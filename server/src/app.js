@@ -38,7 +38,14 @@ const ownerVerificationRoutes = require(
 const adminVerificationRoutes = require(
   "./routes/adminVerification.routes"
 );
+const propertyRoutes =
+  require(
+    "./routes/property.routes"
+  );
 
+const amenityRoutes = require(
+  "./routes/amenity.routes"
+);
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -67,6 +74,14 @@ app.use(
 app.use(
   "/api/admin/verifications",
   adminVerificationRoutes
+);
+app.use(
+  "/api/properties",
+  propertyRoutes
+);
+app.use(
+  "/api/amenities",
+  amenityRoutes
 );
 
 // 404

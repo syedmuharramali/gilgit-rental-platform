@@ -5,6 +5,9 @@ const OwnerVerification = require(
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 
+const {
+  getPrivateFileView,
+} = require("../services/storage.service");
 /*
 |--------------------------------------------------------------------------
 | Get verification requests
@@ -229,5 +232,72 @@ exports.rejectVerification = asyncHandler(
         },
       },
     });
+  }
+);
+
+exports.viewVerificationDocument = asyncHandler(
+  async (req, res, next) => {
+    const { id, documentType } = req.params;
+
+    const allowedTypes = [
+      "cnicFront",
+      "cnicBack",
+      "selfie",
+    ];
+
+    if (!allowedTypes.includes(documentType)) {
+      return next(
+        new AppError(
+          "Invalid verification document type",
+          400
+        )
+      );
+    }
+
+    const verification =
+      await OwnerVerification.findById(id);
+
+    if (!verification) {
+      return next(
+        new AppError(
+          "Verification request not found",
+          404
+        )
+      );
+    }
+
+    const document =
+      verification.documents?.[documentType];
+
+    if (!document?.fileId) {
+      return next(
+        new AppError(
+          "Verification document not found",
+          404
+        )
+      );
+    }
+
+    const fileData =
+      await getPrivateFileView(
+        document.fileId
+      );
+
+    res.setHeader(
+      "Content-Type",
+      document.mimeType
+    );
+
+    res.setHeader(
+      "Content-Disposition",
+      `inline; filename="${document.name}"`
+    );
+
+    res.setHeader(
+      "Cache-Control",
+      "private, no-store, max-age=0"
+    );
+
+    res.send(Buffer.from(fileData));
   }
 );

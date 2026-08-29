@@ -83,3 +83,48 @@ exports.authorize = (...roles) => {
     next();
   };
 };
+
+exports.optionalAuth = asyncHandler(
+  async (req, res, next) => {
+    const authorization =
+      req.headers.authorization;
+
+    if (
+      !authorization ||
+      !authorization.startsWith(
+        "Bearer "
+      )
+    ) {
+      return next();
+    }
+
+    const token =
+      authorization.split(" ")[1];
+
+    try {
+      const decoded =
+        jwt.verify(
+          token,
+          process.env.JWT_SECRET
+        );
+
+      const user =
+        await User.findById(
+          decoded.userId
+        );
+
+      if (
+        user &&
+        user.accountStatus ===
+          "active"
+      ) {
+        req.user = user;
+      }
+    } catch (error) {
+      // Invalid token is treated as anonymous
+      // for this optional-auth route.
+    }
+
+    next();
+  }
+);

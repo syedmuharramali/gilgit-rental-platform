@@ -6,6 +6,7 @@ const {
   getVerificationById,
   approveVerification,
   rejectVerification,
+  viewVerificationDocument
 } = require(
   "../controllers/adminVerification.controller"
 );
@@ -28,6 +29,10 @@ router.use(authorize("admin"));
 router.get(
   "/",
   getVerificationRequests
+);
+router.get(
+  "/:id/documents/:documentType",
+  viewVerificationDocument
 );
 
 router.get(

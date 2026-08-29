@@ -1,7 +1,8 @@
 {
   "scripts": {
     "dev": "nodemon src/server.js",
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "seed:amenities": "node src/scripts/seedAmenities.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
@@ -16,6 +17,7 @@
     "mongoose": "^9.9.4",
     "morgan": "^1.12.0",
     "multer": "^2.3.0",
-    "node-appwrite": "^28.0.0"
+    "node-appwrite": "^28.0.0",
+    "slugify": "^1.6.9"
   }
 }
