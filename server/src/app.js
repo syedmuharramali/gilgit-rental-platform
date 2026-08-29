@@ -32,6 +32,12 @@ if (process.env.NODE_ENV === "development") {
   const authRoutes = require("./routes/auth.routes");
 const errorHandler = require("./middleware/error.middleware");
 const adminRoutes = require("./routes/admin.routes");
+const ownerVerificationRoutes = require(
+  "./routes/ownerVerification.routes"
+);
+const adminVerificationRoutes = require(
+  "./routes/adminVerification.routes"
+);
 
 // Health check
 app.get("/api/health", (req, res) => {
@@ -54,6 +60,14 @@ app.get("/", (req, res) => {
 // API routes
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use(
+  "/api/owner-verification",
+  ownerVerificationRoutes
+);
+app.use(
+  "/api/admin/verifications",
+  adminVerificationRoutes
+);
 
 // 404
 app.use((req, res) => {
