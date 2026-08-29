@@ -88,6 +88,41 @@ const parseBooleanQuery = (
 };
 
 
+const resetPropertyReviewState = (
+  property
+) => {
+  const needsReset = [
+    "pending_review",
+    "published",
+    "rejected",
+  ].includes(
+    property.listingStatus
+  );
+
+  if (!needsReset) {
+    return;
+  }
+
+  property.listingStatus =
+    "draft";
+
+  property.submittedAt =
+    null;
+
+  property.reviewedAt =
+    null;
+
+  property.reviewedBy =
+    null;
+
+  property.rejectionReason =
+    null;
+
+  property.publishedAt =
+    null;
+};
+
+
 /*
 |--------------------------------------------------------------------------
 | Validate amenities
@@ -1345,33 +1380,9 @@ exports.updateProperty =
       */
 
     
-if (
-  [
-    "pending_review",
-    "published",
-    "rejected",
-  ].includes(
-    property.listingStatus
-  )
-) {
-  property.listingStatus =
-    "draft";
-
-  property.submittedAt =
-    null;
-
-  property.reviewedAt =
-    null;
-
-  property.reviewedBy =
-    null;
-
-  property.rejectionReason =
-    null;
-
-  property.publishedAt =
-    null;
-}
+resetPropertyReviewState(
+  property
+);
 
       await property.save();
 
@@ -1514,21 +1525,14 @@ exports.uploadPropertyImages =
 
         /*
         |--------------------------------------------------------------------------
-        | If a published property changes images,
-        | return it to draft for review.
+        | Image changes invalidate an existing review decision.
+        | Reset pending/published/rejected listings to draft.
         |--------------------------------------------------------------------------
         */
 
-        if (
-          property.listingStatus ===
-          "published"
-        ) {
-          property.listingStatus =
-            "draft";
-
-          property.publishedAt =
-            null;
-        }
+        resetPropertyReviewState(
+          property
+        );
 
         await property.save();
 
@@ -1693,20 +1697,13 @@ exports.deletePropertyImage =
 
       /*
       |--------------------------------------------------------------------------
-      | Editing published listing requires review again
+      | Image changes invalidate an existing review decision
       |--------------------------------------------------------------------------
       */
 
-      if (
-        property.listingStatus ===
-        "published"
-      ) {
-        property.listingStatus =
-          "draft";
-
-        property.publishedAt =
-          null;
-      }
+      resetPropertyReviewState(
+        property
+      );
 
       await property.save();
 
@@ -1846,20 +1843,13 @@ exports.setPropertyCoverImage =
 
       /*
       |--------------------------------------------------------------------------
-      | Published listing returns to draft
+      | Image changes invalidate an existing review decision
       |--------------------------------------------------------------------------
       */
 
-      if (
-        property.listingStatus ===
-        "published"
-      ) {
-        property.listingStatus =
-          "draft";
-
-        property.publishedAt =
-          null;
-      }
+      resetPropertyReviewState(
+        property
+      );
 
       await property.save();
 
@@ -2014,20 +2004,13 @@ exports.reorderPropertyImages =
 
       /*
       |--------------------------------------------------------------------------
-      | Published listing returns to draft
+      | Image changes invalidate an existing review decision
       |--------------------------------------------------------------------------
       */
 
-      if (
-        property.listingStatus ===
-        "published"
-      ) {
-        property.listingStatus =
-          "draft";
-
-        property.publishedAt =
-          null;
-      }
+      resetPropertyReviewState(
+        property
+      );
 
       await property.save();
 

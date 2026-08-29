@@ -50,6 +50,18 @@ const adminPropertyRoutes =
   require(
     "./routes/adminProperty.routes"
   );
+  const applicationRoutes =
+  require(
+    "./routes/application.routes"
+  );
+  const viewingRoutes =
+  require(
+    "./routes/viewing.routes"
+  );
+  const tenancyRoutes =
+  require(
+    "./routes/tenancy.routes"
+  );
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -91,7 +103,18 @@ app.use(
   "/api/admin/properties",
   adminPropertyRoutes
 );
-
+app.use(
+  "/api/applications",
+  applicationRoutes
+);
+app.use(
+  "/api/viewings",
+  viewingRoutes
+);
+app.use(
+  "/api/tenancies",
+  tenancyRoutes
+);
 // 404
 app.use((req, res) => {
   res.status(404).json({
