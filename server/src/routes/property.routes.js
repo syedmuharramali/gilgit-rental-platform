@@ -14,8 +14,12 @@ const {
   getPublishedProperties,
   getPropertyById,
   updateProperty,
+  deletePropertyImage,
   deleteProperty,
   uploadPropertyImages,
+  setPropertyCoverImage,
+  reorderPropertyImages,
+  submitPropertyForReview
 } = require(
   "../controllers/property.controller"
 );
@@ -160,6 +164,15 @@ router.post(
   validateRequest,
   createProperty
 );
+router.patch(
+  "/:id/submit",
+
+  protect,
+
+  requireVerifiedOwner,
+
+  submitPropertyForReview
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -176,6 +189,35 @@ router.post(
   uploadPropertyImagesMiddleware,
 
   uploadPropertyImages
+);
+router.patch(
+  "/:id/images/reorder",
+
+  protect,
+
+  requireVerifiedOwner,
+
+  reorderPropertyImages
+);
+
+router.patch(
+  "/:id/images/:imageId/cover",
+
+  protect,
+
+  requireVerifiedOwner,
+
+  setPropertyCoverImage
+);
+
+router.delete(
+  "/:id/images/:imageId",
+
+  protect,
+
+  requireVerifiedOwner,
+
+  deletePropertyImage
 );
 
 router.get(

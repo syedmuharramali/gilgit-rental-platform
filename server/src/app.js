@@ -46,6 +46,10 @@ const propertyRoutes =
 const amenityRoutes = require(
   "./routes/amenity.routes"
 );
+const adminPropertyRoutes =
+  require(
+    "./routes/adminProperty.routes"
+  );
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -82,6 +86,10 @@ app.use(
 app.use(
   "/api/amenities",
   amenityRoutes
+);
+app.use(
+  "/api/admin/properties",
+  adminPropertyRoutes
 );
 
 // 404

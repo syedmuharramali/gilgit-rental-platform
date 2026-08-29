@@ -1,329 +1,658 @@
 const mongoose = require("mongoose");
 const slugify = require("slugify");
 
-const propertySchema = new mongoose.Schema(
-  {
-    owner: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
+/*
+|--------------------------------------------------------------------------
+| Property schema
+|--------------------------------------------------------------------------
+*/
 
-    title: {
-      type: String,
-      required: [true, "Property title is required"],
-      trim: true,
-      minlength: [5, "Title must contain at least 5 characters"],
-      maxlength: [120, "Title cannot exceed 120 characters"],
-    },
+const propertySchema =
+  new mongoose.Schema(
+    {
+      /*
+      |--------------------------------------------------------------------------
+      | Owner
+      |--------------------------------------------------------------------------
+      */
 
-    slug: {
-      type: String,
-      unique: true,
-      index: true,
-    },
+      owner: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
 
-    description: {
-      type: String,
-      required: [true, "Property description is required"],
-      trim: true,
-      minlength: [
-        20,
-        "Description must contain at least 20 characters",
-      ],
-      maxlength: [
-        3000,
-        "Description cannot exceed 3000 characters",
-      ],
-    },
+        ref: "User",
 
-    propertyType: {
-      type: String,
-      required: true,
-      enum: [
-        "hostel",
-        "hostel_bed",
-        "shared_room",
-        "private_room",
-        "apartment",
-        "house",
-        "upper_portion",
-        "lower_portion",
-        "studio",
-      ],
-      index: true,
-    },
+        required: true,
+      },
 
-    monthlyRent: {
-      type: Number,
-      required: true,
-      min: [0, "Monthly rent cannot be negative"],
-      index: true,
-    },
+      /*
+      |--------------------------------------------------------------------------
+      | Basic information
+      |--------------------------------------------------------------------------
+      */
 
-    securityDeposit: {
-      type: Number,
-      default: 0,
-      min: [0, "Security deposit cannot be negative"],
-    },
+      title: {
+        type: String,
 
-    negotiable: {
-      type: Boolean,
-      default: false,
-    },
+        required: [
+          true,
+          "Property title is required",
+        ],
 
-    availableFrom: {
-      type: Date,
-      required: true,
-      index: true,
-    },
+        trim: true,
 
-    minimumStayMonths: {
-      type: Number,
-      default: 1,
-      min: [1, "Minimum stay must be at least 1 month"],
-      max: [120, "Minimum stay cannot exceed 120 months"],
-    },
+        minlength: [
+          5,
+          "Title must contain at least 5 characters",
+        ],
 
-    bedrooms: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
+        maxlength: [
+          120,
+          "Title cannot exceed 120 characters",
+        ],
+      },
 
-    bathrooms: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
+      slug: {
+        type: String,
 
-    floor: {
-      type: Number,
-      default: null,
-    },
+        unique: true,
+      },
 
-    totalArea: {
-      value: {
+      description: {
+        type: String,
+
+        required: [
+          true,
+          "Property description is required",
+        ],
+
+        trim: true,
+
+        minlength: [
+          20,
+          "Description must contain at least 20 characters",
+        ],
+
+        maxlength: [
+          3000,
+          "Description cannot exceed 3000 characters",
+        ],
+      },
+
+      propertyType: {
+        type: String,
+
+        required: true,
+
+        enum: [
+          "hostel",
+          "hostel_bed",
+          "shared_room",
+          "private_room",
+          "apartment",
+          "house",
+          "upper_portion",
+          "lower_portion",
+          "studio",
+        ],
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Pricing
+      |--------------------------------------------------------------------------
+      */
+
+      monthlyRent: {
         type: Number,
+
+        required: true,
+
+        min: [
+          0,
+          "Monthly rent cannot be negative",
+        ],
+      },
+
+      securityDeposit: {
+        type: Number,
+
+        default: 0,
+
+        min: [
+          0,
+          "Security deposit cannot be negative",
+        ],
+      },
+
+      negotiable: {
+        type: Boolean,
+
+        default: false,
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Availability
+      |--------------------------------------------------------------------------
+      */
+
+      availableFrom: {
+        type: Date,
+
+        required: true,
+      },
+
+      minimumStayMonths: {
+        type: Number,
+
+        default: 1,
+
+        min: [
+          1,
+          "Minimum stay must be at least 1 month",
+        ],
+
+        max: [
+          120,
+          "Minimum stay cannot exceed 120 months",
+        ],
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Property details
+      |--------------------------------------------------------------------------
+      */
+
+      bedrooms: {
+        type: Number,
+
+        default: 0,
+
         min: 0,
-        default: null,
+
+        max: 100,
       },
 
-      unit: {
-        type: String,
-        enum: ["sqft", "sqm", "kanal", "marla"],
-        default: "sqft",
-      },
-    },
-
-    furnishedStatus: {
-      type: String,
-      enum: [
-        "furnished",
-        "semi_furnished",
-        "unfurnished",
-      ],
-      default: "unfurnished",
-    },
-
-    maxOccupants: {
-      type: Number,
-      min: 1,
-      default: 1,
-    },
-
-    address: {
-      area: {
-        type: String,
-        required: true,
-        trim: true,
-      },
-
-      street: {
-        type: String,
-        trim: true,
-        default: null,
-      },
-
-      city: {
-        type: String,
-        required: true,
-        trim: true,
-        default: "Gilgit",
-      },
-
-      landmark: {
-        type: String,
-        trim: true,
-        default: null,
-      },
-
-      latitude: {
+      bathrooms: {
         type: Number,
-        min: -90,
-        max: 90,
-        default: null,
+
+        default: 0,
+
+        min: 0,
+
+        max: 100,
       },
 
-      longitude: {
+      floor: {
         type: Number,
-        min: -180,
-        max: 180,
+
         default: null,
       },
-    },
-    amenities: [
-  {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Amenity",
-  },
-],
-images: [
-  {
-    fileId: {
-      type: String,
-      required: true,
-    },
 
-    name: {
-      type: String,
-      required: true,
-    },
+      totalArea: {
+        value: {
+          type: Number,
 
-    mimeType: {
-      type: String,
-      required: true,
-    },
+          min: 0,
 
-    size: {
-      type: Number,
-      required: true,
-    },
+          default: null,
+        },
 
-    alt: {
-      type: String,
-      trim: true,
-      default: "",
-    },
+        unit: {
+          type: String,
 
-    isCover: {
-      type: Boolean,
-      default: false,
-    },
+          enum: [
+            "sqft",
+            "sqm",
+            "kanal",
+            "marla",
+          ],
 
-    order: {
-      type: Number,
-      default: 0,
-    },
-
-    uploadedAt: {
-      type: Date,
-      default: Date.now,
-    },
-  },
-],
-    livingInfo: {
-      heatingAvailable: {
-        type: Boolean,
-        default: false,
+          default: "sqft",
+        },
       },
 
-      hotWaterAvailable: {
-        type: Boolean,
-        default: false,
-      },
-
-      electricityBackup: {
-        type: Boolean,
-        default: false,
-      },
-
-      waterAvailability: {
+      furnishedStatus: {
         type: String,
+
         enum: [
-          "excellent",
-          "good",
-          "limited",
-          "unreliable",
-          "unknown",
+          "furnished",
+          "semi_furnished",
+          "unfurnished",
         ],
-        default: "unknown",
+
+        default:
+          "unfurnished",
       },
 
-      roadAccess: {
-        type: String,
-        enum: [
-          "excellent",
-          "good",
-          "limited",
-          "difficult",
-          "unknown",
-        ],
-        default: "unknown",
+      maxOccupants: {
+        type: Number,
+
+        min: 1,
+
+        default: 1,
       },
 
-      winterAccessible: {
-        type: Boolean,
-        default: true,
-      },
-    },
+      /*
+      |--------------------------------------------------------------------------
+      | Address
+      |--------------------------------------------------------------------------
+      */
 
-    listingStatus: {
-      type: String,
-      enum: [
-        "draft",
-        "pending_review",
-        "published",
-        "rejected",
-        "inactive",
-        "rented",
+      address: {
+        area: {
+          type: String,
+
+          required: true,
+
+          trim: true,
+        },
+
+        street: {
+          type: String,
+
+          trim: true,
+
+          default: null,
+        },
+
+        city: {
+          type: String,
+
+          required: true,
+
+          trim: true,
+
+          default:
+            "Gilgit",
+        },
+
+        landmark: {
+          type: String,
+
+          trim: true,
+
+          default: null,
+        },
+
+        latitude: {
+          type: Number,
+
+          min: -90,
+
+          max: 90,
+
+          default: null,
+        },
+
+        longitude: {
+          type: Number,
+
+          min: -180,
+
+          max: 180,
+
+          default: null,
+        },
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Amenities
+      |--------------------------------------------------------------------------
+      */
+
+      amenities: [
+        {
+          type:
+            mongoose.Schema.Types
+              .ObjectId,
+
+          ref: "Amenity",
+        },
       ],
-      default: "draft",
-      index: true,
+
+      /*
+      |--------------------------------------------------------------------------
+      | Property images
+      |--------------------------------------------------------------------------
+      */
+
+      images: [
+        {
+          fileId: {
+            type: String,
+
+            required: true,
+          },
+
+          name: {
+            type: String,
+
+            required: true,
+          },
+
+          mimeType: {
+            type: String,
+
+            required: true,
+          },
+
+          size: {
+            type: Number,
+
+            required: true,
+          },
+
+          alt: {
+            type: String,
+
+            trim: true,
+
+            default: "",
+          },
+
+          isCover: {
+            type: Boolean,
+
+            default: false,
+          },
+
+          order: {
+            type: Number,
+
+            default: 0,
+          },
+
+          uploadedAt: {
+            type: Date,
+
+            default:
+              Date.now,
+          },
+        },
+      ],
+
+      /*
+      |--------------------------------------------------------------------------
+      | Gilgit living information
+      |--------------------------------------------------------------------------
+      */
+
+      livingInfo: {
+        heatingAvailable: {
+          type: Boolean,
+
+          default: false,
+        },
+
+        hotWaterAvailable: {
+          type: Boolean,
+
+          default: false,
+        },
+
+        electricityBackup: {
+          type: Boolean,
+
+          default: false,
+        },
+
+        waterAvailability: {
+          type: String,
+
+          enum: [
+            "excellent",
+            "good",
+            "limited",
+            "unreliable",
+            "unknown",
+          ],
+
+          default:
+            "unknown",
+        },
+
+        roadAccess: {
+          type: String,
+
+          enum: [
+            "excellent",
+            "good",
+            "limited",
+            "difficult",
+            "unknown",
+          ],
+
+          default:
+            "unknown",
+        },
+
+        winterAccessible: {
+          type: Boolean,
+
+          default: true,
+        },
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Listing lifecycle
+      |--------------------------------------------------------------------------
+      */
+
+      listingStatus: {
+        type: String,
+
+        enum: [
+          "draft",
+          "pending_review",
+          "published",
+          "rejected",
+          "inactive",
+          "rented",
+        ],
+
+        default: "draft",
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Review information
+      |--------------------------------------------------------------------------
+      */
+
+      submittedAt: {
+        type: Date,
+
+        default: null,
+      },
+
+      reviewedAt: {
+        type: Date,
+
+        default: null,
+      },
+
+      reviewedBy: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+
+        ref: "User",
+
+        default: null,
+      },
+
+      rejectionReason: {
+        type: String,
+
+        default: null,
+
+        maxlength: 500,
+      },
+
+      adminNotes: {
+        type: String,
+
+        maxlength: 1000,
+
+        default: null,
+
+        select: false,
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Publishing
+      |--------------------------------------------------------------------------
+      */
+
+      publishedAt: {
+        type: Date,
+
+        default: null,
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Soft deletion
+      |--------------------------------------------------------------------------
+      */
+
+      isDeleted: {
+        type: Boolean,
+
+        default: false,
+
+        select: false,
+      },
+
+      deletedAt: {
+        type: Date,
+
+        default: null,
+
+        select: false,
+      },
     },
 
-    rejectionReason: {
-      type: String,
-      default: null,
-      maxlength: 500,
-    },
-
-    publishedAt: {
-      type: Date,
-      default: null,
-    },
-
-    isDeleted: {
-      type: Boolean,
-      default: false,
-      select: false,
-    },
-
-    deletedAt: {
-      type: Date,
-      default: null,
-      select: false,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+    {
+      timestamps: true,
+    }
+  );
 
 /*
 |--------------------------------------------------------------------------
-| Useful compound indexes
+| Database indexes
+|--------------------------------------------------------------------------
+|
+| These indexes support the queries we are currently using:
+|
+| - public listings
+| - rent filtering
+| - property type filtering
+| - furnished filtering
+| - area filtering
+| - availability filtering
+| - amenity filtering
+| - owner dashboard
+| - admin review queue
+|
+*/
+
+/*
+|--------------------------------------------------------------------------
+| Public listing / newest properties
 |--------------------------------------------------------------------------
 */
 
 propertySchema.index({
   listingStatus: 1,
-  propertyType: 1,
+  isDeleted: 1,
+  publishedAt: -1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Rent filtering and sorting
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
   monthlyRent: 1,
 });
+
+/*
+|--------------------------------------------------------------------------
+| Property type filtering
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
+  propertyType: 1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Furnished status filtering
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
+  furnishedStatus: 1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Area filtering
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
+  "address.area": 1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Availability filtering
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
+  availableFrom: 1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Amenity filtering
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.index({
+  listingStatus: 1,
+  isDeleted: 1,
+  amenities: 1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Owner dashboard
+|--------------------------------------------------------------------------
+*/
 
 propertySchema.index({
   owner: 1,
@@ -332,37 +661,65 @@ propertySchema.index({
 
 /*
 |--------------------------------------------------------------------------
-| Generate unique slug before first save
+| Admin property review queue
 |--------------------------------------------------------------------------
 */
 
-propertySchema.pre("save", function () {
-  if (
-    this.isNew ||
-    this.isModified("title")
-  ) {
-    const baseSlug = slugify(
-      this.title,
-      {
-        lower: true,
-        strict: true,
-        trim: true,
-      }
-    );
-
-    const uniquePart =
-      this._id
-        .toString()
-        .slice(-6);
-
-    this.slug =
-      `${baseSlug}-${uniquePart}`;
-  }
+propertySchema.index({
+  listingStatus: 1,
+  submittedAt: 1,
 });
 
-const Property = mongoose.model(
-  "Property",
-  propertySchema
+/*
+|--------------------------------------------------------------------------
+| Generate unique slug
+|--------------------------------------------------------------------------
+*/
+
+propertySchema.pre(
+  "save",
+
+  function () {
+    if (
+      this.isNew ||
+      this.isModified(
+        "title"
+      )
+    ) {
+      const baseSlug =
+        slugify(
+          this.title,
+          {
+            lower: true,
+
+            strict: true,
+
+            trim: true,
+          }
+        );
+
+      const uniquePart =
+        this._id
+          .toString()
+          .slice(-6);
+
+      this.slug =
+        `${baseSlug}-${uniquePart}`;
+    }
+  }
 );
 
-module.exports = Property;
+/*
+|--------------------------------------------------------------------------
+| Model
+|--------------------------------------------------------------------------
+*/
+
+const Property =
+  mongoose.model(
+    "Property",
+    propertySchema
+  );
+
+module.exports =
+  Property;

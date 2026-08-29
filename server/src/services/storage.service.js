@@ -263,19 +263,75 @@ const uploadPublicImage = async (
 */
 
 const deleteFile = async (
-  fileId
+  fileId,
+  maxAttempts = 3
 ) => {
   if (!fileId) {
     return;
   }
 
-  await storage.deleteFile({
-    bucketId:
-      process.env
-        .APPWRITE_BUCKET_ID,
+  let lastError;
 
-    fileId,
-  });
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts;
+    attempt++
+  ) {
+    try {
+      await storage.deleteFile({
+        bucketId:
+          process.env
+            .APPWRITE_BUCKET_ID,
+
+        fileId,
+      });
+
+      return;
+    } catch (error) {
+      lastError = error;
+
+      const statusCode =
+        Number(error.code) ||
+        Number(
+          error.response?.code
+        ) ||
+        0;
+
+      /*
+      | If Appwrite already says the file
+      | does not exist, deletion is effectively done.
+      */
+      if (statusCode === 404) {
+        return;
+      }
+
+      const isTemporaryError =
+        statusCode === 503 ||
+        statusCode === 502 ||
+        statusCode === 504 ||
+        statusCode === 429 ||
+        String(
+          error.message
+        ).includes("503");
+
+      if (
+        !isTemporaryError ||
+        attempt === maxAttempts
+      ) {
+        break;
+      }
+
+      console.warn(
+        `Appwrite delete temporarily failed. Retry ${attempt}/${maxAttempts}...`
+      );
+
+      await wait(
+        attempt * 1000
+      );
+    }
+  }
+
+  throw lastError;
 };
 
 /*
