@@ -62,6 +62,14 @@ const adminPropertyRoutes =
   require(
     "./routes/tenancy.routes"
   );
+  const rentRecordRoutes =
+  require(
+    "./routes/rentRecord.routes"
+  );
+  const favoriteRoutes =
+  require(
+    "./routes/favorite.routes"
+  );
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -114,6 +122,14 @@ app.use(
 app.use(
   "/api/tenancies",
   tenancyRoutes
+);
+app.use(
+  "/api/rent-ledger",
+  rentRecordRoutes
+);
+app.use(
+  "/api/favorites",
+  favoriteRoutes
 );
 // 404
 app.use((req, res) => {
