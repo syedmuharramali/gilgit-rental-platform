@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 
+const {
+  createNotification,
+} = require(
+  "../services/notification.service"
+);
+
 const Conversation = require(
   "../models/conversation.model"
 );
@@ -658,6 +664,22 @@ exports.sendMessage =
         message.createdAt;
 
       await conversation.save();
+      await createNotification({
+  user: recipientId,
+
+  type: "message",
+
+  title: "New Message",
+
+  message:
+    `${req.user.name} sent you a message.`,
+
+  resourceType:
+    "conversation",
+
+  resourceId:
+    conversation._id,
+});
 
       await message.populate([
         {

@@ -73,6 +73,16 @@ const adminPropertyRoutes =
   const messagingRoutes = require(
   "./routes/messaging.routes"
 );
+const reviewRoutes = require(
+  "./routes/review.routes"
+);
+
+const reportRoutes = require(
+  "./routes/report.routes"
+);
+const notificationRoutes = require(
+  "./routes/notification.routes"
+);
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -137,6 +147,19 @@ app.use(
 app.use(
   "/api/messages",
   messagingRoutes
+);
+app.use(
+  "/api/reviews",
+  reviewRoutes
+);
+
+app.use(
+  "/api/reports",
+  reportRoutes
+);
+app.use(
+  "/api/notifications",
+  notificationRoutes
 );
 // 404
 app.use((req, res) => {
