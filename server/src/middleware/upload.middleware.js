@@ -115,3 +115,19 @@ exports.uploadPropertyImages =
     "images",
     8
   );
+  const conditionEvidenceUpload = multer({
+  storage,
+
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 6,
+  },
+
+  fileFilter: propertyImageFilter,
+});
+
+exports.uploadConditionEvidence =
+  conditionEvidenceUpload.array(
+    "images",
+    6
+  );

@@ -83,6 +83,20 @@ const reportRoutes = require(
 const notificationRoutes = require(
   "./routes/notification.routes"
 );
+const rentalAgreementRoutes = require(
+  "./routes/rentalAgreement.routes"
+);
+
+const conditionReportRoutes = require(
+  "./routes/conditionReport.routes"
+);
+
+const maintenanceRequestRoutes = require(
+  "./routes/maintenanceRequest.routes"
+);
+const scoringRoutes = require(
+  "./routes/scoring.routes"
+);
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -160,6 +174,24 @@ app.use(
 app.use(
   "/api/notifications",
   notificationRoutes
+);
+app.use(
+  "/api/agreements",
+  rentalAgreementRoutes
+);
+
+app.use(
+  "/api/condition-reports",
+  conditionReportRoutes
+);
+
+app.use(
+  "/api/maintenance",
+  maintenanceRequestRoutes
+);
+app.use(
+  "/api/scoring",
+  scoringRoutes
 );
 // 404
 app.use((req, res) => {

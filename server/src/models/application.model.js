@@ -1,5 +1,35 @@
 const mongoose = require("mongoose");
 
+const roommateSchema =
+  new mongoose.Schema(
+    {
+      name: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 80,
+      },
+
+      email: {
+        type: String,
+        required: true,
+        trim: true,
+        lowercase: true,
+        maxlength: 150,
+      },
+
+      phone: {
+        type: String,
+        trim: true,
+        maxlength: 30,
+        default: null,
+      },
+    },
+    {
+      _id: true,
+    }
+  );
+
 const applicationSchema =
   new mongoose.Schema(
     {
@@ -27,13 +57,27 @@ const applicationSchema =
         required: true,
       },
 
+      applicationType: {
+        type: String,
+        enum: [
+          "individual",
+          "group",
+        ],
+        default:
+          "individual",
+      },
+
+      roommates: {
+        type: [
+          roommateSchema,
+        ],
+        default: [],
+      },
+
       message: {
         type: String,
         trim: true,
-        maxlength: [
-          1000,
-          "Application message cannot exceed 1000 characters",
-        ],
+        maxlength: 1000,
         default: "",
       },
 
@@ -64,7 +108,8 @@ const applicationSchema =
           "rejected",
           "withdrawn",
         ],
-        default: "pending",
+        default:
+          "pending",
       },
 
       reviewedAt: {
@@ -89,12 +134,6 @@ const applicationSchema =
     }
   );
 
-/*
-|--------------------------------------------------------------------------
-| Prevent duplicate applications
-|--------------------------------------------------------------------------
-*/
-
 applicationSchema.index(
   {
     property: 1,
@@ -105,34 +144,16 @@ applicationSchema.index(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| Applicant dashboard
-|--------------------------------------------------------------------------
-*/
-
 applicationSchema.index({
   applicant: 1,
   createdAt: -1,
 });
-
-/*
-|--------------------------------------------------------------------------
-| Owner application inbox
-|--------------------------------------------------------------------------
-*/
 
 applicationSchema.index({
   owner: 1,
   status: 1,
   createdAt: -1,
 });
-
-/*
-|--------------------------------------------------------------------------
-| Property applications
-|--------------------------------------------------------------------------
-*/
 
 applicationSchema.index({
   property: 1,

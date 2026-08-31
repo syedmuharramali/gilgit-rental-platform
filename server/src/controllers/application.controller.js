@@ -62,12 +62,6 @@ exports.createApplication =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Owner cannot apply to own property
-      |--------------------------------------------------------------------------
-      */
-
       if (
         property.owner.toString() ===
         req.user._id.toString()
@@ -79,12 +73,6 @@ exports.createApplication =
           )
         );
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Prevent duplicate application
-      |--------------------------------------------------------------------------
-      */
 
       const existingApplication =
         await Application.findOne({
@@ -108,7 +96,170 @@ exports.createApplication =
 
       /*
       |--------------------------------------------------------------------------
-      | Validate move-in date
+      | Application type
+      |--------------------------------------------------------------------------
+      */
+
+      const applicationType =
+        req.body
+          .applicationType ||
+        "individual";
+
+      if (
+        ![
+          "individual",
+          "group",
+        ].includes(
+          applicationType
+        )
+      ) {
+        return next(
+          new AppError(
+            "Application type must be individual or group",
+            400
+          )
+        );
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Group / roommates
+      |--------------------------------------------------------------------------
+      */
+
+      let roommates = [];
+
+      if (
+        applicationType ===
+        "group"
+      ) {
+        if (
+          !Array.isArray(
+            req.body.roommates
+          ) ||
+          req.body
+            .roommates
+            .length === 0
+        ) {
+          return next(
+            new AppError(
+              "A group application requires at least one roommate",
+              400
+            )
+          );
+        }
+
+        if (
+          req.body
+            .roommates
+            .length > 9
+        ) {
+          return next(
+            new AppError(
+              "A group application may contain at most 9 additional roommates",
+              400
+            )
+          );
+        }
+
+        roommates =
+          req.body.roommates.map(
+            (roommate) => {
+              const name =
+                typeof roommate
+                  .name ===
+                "string"
+                  ? roommate
+                      .name
+                      .trim()
+                  : "";
+
+              const email =
+                typeof roommate
+                  .email ===
+                "string"
+                  ? roommate
+                      .email
+                      .trim()
+                      .toLowerCase()
+                  : "";
+
+              const phone =
+                typeof roommate
+                  .phone ===
+                "string"
+                  ? roommate
+                      .phone
+                      .trim()
+                  : null;
+
+              if (
+                name.length < 2 ||
+                name.length > 80
+              ) {
+                throw new AppError(
+                  "Each roommate requires a valid name",
+                  400
+                );
+              }
+
+              if (
+                !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+                  email
+                )
+              ) {
+                throw new AppError(
+                  `Invalid roommate email for ${name}`,
+                  400
+                );
+              }
+
+              return {
+                name,
+                email,
+                phone:
+                  phone || null,
+              };
+            }
+          );
+
+        const emails =
+          roommates.map(
+            (roommate) =>
+              roommate.email
+          );
+
+        if (
+          new Set(emails).size !==
+          emails.length
+        ) {
+          return next(
+            new AppError(
+              "Roommate email addresses must be unique",
+              400
+            )
+          );
+        }
+
+        if (
+          req.user.email &&
+          emails.includes(
+            req.user.email
+              .toLowerCase()
+          )
+        ) {
+          return next(
+            new AppError(
+              "The lead applicant cannot also be listed as a roommate",
+              400
+            )
+          );
+        }
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Move-in date
       |--------------------------------------------------------------------------
       */
 
@@ -142,7 +293,7 @@ exports.createApplication =
 
       /*
       |--------------------------------------------------------------------------
-      | Validate expected stay
+      | Expected stay
       |--------------------------------------------------------------------------
       */
 
@@ -164,10 +315,8 @@ exports.createApplication =
           !Number.isInteger(
             expectedStayMonths
           ) ||
-          expectedStayMonths <
-            1 ||
-          expectedStayMonths >
-            120
+          expectedStayMonths < 1 ||
+          expectedStayMonths > 120
         ) {
           return next(
             new AppError(
@@ -180,18 +329,23 @@ exports.createApplication =
 
       /*
       |--------------------------------------------------------------------------
-      | Validate occupants
+      | Occupancy
       |--------------------------------------------------------------------------
       */
 
       const occupants =
-        req.body.occupants !==
-        undefined
-          ? Number(
-              req.body
-                .occupants
-            )
-          : 1;
+        applicationType ===
+        "group"
+          ? 1 +
+            roommates.length
+          : req.body
+                .occupants !==
+              undefined
+            ? Number(
+                req.body
+                  .occupants
+              )
+            : 1;
 
       if (
         !Number.isInteger(
@@ -220,12 +374,6 @@ exports.createApplication =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Create application
-      |--------------------------------------------------------------------------
-      */
-
       const application =
         await Application.create({
           property:
@@ -237,8 +385,13 @@ exports.createApplication =
           owner:
             property.owner,
 
+          applicationType,
+
+          roommates,
+
           message:
-            req.body.message || "",
+            req.body.message ||
+            "",
 
           preferredMoveInDate,
 
@@ -250,12 +403,14 @@ exports.createApplication =
       await application.populate([
         {
           path: "property",
+
           select:
             "title slug monthlyRent propertyType address listingStatus",
         },
 
         {
           path: "applicant",
+
           select:
             "name avatar",
         },
@@ -265,7 +420,10 @@ exports.createApplication =
         success: true,
 
         message:
-          "Rental application submitted successfully",
+          applicationType ===
+          "group"
+            ? "Group rental application submitted successfully"
+            : "Rental application submitted successfully",
 
         data: {
           application,
