@@ -70,6 +70,9 @@ const adminPropertyRoutes =
   require(
     "./routes/favorite.routes"
   );
+  const messagingRoutes = require(
+  "./routes/messaging.routes"
+);
 // Health check
 app.get("/api/health", (req, res) => {
   res.status(200).json({
@@ -130,6 +133,10 @@ app.use(
 app.use(
   "/api/favorites",
   favoriteRoutes
+);
+app.use(
+  "/api/messages",
+  messagingRoutes
 );
 // 404
 app.use((req, res) => {
