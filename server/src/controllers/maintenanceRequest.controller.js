@@ -17,6 +17,12 @@ const asyncHandler = require(
   "../utils/asyncHandler"
 );
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
+
 /*
 |--------------------------------------------------------------------------
 | Renter creates request
@@ -176,6 +182,26 @@ exports.createMaintenanceRequest =
 
           priority,
         });
+
+      await safeCreateNotification({
+        user:
+          tenancy.owner,
+
+        type:
+          "maintenance",
+
+        title:
+          "New Maintenance Request",
+
+        message:
+          `${req.user.name} submitted a ${priority} priority maintenance request: ${title}.`,
+
+        resourceType:
+          "maintenance_request",
+
+        resourceId:
+          request._id,
+      });
 
       res.status(201).json({
         success: true,
@@ -397,6 +423,35 @@ exports.updateMaintenanceRequest =
 
       await request.save();
 
+      await safeCreateNotification({
+        user:
+          request.renter,
+
+        type:
+          "maintenance",
+
+        title:
+          request.status ===
+          "resolved"
+            ? "Maintenance Request Resolved"
+            : "Maintenance Request Updated",
+
+        message:
+          request.status ===
+          "resolved"
+            ? `Your maintenance request "${request.title}" has been resolved.`
+            : `Your maintenance request "${request.title}" is now ${request.status.replace(
+                "_",
+                " "
+              )}.`,
+
+        resourceType:
+          "maintenance_request",
+
+        resourceId:
+          request._id,
+      });
+
       res.status(200).json({
         success: true,
 
@@ -456,6 +511,26 @@ exports.cancelMaintenanceRequest =
         new Date();
 
       await request.save();
+
+      await safeCreateNotification({
+        user:
+          request.owner,
+
+        type:
+          "maintenance",
+
+        title:
+          "Maintenance Request Cancelled",
+
+        message:
+          `${req.user.name} cancelled the maintenance request "${request.title}".`,
+
+        resourceType:
+          "maintenance_request",
+
+        resourceId:
+          request._id,
+      });
 
       res.status(200).json({
         success: true,

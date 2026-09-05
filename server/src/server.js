@@ -1,5 +1,11 @@
 require("dotenv").config();
 
+const {
+  validateEnv,
+} = require("./config/env");
+
+validateEnv();
+
 const mongoose =
   require("mongoose");
 
@@ -8,10 +14,6 @@ const app =
 
 const connectDB =
   require("./config/db");
-
-const {
-  validateEnv,
-} = require("./config/env");
 
 const PORT =
   Number(
@@ -43,12 +45,6 @@ const shutdown =
     console.log(
       `${signal} received. Shutting down gracefully...`
     );
-
-    /*
-    |--------------------------------------------------------------------------
-    | Safety timeout
-    |--------------------------------------------------------------------------
-    */
 
     const forceExit =
       setTimeout(() => {
@@ -106,8 +102,6 @@ const shutdown =
 const startServer =
   async () => {
     try {
-      validateEnv();
-
       await connectDB();
 
       server =

@@ -16,6 +16,12 @@ const asyncHandler = require(
   "../utils/asyncHandler"
 );
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
+
 const DEFAULT_CLAUSES = [
   "The renter shall pay the agreed monthly rent on time.",
   "The property shall be used only for residential purposes.",
@@ -195,6 +201,26 @@ exports.createAgreement =
             "name email",
         },
       ]);
+
+      await safeCreateNotification({
+        user:
+          agreement.renter._id,
+
+        type:
+          "agreement",
+
+        title:
+          "Rental Agreement Ready",
+
+        message:
+          `A rental agreement for ${agreement.property.title} is ready for your review and signature.`,
+
+        resourceType:
+          "agreement",
+
+        resourceId:
+          agreement._id,
+      });
 
       res.status(201).json({
         success: true,
@@ -488,6 +514,37 @@ exports.signAgreement =
       }
 
       await agreement.save();
+
+      const otherParty =
+        isOwner
+          ? agreement.renter
+          : agreement.owner;
+
+      await safeCreateNotification({
+        user:
+          otherParty,
+
+        type:
+          "agreement",
+
+        title:
+          agreement.status ===
+          "executed"
+            ? "Rental Agreement Executed"
+            : "Rental Agreement Signed",
+
+        message:
+          agreement.status ===
+          "executed"
+            ? "The rental agreement has been signed by both parties and is now fully executed."
+            : `${req.user.name} signed the rental agreement.`,
+
+        resourceType:
+          "agreement",
+
+        resourceId:
+          agreement._id,
+      });
 
       res.status(200).json({
         success: true,

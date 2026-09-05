@@ -19,6 +19,12 @@ const {
   "../middleware/auth.middleware"
 );
 
+const {
+  blockIfPropertyHasAcceptedApplication,
+} = require(
+  "../middleware/applicationState.middleware"
+);
+
 const router =
   express.Router();
 
@@ -43,6 +49,7 @@ router.get(
 
 router.post(
   "/:propertyId",
+  blockIfPropertyHasAcceptedApplication,
   createApplication
 );
 

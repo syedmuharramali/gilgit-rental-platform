@@ -42,6 +42,12 @@ const {
   "../middleware/owner.middleware"
 );
 
+const {
+  requireMutableOwnedProperty,
+} = require(
+  "../middleware/propertyState.middleware"
+);
+
 const validateRequest = require(
   "../middleware/validate.middleware"
 );
@@ -186,6 +192,8 @@ router.post(
 
   requireVerifiedOwner,
 
+  requireMutableOwnedProperty,
+
   uploadPropertyImagesMiddleware,
 
   uploadPropertyImages
@@ -197,6 +205,8 @@ router.patch(
 
   requireVerifiedOwner,
 
+  requireMutableOwnedProperty,
+
   reorderPropertyImages
 );
 
@@ -207,6 +217,8 @@ router.patch(
 
   requireVerifiedOwner,
 
+  requireMutableOwnedProperty,
+
   setPropertyCoverImage
 );
 
@@ -216,6 +228,8 @@ router.delete(
   protect,
 
   requireVerifiedOwner,
+
+  requireMutableOwnedProperty,
 
   deletePropertyImage
 );
@@ -230,6 +244,7 @@ router.patch(
   "/:id",
   protect,
   requireVerifiedOwner,
+  requireMutableOwnedProperty,
   updateProperty
 );
 
@@ -237,6 +252,7 @@ router.delete(
   "/:id",
   protect,
   requireVerifiedOwner,
+  requireMutableOwnedProperty,
   deleteProperty
 );
 

@@ -23,6 +23,13 @@ const {
   "../services/storage.service"
 );
 
+const {
+  safeCreateNotification,
+  safeCreateNotifications,
+} = require(
+  "../services/notification.service"
+);
+
 const getAuthorizedTenancy =
   async (
     tenancyId,
@@ -242,6 +249,45 @@ exports.createConditionReport =
             req.user._id,
         });
 
+      const recipients = [
+        tenancy.owner,
+        tenancy.renter,
+      ].filter(
+        (userId) =>
+          userId.toString() !==
+          req.user._id.toString()
+      );
+
+      await safeCreateNotifications(
+        recipients.map(
+          (userId) => ({
+            user:
+              userId,
+
+            type:
+              "condition_report",
+
+            title:
+              reportType ===
+              "move_in"
+                ? "Move-In Condition Report"
+                : "Move-Out Condition Report",
+
+            message:
+              `${req.user.name} created a ${reportType.replace(
+                "_",
+                "-"
+              )} condition report.`,
+
+            resourceType:
+              "condition_report",
+
+            resourceId:
+              report._id,
+          })
+        )
+      );
+
       res.status(201).json({
         success: true,
 
@@ -396,6 +442,37 @@ exports.confirmConditionReport =
 
       await report.save();
 
+      const otherParty =
+        isOwner
+          ? report.renter
+          : report.owner;
+
+      await safeCreateNotification({
+        user:
+          otherParty,
+
+        type:
+          "condition_report",
+
+        title:
+          report.status ===
+          "confirmed"
+            ? "Condition Report Fully Confirmed"
+            : "Condition Report Confirmed",
+
+        message:
+          report.status ===
+          "confirmed"
+            ? "The condition report has now been confirmed by both parties."
+            : `${req.user.name} confirmed the condition report.`,
+
+        resourceType:
+          "condition_report",
+
+        resourceId:
+          report._id,
+      });
+
       res.status(200).json({
         success: true,
 
@@ -469,17 +546,17 @@ exports.uploadConditionEvidence =
       }
 
       if (
-  report.status === "confirmed" ||
-  report.ownerConfirmation.confirmed ||
-  report.renterConfirmation.confirmed
-) {
-  return next(
-    new AppError(
-      "Evidence cannot be changed after either party has confirmed the report",
-      400
-    )
-  );
-}
+        report.status === "confirmed" ||
+        report.ownerConfirmation.confirmed ||
+        report.renterConfirmation.confirmed
+      ) {
+        return next(
+          new AppError(
+            "Evidence cannot be changed after either party has confirmed the report",
+            400
+          )
+        );
+      }
 
       if (
         !req.files ||
@@ -553,6 +630,32 @@ exports.uploadConditionEvidence =
       );
 
       await report.save();
+
+      const evidenceRecipient =
+        report.owner.toString() ===
+        req.user._id.toString()
+          ? report.renter
+          : report.owner;
+
+      await safeCreateNotification({
+        user:
+          evidenceRecipient,
+
+        type:
+          "condition_report",
+
+        title:
+          "Condition Report Evidence Added",
+
+        message:
+          `${req.user.name} added ${uploadedFiles.length} evidence image(s) to the condition report.`,
+
+        resourceType:
+          "condition_report",
+
+        resourceId:
+          report._id,
+      });
 
       res.status(201).json({
         success: true,

@@ -209,12 +209,6 @@ app.use(
       origin,
       callback
     ) {
-      /*
-      | Native/mobile apps,
-      | Postman and curl may
-      | have no Origin header.
-      */
-
       if (!origin) {
         return callback(
           null,
@@ -234,8 +228,9 @@ app.use(
       }
 
       return callback(
-        new Error(
-          "Origin not allowed by CORS"
+        new AppError(
+          "Origin not allowed by CORS",
+          403
         )
       );
     },
@@ -293,9 +288,6 @@ app.use(
 /*
 |--------------------------------------------------------------------------
 | Request parsers
-|--------------------------------------------------------------------------
-|
-| Images/files use Multer and should not travel through JSON.
 |--------------------------------------------------------------------------
 */
 
