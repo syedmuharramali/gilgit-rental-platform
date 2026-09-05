@@ -144,6 +144,25 @@ applicationSchema.index(
   }
 );
 
+/*
+|--------------------------------------------------------------------------
+| Only one accepted application per property
+|--------------------------------------------------------------------------
+*/
+
+applicationSchema.index(
+  {
+    property: 1,
+  },
+  {
+    unique: true,
+
+    partialFilterExpression: {
+      status: "accepted",
+    },
+  }
+);
+
 applicationSchema.index({
   applicant: 1,
   createdAt: -1,
