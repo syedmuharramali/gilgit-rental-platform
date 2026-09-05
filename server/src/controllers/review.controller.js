@@ -19,6 +19,11 @@ const AppError = require(
 const asyncHandler = require(
   "../utils/asyncHandler"
 );
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
 
 /*
 |--------------------------------------------------------------------------
@@ -215,6 +220,24 @@ exports.createReview = asyncHandler(
           "title slug",
       },
     ]);
+    await safeCreateNotification({
+  user:
+    review.reviewee._id,
+
+  type: "review",
+
+  title:
+    "New Review Received",
+
+  message:
+    `${review.reviewer.name} gave you a ${review.rating}-star review for ${review.property.title}.`,
+
+  resourceType:
+    "review",
+
+  resourceId:
+    review._id,
+});
 
     res.status(201).json({
       success: true,

@@ -22,6 +22,11 @@ const AppError =
 const asyncHandler =
   require("../utils/asyncHandler");
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
 /*
 |--------------------------------------------------------------------------
 | Create tenancy from accepted application
@@ -341,6 +346,20 @@ exports.createTenancy =
             "status preferredMoveInDate expectedStayMonths occupants",
         },
       ]);
+      await safeCreateNotification({
+  user: tenancy.renter._id,
+
+  type: "tenancy",
+
+  title: "Tenancy Started",
+
+  message:
+    `Your tenancy for ${tenancy.property.title} has been created.`,
+
+  resourceType: "tenancy",
+
+  resourceId: tenancy._id,
+});
 
       res.status(201).json({
         success: true,
@@ -646,6 +665,21 @@ exports.endTenancy =
       } finally {
         await session.endSession();
       }
+      await safeCreateNotification({
+  user: tenancy.renter,
+
+  type: "tenancy_ended",
+
+  title: "Tenancy Ended",
+
+  message: reason
+    ? `Your tenancy has been ended. Reason: ${reason}`
+    : "Your tenancy has been ended.",
+
+  resourceType: "tenancy",
+
+  resourceId: tenancy._id,
+});
 
       res.status(200).json({
         success: true,

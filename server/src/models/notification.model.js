@@ -1,82 +1,108 @@
 const mongoose = require("mongoose");
 
-const notificationSchema = new mongoose.Schema(
-  {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-      index: true,
-    },
+const notificationSchema =
+  new mongoose.Schema(
+    {
+      user: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+        index: true,
+      },
 
-    type: {
-      type: String,
-      enum: [
-        "message",
-        "application",
-        "application_accepted",
-        "application_rejected",
-        "viewing",
-        "viewing_confirmed",
-        "viewing_rejected",
-        "tenancy",
-        "rent",
-        "review",
-        "report",
-        "system",
-      ],
-      required: true,
-    },
+      type: {
+        type: String,
 
-    title: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 150,
-    },
+        enum: [
+          "message",
 
-    message: {
-      type: String,
-      required: true,
-      trim: true,
-      maxlength: 500,
-    },
+          "application",
+          "application_accepted",
+          "application_rejected",
+          "application_withdrawn",
 
-    resourceType: {
-      type: String,
-      enum: [
-        "conversation",
-        "application",
-        "viewing",
-        "tenancy",
-        "rent_record",
-        "property",
-        "report",
-        "review",
-        "system",
-      ],
-      default: "system",
-    },
+          "viewing",
+          "viewing_confirmed",
+          "viewing_rejected",
+          "viewing_cancelled",
 
-    resourceId: {
-      type: mongoose.Schema.Types.ObjectId,
-      default: null,
-    },
+          "tenancy",
+          "tenancy_ended",
 
-    isRead: {
-      type: Boolean,
-      default: false,
-    },
+          "rent",
 
-    readAt: {
-      type: Date,
-      default: null,
+          "agreement",
+
+          "condition_report",
+
+          "maintenance",
+
+          "review",
+
+          "report",
+
+          "system",
+        ],
+
+        required: true,
+      },
+
+      title: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 150,
+      },
+
+      message: {
+        type: String,
+        required: true,
+        trim: true,
+        maxlength: 500,
+      },
+
+      resourceType: {
+        type: String,
+
+        enum: [
+          "conversation",
+          "application",
+          "viewing",
+          "tenancy",
+          "rent_record",
+          "property",
+          "agreement",
+          "condition_report",
+          "maintenance_request",
+          "report",
+          "review",
+          "system",
+        ],
+
+        default: "system",
+      },
+
+      resourceId: {
+        type:
+          mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+
+      isRead: {
+        type: Boolean,
+        default: false,
+      },
+
+      readAt: {
+        type: Date,
+        default: null,
+      },
     },
-  },
-  {
-    timestamps: true,
-  }
-);
+    {
+      timestamps: true,
+    }
+  );
 
 notificationSchema.index({
   user: 1,
@@ -89,9 +115,11 @@ notificationSchema.index({
   createdAt: -1,
 });
 
-const Notification = mongoose.model(
-  "Notification",
-  notificationSchema
-);
+const Notification =
+  mongoose.model(
+    "Notification",
+    notificationSchema
+  );
 
-module.exports = Notification;
+module.exports =
+  Notification;

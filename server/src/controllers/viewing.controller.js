@@ -17,6 +17,11 @@ const AppError =
 const asyncHandler =
   require("../utils/asyncHandler");
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
 /*
 |--------------------------------------------------------------------------
 | Request property viewing
@@ -249,6 +254,20 @@ exports.createViewingRequest =
             "name avatar",
         },
       ]);
+await safeCreateNotification({
+  user: property.owner,
+
+  type: "viewing",
+
+  title: "New Viewing Request",
+
+  message:
+    `${req.user.name} requested a viewing for ${property.title}.`,
+
+  resourceType: "viewing",
+
+  resourceId: viewing._id,
+});
 
       res.status(201).json({
         success: true,
@@ -573,6 +592,20 @@ exports.confirmViewing =
         ownerResponse;
 
       await viewing.save();
+      await safeCreateNotification({
+  user: viewing.renter,
+
+  type: "viewing_confirmed",
+
+  title: "Viewing Confirmed",
+
+  message:
+    "Your property viewing request has been confirmed.",
+
+  resourceType: "viewing",
+
+  resourceId: viewing._id,
+});
 
       await viewing.populate([
         {
@@ -688,6 +721,21 @@ exports.rejectViewing =
         ownerResponse || null;
 
       await viewing.save();
+      await safeCreateNotification({
+  user: viewing.renter,
+
+  type: "viewing_rejected",
+
+  title: "Viewing Request Rejected",
+
+  message: ownerResponse
+    ? `Your viewing request was rejected. Reason: ${ownerResponse}`
+    : "Your viewing request was rejected.",
+
+  resourceType: "viewing",
+
+  resourceId: viewing._id,
+});
 
       res.status(200).json({
         success: true,
@@ -770,6 +818,20 @@ exports.cancelViewing =
         new Date();
 
       await viewing.save();
+      await safeCreateNotification({
+  user: viewing.owner,
+
+  type: "viewing_cancelled",
+
+  title: "Viewing Cancelled",
+
+  message:
+    `${req.user.name} cancelled their property viewing.`,
+
+  resourceType: "viewing",
+
+  resourceId: viewing._id,
+});
 
       res.status(200).json({
         success: true,
@@ -867,6 +929,20 @@ exports.completeViewing =
         new Date();
 
       await viewing.save();
+      await safeCreateNotification({
+  user: viewing.renter,
+
+  type: "viewing",
+
+  title: "Viewing Completed",
+
+  message:
+    "Your property viewing has been marked as completed.",
+
+  resourceType: "viewing",
+
+  resourceId: viewing._id,
+});
 
       res.status(200).json({
         success: true,

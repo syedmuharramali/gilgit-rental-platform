@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const {
-  createNotification,
+  safeCreateNotification,
 } = require(
   "../services/notification.service"
 );
@@ -664,7 +664,7 @@ exports.sendMessage =
         message.createdAt;
 
       await conversation.save();
-      await createNotification({
+      await safeCreateNotification({
   user: recipientId,
 
   type: "message",

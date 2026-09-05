@@ -1,5 +1,11 @@
 const mongoose =
   require("mongoose");
+const {
+  safeCreateNotification,
+  safeCreateNotifications,
+} = require(
+  "../services/notification.service"
+);
 
 const Application =
   require(
@@ -415,6 +421,22 @@ exports.createApplication =
             "name avatar",
         },
       ]);
+      await safeCreateNotification({
+  user: property.owner,
+
+  type: "application",
+
+  title: "New Rental Application",
+
+  message:
+    `${req.user.name} applied for ${property.title}.`,
+
+  resourceType:
+    "application",
+
+  resourceId:
+    application._id,
+});
 
       res.status(201).json({
         success: true,
@@ -685,6 +707,34 @@ exports.acceptApplication =
         );
       }
 
+      /*
+      |--------------------------------------------------------------------------
+      | Find other pending applications before rejecting them
+      |--------------------------------------------------------------------------
+      */
+
+      const otherPendingApplications =
+        await Application.find({
+          property:
+            application.property,
+
+          _id: {
+            $ne:
+              application._id,
+          },
+
+          status:
+            "pending",
+        }).select(
+          "_id applicant"
+        );
+
+      /*
+      |--------------------------------------------------------------------------
+      | Accept selected application
+      |--------------------------------------------------------------------------
+      */
+
       application.status =
         "accepted";
 
@@ -729,15 +779,73 @@ exports.acceptApplication =
         }
       );
 
+      /*
+      |--------------------------------------------------------------------------
+      | Notify accepted applicant
+      |--------------------------------------------------------------------------
+      */
+
+      await safeCreateNotification({
+        user:
+          application.applicant,
+
+        type:
+          "application_accepted",
+
+        title:
+          "Application Accepted",
+
+        message:
+          `Your application for ${property.title} has been accepted.`,
+
+        resourceType:
+          "application",
+
+        resourceId:
+          application._id,
+      });
+
+      /*
+      |--------------------------------------------------------------------------
+      | Notify automatically rejected applicants
+      |--------------------------------------------------------------------------
+      */
+
+      await safeCreateNotifications(
+        otherPendingApplications.map(
+          (otherApplication) => ({
+            user:
+              otherApplication.applicant,
+
+            type:
+              "application_rejected",
+
+            title:
+              "Application Update",
+
+            message:
+              `Another application was accepted for ${property.title}.`,
+
+            resourceType:
+              "application",
+
+            resourceId:
+              otherApplication._id,
+          })
+        )
+      );
+
       await application.populate([
         {
           path: "property",
+
           select:
             "title slug monthlyRent propertyType address",
         },
 
         {
           path: "applicant",
+
           select:
             "name email phone avatar",
         },
@@ -823,6 +931,28 @@ exports.rejectApplication =
 
       await application.save();
 
+      await safeCreateNotification({
+        user:
+          application.applicant,
+
+        type:
+          "application_rejected",
+
+        title:
+          "Application Rejected",
+
+        message:
+          reason
+            ? `Your rental application was rejected. Reason: ${reason}`
+            : "Your rental application was rejected.",
+
+        resourceType:
+          "application",
+
+        resourceId:
+          application._id,
+      });
+
       res.status(200).json({
         success: true,
 
@@ -883,6 +1013,26 @@ exports.withdrawApplication =
         new Date();
 
       await application.save();
+
+      await safeCreateNotification({
+        user:
+          application.owner,
+
+        type:
+          "application_withdrawn",
+
+        title:
+          "Application Withdrawn",
+
+        message:
+          `${req.user.name} withdrew their rental application.`,
+
+        resourceType:
+          "application",
+
+        resourceId:
+          application._id,
+      });
 
       res.status(200).json({
         success: true,

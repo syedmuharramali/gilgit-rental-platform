@@ -19,6 +19,12 @@ const AppError = require(
 const asyncHandler = require(
   "../utils/asyncHandler"
 );
+const {
+  safeCreateNotification,
+  safeCreateNotifications,
+} = require(
+  "../services/notification.service"
+);
 
 const ALLOWED_REASONS = [
   "fraud",
@@ -239,7 +245,39 @@ exports.createReport =
         await Report.create(
           reportData
         );
+       const admins =
+  await User.find({
+    role: "admin",
+    accountStatus:
+      "active",
+  }).select("_id");
 
+await safeCreateNotifications(
+  admins.map(
+    (admin) => ({
+      user:
+        admin._id,
+
+      type:
+        "report",
+
+      title:
+        "New Report Submitted",
+
+      message:
+        `A new ${reason.replace(
+          /_/g,
+          " "
+        )} report has been submitted.`,
+
+      resourceType:
+        "report",
+
+      resourceId:
+        report._id,
+    })
+  )
+); 
       res.status(201).json({
         success: true,
 
@@ -516,6 +554,35 @@ exports.updateReportStatus =
         new Date();
 
       await report.save();
+      await safeCreateNotification({
+  user:
+    report.reporter,
+
+  type: "report",
+
+  title:
+    status === "resolved"
+      ? "Report Resolved"
+      : status === "dismissed"
+        ? "Report Dismissed"
+        : "Report Status Updated",
+
+  message:
+    status === "resolved"
+      ? "Your report has been reviewed and resolved by an administrator."
+      : status === "dismissed"
+        ? "Your report has been reviewed and dismissed by an administrator."
+        : `Your report status is now ${status.replace(
+            /_/g,
+            " "
+          )}.`,
+
+  resourceType:
+    "report",
+
+  resourceId:
+    report._id,
+});
 
       await report.populate([
         {

@@ -17,6 +17,12 @@ const AppError =
 const asyncHandler =
   require("../utils/asyncHandler");
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
+
 /*
 |--------------------------------------------------------------------------
 | Generate rent schedule
@@ -210,6 +216,20 @@ exports.generateRentSchedule =
         await RentRecord.insertMany(
           records
         );
+        await safeCreateNotification({
+  user: tenancy.renter,
+
+  type: "rent",
+
+  title: "Rent Schedule Created",
+
+  message:
+    `${createdRecords.length} monthly rent record(s) have been created for your tenancy.`,
+
+  resourceType: "tenancy",
+
+  resourceId: tenancy._id,
+});
 
       res.status(201).json({
         success: true,
@@ -534,6 +554,29 @@ exports.recordPayment =
       }
 
       await record.save();
+      const remainingAmount =
+  record.amountDue -
+  record.amountPaid;
+
+await safeCreateNotification({
+  user: record.renter,
+
+  type: "rent",
+
+  title:
+    record.status === "paid"
+      ? "Rent Payment Recorded"
+      : "Partial Rent Payment Recorded",
+
+  message:
+    record.status === "paid"
+      ? `Your rent payment for ${record.period} has been recorded as fully paid.`
+      : `A payment of ${amount} has been recorded for ${record.period}. Remaining amount: ${remainingAmount}.`,
+
+  resourceType: "rent_record",
+
+  resourceId: record._id,
+});
 
       res.status(200).json({
         success: true,
