@@ -1,43 +1,202 @@
 require("dotenv").config();
 
-const app = require("./app");
-const connectDB = require("./config/db");
+const mongoose =
+  require("mongoose");
 
-const PORT = process.env.PORT || 5000;
+const app =
+  require("./app");
 
-const startServer = async () => {
-  try {
-    // Connect to MongoDB before accepting requests
-    await connectDB();
+const connectDB =
+  require("./config/db");
 
-    const server = app.listen(PORT, () => {
-      console.log(`
-========================================
- Gilgit Rental Platform API
-========================================
- Environment : ${process.env.NODE_ENV}
- Port        : ${PORT}
- URL         : http://localhost:${PORT}
-========================================
-`);
-    });
+const {
+  validateEnv,
+} = require("./config/env");
 
-    process.on("unhandledRejection", (error) => {
-      console.error("Unhandled Rejection:", error);
+const PORT =
+  Number(
+    process.env.PORT
+  ) || 5000;
 
-      server.close(() => {
+let server;
+
+let shuttingDown =
+  false;
+
+/*
+|--------------------------------------------------------------------------
+| Graceful shutdown
+|--------------------------------------------------------------------------
+*/
+
+const shutdown =
+  async (
+    signal,
+    exitCode = 0
+  ) => {
+    if (shuttingDown) {
+      return;
+    }
+
+    shuttingDown = true;
+
+    console.log(
+      `${signal} received. Shutting down gracefully...`
+    );
+
+    /*
+    |--------------------------------------------------------------------------
+    | Safety timeout
+    |--------------------------------------------------------------------------
+    */
+
+    const forceExit =
+      setTimeout(() => {
+        console.error(
+          "Forced shutdown after timeout"
+        );
+
         process.exit(1);
-      });
-    });
-  } catch (error) {
-    console.error("Failed to start server:", error);
-    process.exit(1);
-  }
-};
+      }, 10000);
 
-process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
-  process.exit(1);
-});
+    forceExit.unref();
+
+    try {
+      if (server) {
+        await new Promise(
+          (resolve) => {
+            server.close(
+              resolve
+            );
+          }
+        );
+      }
+
+      if (
+        mongoose
+          .connection
+          .readyState !== 0
+      ) {
+        await mongoose.disconnect();
+      }
+
+      console.log(
+        "Server shutdown complete"
+      );
+
+      process.exit(
+        exitCode
+      );
+    } catch (error) {
+      console.error(
+        "Shutdown error:",
+        error
+      );
+
+      process.exit(1);
+    }
+  };
+
+/*
+|--------------------------------------------------------------------------
+| Start
+|--------------------------------------------------------------------------
+*/
+
+const startServer =
+  async () => {
+    try {
+      validateEnv();
+
+      await connectDB();
+
+      server =
+        app.listen(
+          PORT,
+          () => {
+            console.log(
+              [
+                "",
+                "========================================",
+                " Gilgit Rental Platform API",
+                "========================================",
+                ` Environment : ${process.env.NODE_ENV}`,
+                ` Port        : ${PORT}`,
+                ` URL         : http://localhost:${PORT}`,
+                "========================================",
+                "",
+              ].join("\n")
+            );
+          }
+        );
+    } catch (error) {
+      console.error(
+        "Failed to start server:",
+        error.message
+      );
+
+      process.exit(1);
+    }
+  };
+
+/*
+|--------------------------------------------------------------------------
+| Process errors
+|--------------------------------------------------------------------------
+*/
+
+process.on(
+  "unhandledRejection",
+  (error) => {
+    console.error(
+      "Unhandled Rejection:",
+      error
+    );
+
+    shutdown(
+      "unhandledRejection",
+      1
+    );
+  }
+);
+
+process.on(
+  "uncaughtException",
+  (error) => {
+    console.error(
+      "Uncaught Exception:",
+      error
+    );
+
+    shutdown(
+      "uncaughtException",
+      1
+    );
+  }
+);
+
+/*
+|--------------------------------------------------------------------------
+| Deployment shutdown signals
+|--------------------------------------------------------------------------
+*/
+
+process.on(
+  "SIGTERM",
+  () =>
+    shutdown(
+      "SIGTERM",
+      0
+    )
+);
+
+process.on(
+  "SIGINT",
+  () =>
+    shutdown(
+      "SIGINT",
+      0
+    )
+);
 
 startServer();

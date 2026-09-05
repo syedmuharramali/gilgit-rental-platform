@@ -1,29 +1,72 @@
 const dns = require("node:dns");
-const mongoose = require("mongoose");
 
-dns.setServers(["8.8.8.8", "8.8.4.4"]);
+const mongoose = require(
+  "mongoose"
+);
+
+/*
+|--------------------------------------------------------------------------
+| Local DNS workaround
+|--------------------------------------------------------------------------
+|
+| Our Windows/local network previously had trouble resolving MongoDB Atlas
+| SRV records.
+|
+| Never override the production server's DNS configuration.
+|--------------------------------------------------------------------------
+*/
+
+if (
+  process.env.NODE_ENV ===
+  "development"
+) {
+  dns.setServers([
+    "8.8.8.8",
+    "8.8.4.4",
+  ]);
+}
+
+/*
+|--------------------------------------------------------------------------
+| Connect MongoDB
+|--------------------------------------------------------------------------
+*/
+
 const connectDB = async () => {
-  try {
-    const connection = await mongoose.connect(process.env.MONGODB_URI, {
-      dbName: process.env.DB_NAME,
+  const connection =
+    await mongoose.connect(
+      process.env.MONGODB_URI,
+      {
+        dbName:
+          process.env.DB_NAME,
 
-      // Force IPv4
-      family: 4,
+        family: 4,
 
-      // Fail faster while debugging
-      serverSelectionTimeoutMS: 10000,
-    });
+        serverSelectionTimeoutMS:
+          10000,
+      }
+    );
 
-    // Verify that MongoDB can actually execute commands
-    await connection.connection.db.admin().ping();
+  /*
+  |--------------------------------------------------------------------------
+  | Verify actual database connectivity
+  |--------------------------------------------------------------------------
+  */
 
-    console.log(`MongoDB connected: ${connection.connection.host}`);
-    console.log(`Database connected: ${connection.connection.name}`);
-    console.log("MongoDB ping successful");
-  } catch (error) {
-    console.error(`MongoDB connection failed: ${error.message}`);
-    process.exit(1);
-  }
+  await connection.connection.db
+    .admin()
+    .ping();
+
+  console.log(
+    `MongoDB connected: ${connection.connection.host}`
+  );
+
+  console.log(
+    `Database: ${connection.connection.name}`
+  );
+
+  return connection;
 };
 
-module.exports = connectDB;
+module.exports =
+  connectDB;
