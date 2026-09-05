@@ -25,6 +25,64 @@ const {
 
 /*
 |--------------------------------------------------------------------------
+| Safe monthly due date
+|--------------------------------------------------------------------------
+|
+| Keeps the original due-day when possible and clamps to the last valid
+| day of shorter months (for example Jan 31 -> Feb 28/29 -> Mar 31).
+|
+|--------------------------------------------------------------------------
+*/
+
+const getMonthlyDueDate = (
+  startDate,
+  monthOffset
+) => {
+  const targetMonth =
+    new Date(
+      Date.UTC(
+        startDate.getUTCFullYear(),
+        startDate.getUTCMonth() +
+          monthOffset,
+        1
+      )
+    );
+
+  const year =
+    targetMonth.getUTCFullYear();
+
+  const month =
+    targetMonth.getUTCMonth();
+
+  const originalDay =
+    startDate.getUTCDate();
+
+  const lastDayOfMonth =
+    new Date(
+      Date.UTC(
+        year,
+        month + 1,
+        0
+      )
+    ).getUTCDate();
+
+  const safeDay =
+    Math.min(
+      originalDay,
+      lastDayOfMonth
+    );
+
+  return new Date(
+    Date.UTC(
+      year,
+      month,
+      safeDay
+    )
+  );
+};
+
+/*
+|--------------------------------------------------------------------------
 | Generate rent schedule
 | POST /api/rent-ledger/tenancy/:tenancyId/generate
 |--------------------------------------------------------------------------
@@ -33,12 +91,6 @@ const {
 exports.generateRentSchedule =
   asyncHandler(
     async (req, res, next) => {
-      /*
-      |--------------------------------------------------------------------------
-      | Validate tenancy ID
-      |--------------------------------------------------------------------------
-      */
-
       if (
         !mongoose.isValidObjectId(
           req.params.tenancyId
@@ -51,12 +103,6 @@ exports.generateRentSchedule =
           )
         );
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Find tenancy first
-      |--------------------------------------------------------------------------
-      */
 
       const tenancy =
         await Tenancy.findById(
@@ -72,12 +118,6 @@ exports.generateRentSchedule =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Only the tenancy owner can generate the ledger
-      |--------------------------------------------------------------------------
-      */
-
       if (
         tenancy.owner.toString() !==
         req.user._id.toString()
@@ -90,12 +130,6 @@ exports.generateRentSchedule =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Tenancy must be active
-      |--------------------------------------------------------------------------
-      */
-
       if (
         tenancy.status !==
         "active"
@@ -107,12 +141,6 @@ exports.generateRentSchedule =
           )
         );
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Prevent duplicate schedule
-      |--------------------------------------------------------------------------
-      */
 
       const existingCount =
         await RentRecord.countDocuments({
@@ -131,12 +159,6 @@ exports.generateRentSchedule =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Generate one rent record per month
-      |--------------------------------------------------------------------------
-      */
-
       const records = [];
 
       const startDate =
@@ -151,18 +173,9 @@ exports.generateRentSchedule =
         monthIndex++
       ) {
         const dueDate =
-          new Date(
-            Date.UTC(
-              startDate
-                .getUTCFullYear(),
-
-              startDate
-                .getUTCMonth() +
-                monthIndex,
-
-              startDate
-                .getUTCDate()
-            )
+          getMonthlyDueDate(
+            startDate,
+            monthIndex
           );
 
         const year =
@@ -206,30 +219,30 @@ exports.generateRentSchedule =
         });
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Save schedule
-      |--------------------------------------------------------------------------
-      */
-
       const createdRecords =
         await RentRecord.insertMany(
           records
         );
-        await safeCreateNotification({
-  user: tenancy.renter,
 
-  type: "rent",
+      await safeCreateNotification({
+        user:
+          tenancy.renter,
 
-  title: "Rent Schedule Created",
+        type:
+          "rent",
 
-  message:
-    `${createdRecords.length} monthly rent record(s) have been created for your tenancy.`,
+        title:
+          "Rent Schedule Created",
 
-  resourceType: "tenancy",
+        message:
+          `${createdRecords.length} monthly rent record(s) have been created for your tenancy.`,
 
-  resourceId: tenancy._id,
-});
+        resourceType:
+          "tenancy",
+
+        resourceId:
+          tenancy._id,
+      });
 
       res.status(201).json({
         success: true,
@@ -511,9 +524,10 @@ exports.recordPayment =
       }
 
       const notes =
-        req.body
-          ?.notes
-          ?.trim() || null;
+        typeof req.body.notes ===
+        "string"
+          ? req.body.notes.trim()
+          : null;
 
       if (
         notes &&
@@ -534,7 +548,7 @@ exports.recordPayment =
         req.user._id;
 
       record.notes =
-        notes;
+        notes || null;
 
       if (
         record.amountPaid ===
@@ -554,29 +568,36 @@ exports.recordPayment =
       }
 
       await record.save();
+
       const remainingAmount =
-  record.amountDue -
-  record.amountPaid;
+        record.amountDue -
+        record.amountPaid;
 
-await safeCreateNotification({
-  user: record.renter,
+      await safeCreateNotification({
+        user:
+          record.renter,
 
-  type: "rent",
+        type:
+          "rent",
 
-  title:
-    record.status === "paid"
-      ? "Rent Payment Recorded"
-      : "Partial Rent Payment Recorded",
+        title:
+          record.status ===
+          "paid"
+            ? "Rent Payment Recorded"
+            : "Partial Rent Payment Recorded",
 
-  message:
-    record.status === "paid"
-      ? `Your rent payment for ${record.period} has been recorded as fully paid.`
-      : `A payment of ${amount} has been recorded for ${record.period}. Remaining amount: ${remainingAmount}.`,
+        message:
+          record.status ===
+          "paid"
+            ? `Your rent payment for ${record.period} has been recorded as fully paid.`
+            : `A payment of ${amount} has been recorded for ${record.period}. Remaining amount: ${remainingAmount}.`,
 
-  resourceType: "rent_record",
+        resourceType:
+          "rent_record",
 
-  resourceId: record._id,
-});
+        resourceId:
+          record._id,
+      });
 
       res.status(200).json({
         success: true,
