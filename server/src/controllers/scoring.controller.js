@@ -1,7 +1,12 @@
-const mongoose = require("mongoose");
+const mongoose =
+  require("mongoose");
 
 const Property = require(
   "../models/property.model"
+);
+
+const Amenity = require(
+  "../models/amenity.model"
 );
 
 const RenterPreference =
@@ -209,6 +214,42 @@ exports.savePreferences =
         );
       }
 
+      const uniqueAmenities = [
+        ...new Set(
+          amenities.map(
+            (id) =>
+              id.toString()
+          )
+        ),
+      ];
+
+      if (
+        uniqueAmenities.length >
+        0
+      ) {
+        const validAmenities =
+          await Amenity.find({
+            _id: {
+              $in:
+                uniqueAmenities,
+            },
+
+            isActive: true,
+          }).select("_id");
+
+        if (
+          validAmenities.length !==
+          uniqueAmenities.length
+        ) {
+          return next(
+            new AppError(
+              "One or more selected amenities do not exist or are inactive",
+              400
+            )
+          );
+        }
+      }
+
       let minimumBedrooms =
         null;
 
@@ -264,7 +305,8 @@ exports.savePreferences =
 
             minimumBedrooms,
 
-            amenities,
+            amenities:
+              uniqueAmenities,
 
             prioritizeWinterReadiness:
               req.body
@@ -484,6 +526,9 @@ exports.getPropertyLivingScore =
           _id:
             req.params
               .propertyId,
+
+          listingStatus:
+            "published",
 
           isDeleted: {
             $ne: true,
