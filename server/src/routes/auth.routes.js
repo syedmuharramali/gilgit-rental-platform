@@ -5,6 +5,7 @@ const rateLimit = require("express-rate-limit");
 const {
   register,
   login,
+  googleLogin,
   getMe,
 } = require("../controllers/auth.controller");
 
@@ -100,6 +101,35 @@ router.post(
   validateRequest,
 
   login
+);
+
+/*
+|--------------------------------------------------------------------------
+| Google Sign-In
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+  "/google",
+
+  authLimiter,
+
+  [
+    body("credential")
+      .isString()
+      .withMessage("Google credential is required")
+      .trim()
+      .notEmpty()
+      .withMessage("Google credential is required")
+      .isLength({
+        max: 10000,
+      })
+      .withMessage("Google credential is invalid"),
+  ],
+
+  validateRequest,
+
+  googleLogin
 );
 
 /*
