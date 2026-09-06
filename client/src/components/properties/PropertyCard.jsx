@@ -1,6 +1,7 @@
-import { Bath, BedDouble, Heart, MapPin, ShieldCheck } from 'lucide-react'
+import { Bath, BedDouble, MapPin, ShieldCheck } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
+import FavoriteButton from './FavoriteButton'
 
 const formatRent = (value) => new Intl.NumberFormat('en-PK').format(value || 0)
 
@@ -27,9 +28,10 @@ function PropertyCard({ property }) {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/82 px-3 py-1.5 text-[11px] font-bold text-slate-800 shadow-sm backdrop-blur-xl">
               <ShieldCheck className="h-3.5 w-3.5 text-emerald-700" /> Verified listing
             </span>
-            <span className="grid h-9 w-9 place-items-center rounded-full border border-white/35 bg-white/84 text-slate-700 shadow-sm backdrop-blur-xl">
-              <Heart className="h-4 w-4" />
-            </span>
+            <FavoriteButton
+              propertyId={property._id}
+              className="h-9 w-9 border border-white/35 bg-white/84 text-slate-700 shadow-sm backdrop-blur-xl hover:bg-white"
+            />
           </div>
 
           <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 via-black/10 to-transparent p-4 pt-14 text-white">
