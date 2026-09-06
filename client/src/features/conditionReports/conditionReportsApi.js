@@ -5,11 +5,17 @@ export const conditionReportsApi = baseApi.injectEndpoints({
     getConditionReports: builder.query({
       query: (tenancyId) => `/condition-reports/tenancy/${tenancyId}`,
       transformResponse: (response) => response.data,
-      providesTags: (_result, _error, tenancyId) => [{ type: 'ConditionReport', id: `TENANCY-${tenancyId}` }],
+      providesTags: (_result, _error, tenancyId) => [
+        { type: 'ConditionReport', id: `TENANCY-${tenancyId}` },
+        { type: 'ConditionReport', id: 'LIST' },
+      ],
     }),
     createConditionReport: builder.mutation({
       query: ({ tenancyId, ...body }) => ({ url: `/condition-reports/tenancy/${tenancyId}`, method: 'POST', body }),
-      invalidatesTags: (_result, _error, { tenancyId }) => [{ type: 'ConditionReport', id: `TENANCY-${tenancyId}` }],
+      invalidatesTags: (_result, _error, { tenancyId }) => [
+        { type: 'ConditionReport', id: `TENANCY-${tenancyId}` },
+        { type: 'ConditionReport', id: 'LIST' },
+      ],
     }),
     confirmConditionReport: builder.mutation({
       query: (id) => ({ url: `/condition-reports/${id}/confirm`, method: 'PATCH' }),
@@ -23,6 +29,13 @@ export const conditionReportsApi = baseApi.injectEndpoints({
       },
       invalidatesTags: [{ type: 'ConditionReport', id: 'LIST' }],
     }),
+    getConditionEvidence: builder.query({
+      query: ({ id, evidenceId }) => ({
+        url: `/condition-reports/${id}/evidence/${evidenceId}`,
+        responseHandler: (response) => response.blob(),
+      }),
+      keepUnusedDataFor: 0,
+    }),
   }),
 })
 
@@ -31,4 +44,5 @@ export const {
   useCreateConditionReportMutation,
   useConfirmConditionReportMutation,
   useUploadConditionEvidenceMutation,
+  useLazyGetConditionEvidenceQuery,
 } = conditionReportsApi
