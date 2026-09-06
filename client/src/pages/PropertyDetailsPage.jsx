@@ -1,6 +1,7 @@
-import { Bath, BedDouble, CalendarDays, CheckCircle2, ChevronLeft, Heart, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
+import { Bath, BedDouble, CalendarDays, CheckCircle2, ChevronLeft, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
+import FavoriteButton from '../components/properties/FavoriteButton'
 import { useGetPropertyQuery } from '../features/properties/propertiesApi'
 
 const money = (value) => new Intl.NumberFormat('en-PK').format(value || 0)
@@ -54,7 +55,11 @@ function PropertyDetailsPage() {
                 <h1 className="mt-4 text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-5xl">{property.title}</h1>
                 <p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4" /> {property.address?.area}, {property.address?.city}</p>
               </div>
-              <button className="grid h-12 w-12 shrink-0 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"><Heart className="h-5 w-5" /></button>
+              <FavoriteButton
+                propertyId={property._id}
+                showLabel
+                className="min-h-12 shrink-0 border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-lg"
+              />
             </div>
 
             <div className="grid grid-cols-2 gap-3 border-b border-slate-200 py-7 sm:grid-cols-4">
