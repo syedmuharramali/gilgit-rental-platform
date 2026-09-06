@@ -36,85 +36,51 @@ function LoginPage() {
     if (loginUser.fulfilled.match(result)) toast.success('Welcome back')
   }
 
-  const onGoogleCredential = useCallback(
-    async (credential) => {
-      const result = await dispatch(googleSignIn(credential))
-      if (googleSignIn.fulfilled.match(result)) toast.success('Signed in with Google')
-    },
-    [dispatch],
-  )
+  const onGoogleCredential = useCallback(async (credential) => {
+    const result = await dispatch(googleSignIn(credential))
+    if (googleSignIn.fulfilled.match(result)) toast.success('Signed in with Google')
+  }, [dispatch])
 
   return (
     <AuthLayout
       eyebrow="Welcome back"
-      title="Find your place in Gilgit."
-      subtitle="Sign in to manage applications, saved homes, viewings and every step of your rental journey."
+      title="Your next home is closer."
+      subtitle="Sign in to continue saved homes, applications, viewings and your rental journey."
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        <label className="field-wrap">
-          <span className="field-label">Email address</span>
-          <div className="field-shell">
-            <Mail className="field-icon" />
-            <input
-              type="email"
-              name="email"
-              value={form.email}
-              onChange={onChange}
-              autoComplete="email"
-              placeholder="you@example.com"
-              required
-            />
+        <label className="block">
+          <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">Email address</span>
+          <div className="relative flex h-13 items-center rounded-[18px] border border-slate-200 bg-slate-50 transition focus-within:border-emerald-700/35 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-900/[0.04]">
+            <Mail className="absolute left-4 h-4 w-4 text-slate-400" />
+            <input type="email" name="email" value={form.email} onChange={onChange} autoComplete="email" placeholder="you@example.com" required className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400" />
           </div>
         </label>
 
-        <label className="field-wrap">
-          <span className="field-label">Password</span>
-          <div className="field-shell">
-            <LockKeyhole className="field-icon" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              name="password"
-              value={form.password}
-              onChange={onChange}
-              autoComplete="current-password"
-              placeholder="Enter your password"
-              required
-            />
-            <button
-              type="button"
-              className="field-action"
-              onClick={() => setShowPassword((value) => !value)}
-              aria-label={showPassword ? 'Hide password' : 'Show password'}
-            >
-              {showPassword ? <EyeOff /> : <Eye />}
+        <label className="block">
+          <span className="mb-2 block text-xs font-extrabold uppercase tracking-[0.12em] text-slate-500">Password</span>
+          <div className="relative flex h-13 items-center rounded-[18px] border border-slate-200 bg-slate-50 transition focus-within:border-emerald-700/35 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-900/[0.04]">
+            <LockKeyhole className="absolute left-4 h-4 w-4 text-slate-400" />
+            <input type={showPassword ? 'text' : 'password'} name="password" value={form.password} onChange={onChange} autoComplete="current-password" placeholder="Enter your password" required className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-slate-900 outline-none placeholder:font-medium placeholder:text-slate-400" />
+            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-slate-400 transition hover:bg-white hover:text-slate-700" aria-label={showPassword ? 'Hide password' : 'Show password'}>
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
             </button>
           </div>
         </label>
 
-        <div className="flex items-center justify-between gap-3 text-sm">
-          <label className="flex items-center gap-2 text-white/45">
-            <input type="checkbox" className="accent-emerald-400" />
-            Keep me signed in
-          </label>
-          <span className="cursor-not-allowed text-white/30" title="Password recovery will be added with the account settings phase">
-            Forgot password?
-          </span>
+        <div className="flex items-center justify-between gap-3 text-xs">
+          <label className="flex items-center gap-2 font-semibold text-slate-500"><input type="checkbox" className="accent-[#245545]" /> Keep me signed in</label>
+          <span className="text-slate-400">Forgot password?</span>
         </div>
 
-        <button type="submit" disabled={isLoading} className="primary-action">
+        <button type="submit" disabled={isLoading} className="flex h-13 w-full items-center justify-center gap-2 rounded-[18px] bg-[#102f26] text-sm font-black text-white shadow-[0_16px_34px_rgba(16,47,38,.18)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">
           {isLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : 'Sign in'}
         </button>
       </form>
 
-      <div className="auth-divider"><span>or continue with</span></div>
+      <div className="my-5 flex items-center gap-3 text-[10px] font-extrabold uppercase tracking-[0.14em] text-slate-400 before:h-px before:flex-1 before:bg-slate-200 after:h-px after:flex-1 after:bg-slate-200"><span>or continue with</span></div>
       <GoogleSignInButton onCredential={onGoogleCredential} disabled={isLoading} />
 
-      <p className="mt-7 text-center text-sm text-white/45">
-        New to Gilgit Rental?{' '}
-        <Link className="font-semibold text-emerald-300 transition hover:text-emerald-200" to="/register">
-          Create an account
-        </Link>
-      </p>
+      <p className="mt-6 text-center text-sm text-slate-500">New here? <Link className="font-black text-[#245545] hover:text-[#102f26]" to="/register">Create an account</Link></p>
     </AuthLayout>
   )
 }
