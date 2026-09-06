@@ -6,6 +6,7 @@ import { Toaster } from 'sonner'
 import App from './App.jsx'
 import { store } from './app/store'
 import './index.css'
+import './pages/properties.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
