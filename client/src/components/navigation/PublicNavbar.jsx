@@ -1,4 +1,4 @@
-import { Menu, Search, Sparkles, X } from 'lucide-react'
+import { Heart, Menu, Search, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
@@ -44,6 +44,18 @@ function PublicNavbar() {
               {link.label}
             </NavLink>
           ))}
+          {token && (
+            <NavLink
+              to="/favorites"
+              className={({ isActive }) =>
+                `rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                  isActive ? 'bg-slate-100 text-slate-950' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-950'
+                }`
+              }
+            >
+              Saved homes
+            </NavLink>
+          )}
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -54,6 +66,15 @@ function PublicNavbar() {
           >
             <Search className="h-4 w-4" />
           </Link>
+          {token && (
+            <Link
+              to="/favorites"
+              className="grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-lg"
+              aria-label="Saved homes"
+            >
+              <Heart className="h-4 w-4" />
+            </Link>
+          )}
           {token ? (
             <Link to="/dashboard" className="rounded-full bg-[#102f26] px-5 py-2.5 text-sm font-bold text-white shadow-[0_12px_28px_rgba(16,47,38,0.18)] transition hover:-translate-y-0.5">
               Dashboard
@@ -92,6 +113,11 @@ function PublicNavbar() {
                   {link.label}
                 </Link>
               ))}
+              {token && (
+                <Link to="/favorites" onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  Saved homes
+                </Link>
+              )}
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <Link to={token ? '/dashboard' : '/login'} onClick={() => setOpen(false)} className="rounded-2xl border border-slate-200 px-4 py-3 text-center text-sm font-bold text-slate-800">
                   {token ? 'Dashboard' : 'Sign in'}
