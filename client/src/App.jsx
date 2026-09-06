@@ -26,7 +26,6 @@ import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
 import {
   AgreementsPage,
-  ConditionReportsPage,
   MessagesPage,
   NotificationsPage,
   OwnerPropertiesPage,
@@ -35,6 +34,7 @@ import {
   ReportsPage,
   ReviewsPage,
 } from './pages/workspace/AccountPages'
+import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import {
   ApplicationsPage,
   DashboardOverviewPage,
