@@ -25,21 +25,23 @@ import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
 import {
   AgreementsPage,
-  ApplicationsPage,
   ConditionReportsPage,
-  DashboardOverviewPage,
-  MaintenancePage,
   MessagesPage,
   NotificationsPage,
   OwnerPropertiesPage,
   OwnerVerificationPage,
   ProfilePage,
-  RentPage,
   ReportsPage,
   ReviewsPage,
+} from './pages/workspace/AccountPages'
+import {
+  ApplicationsPage,
+  DashboardOverviewPage,
+  MaintenancePage,
+  RentPage,
   TenanciesPage,
   ViewingsPage,
-} from './pages/workspace/WorkspacePages'
+} from './pages/workspace/LifecyclePages'
 
 const protectedElement = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 
