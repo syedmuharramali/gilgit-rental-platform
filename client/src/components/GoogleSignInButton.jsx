@@ -16,6 +16,7 @@ function GoogleSignInButton({ onCredential, disabled = false }) {
     }
 
     let cancelled = false
+
     const initialize = () => {
       if (cancelled || !window.google || !buttonRef.current) return
 
@@ -63,21 +64,12 @@ function GoogleSignInButton({ onCredential, disabled = false }) {
   }, [onCredential])
 
   if (scriptError) {
-    return (
-      <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-        Google Sign-In is unavailable. Check VITE_GOOGLE_CLIENT_ID and your connection.
-      </div>
-    )
+    return <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">Google Sign-In is unavailable. Check VITE_GOOGLE_CLIENT_ID and your connection.</div>
   }
 
   return (
-    <div className={`google-button-shell ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
-      {!ready && (
-        <div className="flex h-11 items-center justify-center gap-2 text-sm text-white/60">
-          <LoaderCircle className="h-4 w-4 animate-spin" />
-          Loading Google Sign-In
-        </div>
-      )}
+    <div className={`overflow-hidden rounded-[18px] border border-slate-200 bg-white p-1.5 ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
+      {!ready && <div className="flex h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400"><LoaderCircle className="h-4 w-4 animate-spin" /> Loading Google Sign-In</div>}
       <div ref={buttonRef} className={ready ? 'flex justify-center' : 'hidden'} />
     </div>
   )
