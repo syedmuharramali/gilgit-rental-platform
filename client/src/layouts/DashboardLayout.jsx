@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   Sparkles,
   Star,
+  TriangleAlert,
   Wrench,
   WalletCards,
 } from 'lucide-react'
@@ -33,6 +34,7 @@ const renterLinks = [
   ['/dashboard/condition-reports', 'Condition reports', ClipboardList],
   ['/dashboard/maintenance', 'Maintenance', Wrench],
   ['/dashboard/reviews', 'Reviews', Star],
+  ['/dashboard/reports', 'Safety reports', TriangleAlert],
   ['/dashboard/notifications', 'Notifications', Bell],
   ['/dashboard/profile', 'Profile', Settings2],
 ]
@@ -45,7 +47,14 @@ const ownerLinks = [
   ['/owner/viewings', 'Viewings', FileCheck2],
   ['/owner/tenancies', 'Tenancies', Building2],
   ['/owner/rent', 'Rent ledger', WalletCards],
+  ['/owner/messages', 'Messages', MessageCircle],
+  ['/owner/agreements', 'Agreements', FileCheck2],
+  ['/owner/condition-reports', 'Condition reports', ClipboardList],
   ['/owner/maintenance', 'Maintenance', Wrench],
+  ['/owner/reviews', 'Reviews', Star],
+  ['/owner/reports', 'Safety reports', TriangleAlert],
+  ['/owner/notifications', 'Notifications', Bell],
+  ['/owner/profile', 'Profile', Settings2],
 ]
 
 function DashboardLayout({ mode = 'renter' }) {
@@ -53,9 +62,10 @@ function DashboardLayout({ mode = 'renter' }) {
   const user = useSelector((state) => state.auth.user)
   const { data: unread } = useGetUnreadCountQuery(undefined, { pollingInterval: 30000 })
   const links = mode === 'owner' ? ownerLinks : renterLinks
+  const notificationPath = mode === 'owner' ? '/owner/notifications' : '/dashboard/notifications'
 
   return (
-    <div className="min-h-screen bg-[#f4f6f5] text-slate-950">
+    <div className="min-h-screen bg-[#f4f6f5] pb-20 text-slate-950 lg:pb-0">
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-slate-200 bg-white lg:flex lg:flex-col">
         <div className="flex h-20 items-center gap-3 border-b border-slate-100 px-6">
           <Link to="/" className="grid h-10 w-10 place-items-center rounded-2xl bg-[#102f26] text-white"><Sparkles className="h-4 w-4" /></Link>
@@ -84,7 +94,7 @@ function DashboardLayout({ mode = 'renter' }) {
           <div><p className="text-xs font-black uppercase tracking-[.18em] text-emerald-700">{mode === 'owner' ? 'Manage your rentals' : 'Your rental journey'}</p></div>
           <div className="flex items-center gap-2">
             {mode === 'renter' ? <Link to="/owner" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-700">Owner mode</Link> : <Link to="/dashboard" className="rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-700">Renter mode</Link>}
-            <Link to="/dashboard/notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white"><Bell className="h-4 w-4" />{unread?.unreadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{unread.unreadCount}</span>}</Link>
+            <Link to={notificationPath} className="relative grid h-10 w-10 place-items-center rounded-full border border-slate-200 bg-white"><Bell className="h-4 w-4" />{unread?.unreadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{unread.unreadCount}</span>}</Link>
           </div>
         </header>
         <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
