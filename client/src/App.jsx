@@ -19,6 +19,7 @@ import InfoPage from './pages/InfoPage'
 import LivingScorePage from './pages/LivingScorePage'
 import LoginPage from './pages/LoginPage'
 import PropertyEditorPage from './pages/owner/PropertyEditorPage'
+import PropertyMediaPage from './pages/owner/PropertyMediaPage'
 import PropertiesPage from './pages/PropertiesPage'
 import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
@@ -91,6 +92,7 @@ function App() {
         <Route path="properties" element={<OwnerPropertiesPage />} />
         <Route path="properties/new" element={<PropertyEditorPage />} />
         <Route path="properties/:id/edit" element={<PropertyEditorPage />} />
+        <Route path="media" element={<PropertyMediaPage />} />
         <Route path="applications" element={<ApplicationsPage owner />} />
         <Route path="viewings" element={<ViewingsPage owner />} />
         <Route path="tenancies" element={<TenanciesPage owner />} />
