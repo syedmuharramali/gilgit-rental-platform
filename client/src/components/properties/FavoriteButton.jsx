@@ -6,6 +6,7 @@ import { toast } from 'sonner'
 import {
   useAddFavoriteMutation,
   useCheckFavoriteQuery,
+  useGetFavoritesQuery,
   useRemoveFavoriteMutation,
 } from '../../features/favorites/favoritesApi'
 
@@ -13,12 +14,15 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
   const token = useSelector((state) => state.auth.token)
   const navigate = useNavigate()
   const location = useLocation()
-  const { data, isFetching } = useCheckFavoriteQuery(propertyId, { skip: !token || !propertyId })
+  const listQuery = useGetFavoritesQuery(undefined, { skip: !token || showLabel })
+  const statusQuery = useCheckFavoriteQuery(propertyId, { skip: !token || !propertyId || !showLabel })
   const [addFavorite, { isLoading: isAdding }] = useAddFavoriteMutation()
   const [removeFavorite, { isLoading: isRemoving }] = useRemoveFavoriteMutation()
 
-  const isSaved = Boolean(data?.isSaved)
-  const isLoading = isAdding || isRemoving || isFetching
+  const isSaved = showLabel
+    ? Boolean(statusQuery.data?.isSaved)
+    : Boolean(listQuery.data?.favorites?.some((favorite) => String(favorite.property?._id) === String(propertyId)))
+  const isLoading = isAdding || isRemoving || (showLabel ? statusQuery.isFetching : listQuery.isFetching)
 
   const handleClick = async (event) => {
     event.preventDefault()
