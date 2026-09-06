@@ -6,13 +6,13 @@ import { hydrateCurrentUser } from './features/auth/authSlice'
 import AdminLayout from './layouts/AdminLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 import PublicLayout from './layouts/PublicLayout'
+import { AdminDashboardPage, AdminGuard, AdminReportsPage } from './pages/admin/AdminPages'
 import {
-  AdminDashboardPage,
-  AdminGuard,
-  AdminPropertiesPage,
-  AdminReportsPage,
-  AdminVerificationsPage,
-} from './pages/admin/AdminPages'
+  AdminPropertiesQueuePage,
+  AdminPropertyReviewPage,
+  AdminVerificationReviewPage,
+  AdminVerificationsQueuePage,
+} from './pages/admin/AdminReviewPages'
 import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
 import InfoPage from './pages/InfoPage'
@@ -107,8 +107,10 @@ function App() {
 
       <Route path="/admin" element={protectedElement(<AdminGuard><AdminLayout /></AdminGuard>)}>
         <Route index element={<AdminDashboardPage />} />
-        <Route path="verifications" element={<AdminVerificationsPage />} />
-        <Route path="properties" element={<AdminPropertiesPage />} />
+        <Route path="verifications" element={<AdminVerificationsQueuePage />} />
+        <Route path="verifications/:id" element={<AdminVerificationReviewPage />} />
+        <Route path="properties" element={<AdminPropertiesQueuePage />} />
+        <Route path="properties/:id" element={<AdminPropertyReviewPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
       </Route>
 
