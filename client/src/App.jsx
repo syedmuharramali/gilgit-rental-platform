@@ -8,10 +8,12 @@ import DashboardPage from './pages/DashboardPage'
 import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
 import InfoPage from './pages/InfoPage'
+import LivingScorePage from './pages/LivingScorePage'
 import LoginPage from './pages/LoginPage'
 import PropertiesPage from './pages/PropertiesPage'
 import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
+import SmartMatchesPage from './pages/SmartMatchesPage'
 
 function App() {
   const dispatch = useDispatch()
@@ -37,7 +39,15 @@ function App() {
             </ProtectedRoute>
           }
         />
-        <Route path="/living-score" element={<InfoPage type="living-score" />} />
+        <Route
+          path="/matches"
+          element={
+            <ProtectedRoute>
+              <SmartMatchesPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/living-score" element={<LivingScorePage />} />
         <Route path="/about" element={<InfoPage type="about" />} />
         <Route path="/help" element={<InfoPage type="help" />} />
       </Route>
