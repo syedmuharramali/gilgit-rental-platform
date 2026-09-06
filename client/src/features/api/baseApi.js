@@ -28,6 +28,7 @@ export const baseApi = createApi({
     'ConditionReport',
     'Maintenance',
     'Review',
+    'Report',
     'Notification',
     'Verification',
   ],
