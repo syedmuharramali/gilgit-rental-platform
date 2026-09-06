@@ -16,23 +16,20 @@ export const favoritesApi = baseApi.injectEndpoints({
             ]
           : [{ type: 'Favorite', id: 'LIST' }],
     }),
-
+    checkFavorite: builder.query({
+      query: (propertyId) => `/favorites/${propertyId}/check`,
+      transformResponse: (response) => response.data,
+      providesTags: (_result, _error, propertyId) => [{ type: 'Favorite', id: propertyId }],
+    }),
     addFavorite: builder.mutation({
-      query: (propertyId) => ({
-        url: `/favorites/${propertyId}`,
-        method: 'POST',
-      }),
+      query: (propertyId) => ({ url: `/favorites/${propertyId}`, method: 'POST' }),
       invalidatesTags: (_result, _error, propertyId) => [
         { type: 'Favorite', id: propertyId },
         { type: 'Favorite', id: 'LIST' },
       ],
     }),
-
     removeFavorite: builder.mutation({
-      query: (propertyId) => ({
-        url: `/favorites/${propertyId}`,
-        method: 'DELETE',
-      }),
+      query: (propertyId) => ({ url: `/favorites/${propertyId}`, method: 'DELETE' }),
       invalidatesTags: (_result, _error, propertyId) => [
         { type: 'Favorite', id: propertyId },
         { type: 'Favorite', id: 'LIST' },
@@ -43,6 +40,7 @@ export const favoritesApi = baseApi.injectEndpoints({
 
 export const {
   useGetFavoritesQuery,
+  useCheckFavoriteQuery,
   useAddFavoriteMutation,
   useRemoveFavoriteMutation,
 } = favoritesApi
