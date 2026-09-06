@@ -5,6 +5,7 @@ import ProtectedRoute from './components/ProtectedRoute'
 import { hydrateCurrentUser } from './features/auth/authSlice'
 import PublicLayout from './layouts/PublicLayout'
 import DashboardPage from './pages/DashboardPage'
+import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
 import InfoPage from './pages/InfoPage'
 import LoginPage from './pages/LoginPage'
@@ -28,6 +29,14 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/properties/:id" element={<PropertyDetailsPage />} />
+        <Route
+          path="/favorites"
+          element={
+            <ProtectedRoute>
+              <FavoritesPage />
+            </ProtectedRoute>
+          }
+        />
         <Route path="/living-score" element={<InfoPage type="living-score" />} />
         <Route path="/about" element={<InfoPage type="about" />} />
         <Route path="/help" element={<InfoPage type="help" />} />
