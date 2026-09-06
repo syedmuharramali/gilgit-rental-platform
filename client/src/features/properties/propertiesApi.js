@@ -44,6 +44,14 @@ export const propertiesApi = baseApi.injectEndpoints({
       },
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
     }),
+    reorderPropertyImages: builder.mutation({
+      query: ({ id, imageIds }) => ({
+        url: `/properties/${id}/images/reorder`,
+        method: 'PATCH',
+        body: { imageIds },
+      }),
+      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+    }),
     setCoverImage: builder.mutation({
       query: ({ id, imageId }) => ({ url: `/properties/${id}/images/${imageId}/cover`, method: 'PATCH' }),
       invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
@@ -64,6 +72,7 @@ export const {
   useDeletePropertyMutation,
   useSubmitPropertyMutation,
   useUploadPropertyImagesMutation,
+  useReorderPropertyImagesMutation,
   useSetCoverImageMutation,
   useDeletePropertyImageMutation,
 } = propertiesApi
