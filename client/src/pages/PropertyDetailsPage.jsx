@@ -1,14 +1,18 @@
-import { Bath, BedDouble, CalendarDays, CheckCircle2, ChevronLeft, MapPin, ShieldCheck, UsersRound } from 'lucide-react'
+import { Bath, BedDouble, CalendarDays, CheckCircle2, ChevronLeft, MapPin, ShieldCheck, Sparkles, UsersRound } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useParams } from 'react-router-dom'
 import FavoriteButton from '../components/properties/FavoriteButton'
+import LivingScoreBreakdown from '../components/scoring/LivingScoreBreakdown'
+import ScoreRing from '../components/scoring/ScoreRing'
 import { useGetPropertyQuery } from '../features/properties/propertiesApi'
+import { useGetLivingScoreQuery } from '../features/scoring/scoringApi'
 
 const money = (value) => new Intl.NumberFormat('en-PK').format(value || 0)
 
 function PropertyDetailsPage() {
   const { id } = useParams()
   const { data: property, isLoading, error } = useGetPropertyQuery(id)
+  const { data: livingScore, isLoading: scoreLoading } = useGetLivingScoreQuery(id, { skip: !id })
 
   if (isLoading) {
     return <main className="min-h-[70vh] bg-[#f6f8f7] px-5 py-10"><div className="mx-auto max-w-[1440px] animate-pulse"><div className="h-[55vh] rounded-[34px] bg-slate-200" /><div className="mt-8 h-10 w-1/2 rounded bg-slate-200" /></div></main>
@@ -28,17 +32,11 @@ function PropertyDetailsPage() {
 
   return (
     <main className="bg-[#f6f8f7] pb-20">
-      <section className="px-5 py-5 sm:px-8 lg:px-10">
-        <div className="mx-auto max-w-[1440px]">
-          <Link to="/properties" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-950"><ChevronLeft className="h-4 w-4" /> Back to rentals</Link>
-        </div>
-      </section>
+      <section className="px-5 py-5 sm:px-8 lg:px-10"><div className="mx-auto max-w-[1440px]"><Link to="/properties" className="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-950"><ChevronLeft className="h-4 w-4" /> Back to rentals</Link></div></section>
 
       <section className="px-5 sm:px-8 lg:px-10">
         <div className="mx-auto grid max-w-[1440px] gap-3 overflow-hidden rounded-[34px] lg:grid-cols-[1.3fr_.7fr] lg:grid-rows-2">
-          <div className="min-h-[360px] overflow-hidden bg-slate-200 lg:row-span-2 lg:min-h-[620px]">
-            {cover?.url ? <img src={cover.url} alt={cover.alt || property.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center bg-[#d7e6de] font-bold text-slate-600">No property image</div>}
-          </div>
+          <div className="min-h-[360px] overflow-hidden bg-slate-200 lg:row-span-2 lg:min-h-[620px]">{cover?.url ? <img src={cover.url} alt={cover.alt || property.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center bg-[#d7e6de] font-bold text-slate-600">No property image</div>}</div>
           {secondary.slice(0, 2).map((image) => <div key={image.id} className="hidden overflow-hidden bg-slate-200 lg:block"><img src={image.url} alt={image.alt || property.title} className="h-full w-full object-cover" /></div>)}
         </div>
       </section>
@@ -48,18 +46,11 @@ function PropertyDetailsPage() {
           <div>
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-7 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="rounded-full bg-[#e6f2ec] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#245545]">{property.propertyType?.replaceAll('_', ' ')}</span>
-                  <span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200"><ShieldCheck className="h-3.5 w-3.5 text-emerald-700" /> Published</span>
-                </div>
+                <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-[#e6f2ec] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#245545]">{property.propertyType?.replaceAll('_', ' ')}</span><span className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1.5 text-[11px] font-bold text-slate-600 ring-1 ring-slate-200"><ShieldCheck className="h-3.5 w-3.5 text-emerald-700" /> Published</span></div>
                 <h1 className="mt-4 text-4xl font-black tracking-[-0.055em] text-slate-950 sm:text-5xl">{property.title}</h1>
                 <p className="mt-3 flex items-center gap-2 text-sm text-slate-500"><MapPin className="h-4 w-4" /> {property.address?.area}, {property.address?.city}</p>
               </div>
-              <FavoriteButton
-                propertyId={property._id}
-                showLabel
-                className="min-h-12 shrink-0 border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-lg"
-              />
+              <FavoriteButton propertyId={property._id} showLabel className="min-h-12 shrink-0 border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm hover:-translate-y-0.5 hover:shadow-lg" />
             </div>
 
             <div className="grid grid-cols-2 gap-3 border-b border-slate-200 py-7 sm:grid-cols-4">
@@ -69,38 +60,23 @@ function PropertyDetailsPage() {
               <div className="rounded-[20px] bg-white p-4 ring-1 ring-slate-200"><CalendarDays className="h-4 w-4 text-emerald-700" /><p className="mt-3 text-sm font-black">{property.minimumStayMonths || 1}+ month stay</p></div>
             </div>
 
-            <div className="py-8">
-              <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">About this place</h2>
-              <p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-600">{property.description}</p>
-            </div>
+            <div className="py-8"><h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">About this place</h2><p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-600">{property.description}</p></div>
 
             <div className="border-t border-slate-200 py-8">
-              <h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">Amenities</h2>
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {(property.amenities || []).map((amenity) => <div key={amenity._id} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"><CheckCircle2 className="h-4 w-4 text-emerald-700" /> {amenity.name}</div>)}
-              </div>
+              <div className="mb-6 flex items-end justify-between gap-4"><div><span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.12em] text-emerald-700"><Sparkles className="h-3.5 w-3.5" /> Gilgit Living Score</span><h2 className="mt-3 text-2xl font-black tracking-[-0.04em] text-slate-950">How practical is this home for local living?</h2></div><Link to="/living-score" className="hidden text-sm font-black text-emerald-700 sm:block">How it works →</Link></div>
+              {scoreLoading ? <div className="h-64 animate-pulse rounded-[28px] bg-slate-200" /> : livingScore ? <div className="grid gap-6 rounded-[30px] border border-slate-200 bg-[#f9fbfa] p-5 sm:p-6 xl:grid-cols-[180px_1fr] xl:items-center"><div className="flex justify-center"><ScoreRing score={livingScore.gilgitLivingScore} label={livingScore.label} size={160} /></div><LivingScoreBreakdown breakdown={livingScore.breakdown} /></div> : null}
             </div>
+
+            <div className="border-t border-slate-200 py-8"><h2 className="text-2xl font-black tracking-[-0.04em] text-slate-950">Amenities</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{(property.amenities || []).map((amenity) => <div key={amenity._id} className="flex items-center gap-3 rounded-2xl bg-white px-4 py-3 text-sm font-semibold text-slate-700 ring-1 ring-slate-200"><CheckCircle2 className="h-4 w-4 text-emerald-700" /> {amenity.name}</div>)}</div></div>
           </div>
 
           <aside>
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="sticky top-24 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_24px_70px_rgba(15,23,42,.10)]">
-              <p className="text-sm text-slate-500">Monthly rent</p>
-              <p className="mt-1 text-3xl font-black tracking-[-0.045em] text-slate-950">PKR {money(property.monthlyRent)}</p>
-              {property.negotiable && <span className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-700">Negotiable</span>}
-
-              <div className="mt-6 space-y-3 rounded-[22px] bg-[#f6f8f7] p-4 text-sm">
-                <div className="flex justify-between gap-4"><span className="text-slate-500">Security deposit</span><strong>PKR {money(property.securityDeposit)}</strong></div>
-                <div className="flex justify-between gap-4"><span className="text-slate-500">Furnishing</span><strong className="capitalize">{property.furnishedStatus?.replace('_', ' ')}</strong></div>
-                <div className="flex justify-between gap-4"><span className="text-slate-500">Available</span><strong>{property.availableFrom ? new Date(property.availableFrom).toLocaleDateString() : 'Ask owner'}</strong></div>
-              </div>
-
+              <p className="text-sm text-slate-500">Monthly rent</p><p className="mt-1 text-3xl font-black tracking-[-0.045em] text-slate-950">PKR {money(property.monthlyRent)}</p>{property.negotiable && <span className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-700">Negotiable</span>}
+              <div className="mt-6 space-y-3 rounded-[22px] bg-[#f6f8f7] p-4 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-500">Security deposit</span><strong>PKR {money(property.securityDeposit)}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">Furnishing</span><strong className="capitalize">{property.furnishedStatus?.replace('_', ' ')}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">Available</span><strong>{property.availableFrom ? new Date(property.availableFrom).toLocaleDateString() : 'Ask owner'}</strong></div></div>
               <Link to="/login" state={{ from: `/properties/${property._id}` }} className="mt-5 flex h-13 items-center justify-center rounded-[18px] bg-[#102f26] text-sm font-black text-white shadow-lg transition hover:-translate-y-0.5">Sign in to apply</Link>
               <button className="mt-2 flex h-13 w-full items-center justify-center rounded-[18px] border border-slate-200 text-sm font-black text-slate-700">Schedule a viewing</button>
-
-              <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">
-                {property.owner?.avatar?.url ? <img src={property.owner.avatar.url} alt="" className="h-11 w-11 rounded-2xl object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e8f2ed] font-black text-[#245545]">{property.owner?.name?.[0] || 'O'}</div>}
-                <div><p className="text-sm font-black text-slate-900">{property.owner?.name || 'Property owner'}</p><p className="text-xs text-slate-400">Verified rental owner</p></div>
-              </div>
+              <div className="mt-6 flex items-center gap-3 border-t border-slate-100 pt-5">{property.owner?.avatar?.url ? <img src={property.owner.avatar.url} alt="" className="h-11 w-11 rounded-2xl object-cover" /> : <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e8f2ed] font-black text-[#245545]">{property.owner?.name?.[0] || 'O'}</div>}<div><p className="text-sm font-black text-slate-900">{property.owner?.name || 'Property owner'}</p><p className="text-xs text-slate-400">Verified rental owner</p></div></div>
             </motion.div>
           </aside>
         </div>
