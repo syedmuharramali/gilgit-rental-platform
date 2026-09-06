@@ -1,21 +1,75 @@
-const mongoose =
-  require("mongoose");
+const mongoose = require("mongoose");
 
-const Favorite =
-  require(
-    "../models/favorite.model"
-  );
+const Favorite = require(
+  "../models/favorite.model"
+);
 
-const Property =
-  require(
-    "../models/property.model"
-  );
+const Property = require(
+  "../models/property.model"
+);
 
-const AppError =
-  require("../utils/AppError");
+const {
+  getPublicFileViewUrl,
+} = require(
+  "../services/storage.service"
+);
 
-const asyncHandler =
-  require("../utils/asyncHandler");
+const AppError = require(
+  "../utils/AppError"
+);
+
+const asyncHandler = require(
+  "../utils/asyncHandler"
+);
+
+/*
+|--------------------------------------------------------------------------
+| Helpers
+|--------------------------------------------------------------------------
+*/
+
+const favoritePropertySelect =
+  "title slug monthlyRent securityDeposit propertyType furnishedStatus address listingStatus availableFrom bedrooms bathrooms maxOccupants images";
+
+const formatPropertyImages = (
+  images = []
+) => {
+  return [...images]
+    .sort(
+      (a, b) =>
+        a.order - b.order
+    )
+    .map((image) => ({
+      id: image._id,
+      fileId: image.fileId,
+      name: image.name,
+      mimeType: image.mimeType,
+      size: image.size,
+      alt: image.alt,
+      isCover: image.isCover,
+      order: image.order,
+      url:
+        getPublicFileViewUrl(
+          image.fileId
+        ),
+    }));
+};
+
+const formatFavorite = (
+  favorite
+) => {
+  const result =
+    favorite.toObject();
+
+  if (favorite.property) {
+    result.property.images =
+      formatPropertyImages(
+        favorite.property.images
+      );
+  }
+
+  return result;
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -93,7 +147,7 @@ exports.addFavorite =
         path: "property",
 
         select:
-          "title slug monthlyRent propertyType furnishedStatus address listingStatus",
+          favoritePropertySelect,
       });
 
       res.status(201).json({
@@ -103,7 +157,10 @@ exports.addFavorite =
           "Property saved successfully",
 
         data: {
-          favorite,
+          favorite:
+            formatFavorite(
+              favorite
+            ),
         },
       });
     }
@@ -127,8 +184,17 @@ exports.getMyFavorites =
           .populate({
             path: "property",
 
+            match: {
+              listingStatus:
+                "published",
+
+              isDeleted: {
+                $ne: true,
+              },
+            },
+
             select:
-              "title slug monthlyRent propertyType furnishedStatus address listingStatus availableFrom",
+              favoritePropertySelect,
           })
           .sort({
             createdAt: -1,
@@ -136,15 +202,19 @@ exports.getMyFavorites =
 
       /*
       |--------------------------------------------------------------------------
-      | Remove references whose property no longer exists
+      | Hide saved references whose listing is no longer publicly available
       |--------------------------------------------------------------------------
       */
 
       const validFavorites =
-        favorites.filter(
-          (favorite) =>
-            favorite.property
-        );
+        favorites
+          .filter(
+            (favorite) =>
+              favorite.property
+          )
+          .map(
+            formatFavorite
+          );
 
       res.status(200).json({
         success: true,
