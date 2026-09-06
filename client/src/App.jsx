@@ -3,8 +3,13 @@ import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { hydrateCurrentUser } from './features/auth/authSlice'
+import PublicLayout from './layouts/PublicLayout'
 import DashboardPage from './pages/DashboardPage'
+import HomePage from './pages/HomePage'
+import InfoPage from './pages/InfoPage'
 import LoginPage from './pages/LoginPage'
+import PropertiesPage from './pages/PropertiesPage'
+import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
 
 function App() {
@@ -19,9 +24,18 @@ function App() {
 
   return (
     <Routes>
-      <Route path="/" element={<Navigate to={token ? '/dashboard' : '/login'} replace />} />
+      <Route element={<PublicLayout />}>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/properties" element={<PropertiesPage />} />
+        <Route path="/properties/:id" element={<PropertyDetailsPage />} />
+        <Route path="/living-score" element={<InfoPage type="living-score" />} />
+        <Route path="/about" element={<InfoPage type="about" />} />
+        <Route path="/help" element={<InfoPage type="help" />} />
+      </Route>
+
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+
       <Route
         path="/dashboard"
         element={
@@ -30,7 +44,8 @@ function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="*" element={<Navigate to={token ? '/dashboard' : '/login'} replace />} />
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
