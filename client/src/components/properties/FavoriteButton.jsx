@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   useAddFavoriteMutation,
-  useGetFavoritesQuery,
+  useCheckFavoriteQuery,
   useRemoveFavoriteMutation,
 } from '../../features/favorites/favoritesApi'
 
@@ -13,30 +13,19 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
   const token = useSelector((state) => state.auth.token)
   const navigate = useNavigate()
   const location = useLocation()
-
-  const { data } = useGetFavoritesQuery(undefined, {
-    skip: !token,
-  })
-
+  const { data, isFetching } = useCheckFavoriteQuery(propertyId, { skip: !token || !propertyId })
   const [addFavorite, { isLoading: isAdding }] = useAddFavoriteMutation()
   const [removeFavorite, { isLoading: isRemoving }] = useRemoveFavoriteMutation()
 
-  const isSaved = Boolean(
-    data?.favorites?.some((favorite) => favorite.property?._id === propertyId),
-  )
-
-  const isLoading = isAdding || isRemoving
+  const isSaved = Boolean(data?.isSaved)
+  const isLoading = isAdding || isRemoving || isFetching
 
   const handleClick = async (event) => {
     event.preventDefault()
     event.stopPropagation()
 
     if (!token) {
-      navigate('/login', {
-        state: {
-          from: `${location.pathname}${location.search}`,
-        },
-      })
+      navigate('/login', { state: { from: `${location.pathname}${location.search}` } })
       return
     }
 
@@ -62,11 +51,7 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
       aria-label={isSaved ? 'Remove from favorites' : 'Save to favorites'}
       className={`inline-flex items-center justify-center gap-2 rounded-full transition ${className}`}
     >
-      {isLoading ? (
-        <LoaderCircle className="h-4 w-4 animate-spin" />
-      ) : (
-        <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />
-      )}
+      {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />}
       {showLabel && <span>{isSaved ? 'Saved' : 'Save home'}</span>}
     </motion.button>
   )
