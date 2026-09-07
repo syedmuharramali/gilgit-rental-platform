@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bell, FileCheck2, Plus, Send, ShieldCheck, Star, Trash2 } from 'lucide-react'
-import { useLocation } from 'react-router-dom'
+import { motion } from 'motion/react'
+import { Link, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import {
@@ -50,6 +51,7 @@ import {
 } from '../../components/workspace/WorkspaceUI'
 
 const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
+const glass = 'rounded-2xl border border-white/[0.07] bg-white/[0.035]'
 
 export function MessagesPage() {
   const location = useLocation()
@@ -83,32 +85,33 @@ export function MessagesPage() {
   return (
     <>
       <PageHeader eyebrow="Communication" title="Messages" text="Conversations stay attached to a property so the rental context never gets lost." />
-      <div className="grid min-h-[620px] overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm lg:grid-cols-[330px_1fr]">
-        <aside className="border-b border-slate-200 lg:border-b-0 lg:border-r">
-          <div className="p-4"><p className="text-xs font-black uppercase tracking-[.15em] text-slate-400">Conversations</p></div>
+      <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} className="grid min-h-[620px] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#0d1423] shadow-[0_30px_90px_rgba(0,0,0,.25)] lg:grid-cols-[330px_1fr]">
+        <aside className="border-b border-white/[0.07] bg-[#0a101c] lg:border-b-0 lg:border-r lg:border-white/[0.07]">
+          <div className="p-4"><p className="text-xs font-black uppercase tracking-[.15em] text-slate-500">Conversations</p></div>
           {conversations.length ? conversations.map((conversation) => {
             const ownerId = conversation.owner?._id || conversation.owner?.id
             const other = ownerId === user?.id ? conversation.renter : conversation.owner
             return (
-              <button key={conversation._id} onClick={() => setSelected(conversation._id)} className={`flex w-full gap-3 border-t border-slate-100 p-4 text-left ${active === conversation._id ? 'bg-[#edf5f1]' : 'hover:bg-slate-50'}`}>
-                <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-slate-100 font-black">{other?.avatar?.url ? <img src={other.avatar.url} alt="" className="h-full w-full object-cover" /> : other?.name?.[0] || 'U'}</div>
-                <div className="min-w-0"><p className="truncate text-sm font-black">{other?.name || 'Rental conversation'}</p><p className="truncate text-xs text-slate-400">{conversation.property?.title}</p><p className="mt-1 truncate text-xs text-slate-500">{conversation.lastMessage?.body || 'Start the conversation'}</p></div>
-                {conversation.unreadCount > 0 && <span className="ml-auto self-start rounded-full bg-rose-500 px-2 py-1 text-[9px] font-black text-white">{conversation.unreadCount}</span>}
+              <button key={conversation._id} onClick={() => setSelected(conversation._id)} className={`flex w-full gap-3 border-t border-white/[0.05] p-4 text-left transition ${active === conversation._id ? 'bg-cyan-300/[0.07]' : 'hover:bg-white/[0.035]'}`}>
+                <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 font-black text-cyan-100 ring-1 ring-white/10">{other?.avatar?.url ? <img src={other.avatar.url} alt="" className="h-full w-full object-cover" /> : other?.name?.[0] || 'U'}</div>
+                <div className="min-w-0"><p className="truncate text-sm font-black text-white">{other?.name || 'Rental conversation'}</p><p className="truncate text-xs text-slate-500">{conversation.property?.title}</p><p className="mt-1 truncate text-xs text-slate-400">{conversation.lastMessage?.body || 'Start the conversation'}</p></div>
+                {conversation.unreadCount > 0 && <span className="ml-auto self-start rounded-full bg-gradient-to-r from-cyan-300 to-blue-500 px-2 py-1 text-[9px] font-black text-[#07101e]">{conversation.unreadCount}</span>}
               </button>
             )
           }) : <div className="p-4"><EmptyState title="No conversations" text="Open a property and message its owner to start one." /></div>}
         </aside>
-        <section className="flex min-h-[500px] flex-col">
-          <div className="flex-1 space-y-3 overflow-y-auto bg-[#f8faf9] p-5">
+
+        <section className="flex min-h-[500px] flex-col bg-[radial-gradient(circle_at_60%_0%,rgba(56,189,248,.05),transparent_32%),#0b111e]">
+          <div className="flex-1 space-y-3 overflow-y-auto p-5">
             {active ? (messageData?.messages || []).map((message) => {
               const senderId = message.sender?._id || message.sender?.id
               const mine = senderId === user?.id
-              return <div key={message._id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[75%] rounded-[22px] px-4 py-3 text-sm leading-6 ${mine ? 'bg-[#102f26] text-white' : 'bg-white text-slate-700 shadow-sm ring-1 ring-slate-200'}`}>{message.body}<p className={`mt-1 text-[9px] ${mine ? 'text-white/40' : 'text-slate-400'}`}>{dateTime(message.createdAt)}</p></div></div>
+              return <div key={message._id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[75%] rounded-[22px] px-4 py-3 text-sm leading-6 ${mine ? 'bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 text-[#07101e]' : 'border border-white/[0.07] bg-white/[0.045] text-slate-200 shadow-sm'}`}>{message.body}<p className={`mt-1 text-[9px] ${mine ? 'text-[#07101e]/55' : 'text-slate-500'}`}>{dateTime(message.createdAt)}</p></div></div>
             }) : <EmptyState title="Choose a conversation" />}
           </div>
-          {active && <form onSubmit={submit} className="flex gap-2 border-t border-slate-200 p-4"><TextInput value={body} maxLength={2000} onChange={(event) => setBody(event.target.value)} placeholder="Write a message…" /><PrimaryButton disabled={sendState.isLoading} aria-label="Send"><Send className="h-4 w-4" /></PrimaryButton></form>}
+          {active && <form onSubmit={submit} className="flex gap-2 border-t border-white/[0.07] bg-[#0a101c] p-4"><TextInput value={body} maxLength={2000} onChange={(event) => setBody(event.target.value)} placeholder="Write a message…" /><PrimaryButton disabled={sendState.isLoading} aria-label="Send"><Send className="h-4 w-4" /></PrimaryButton></form>}
         </section>
-      </div>
+      </motion.div>
     </>
   )
 }
@@ -124,7 +127,8 @@ export function AgreementsPage() {
     try {
       await signAgreement({ id: active._id, legalName }).unwrap()
       toast.success('Agreement accepted')
-      setActive(null); setLegalName('')
+      setActive(null)
+      setLegalName('')
     } catch (error) { toast.error(errorMessage(error)) }
   }
 
@@ -142,14 +146,20 @@ export function AgreementsPage() {
           return (
             <Panel key={agreement._id}>
               <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
-                <div><StatusBadge value={agreement.status} /><h2 className="mt-3 text-lg font-black">{agreement.property?.title}</h2><p className="mt-1 text-sm text-slate-500">{money(agreement.monthlyRent)}/month · {agreement.durationMonths} months · starts {shortDate(agreement.startDate)}</p><div className="mt-4 grid gap-2 text-sm text-slate-600 sm:grid-cols-2">{(agreement.clauses || []).map((clause, index) => <p key={`${agreement._id}-${index}`} className="rounded-2xl bg-slate-50 p-3"><span className="font-black text-emerald-700">{index + 1}.</span> {clause}</p>)}</div><div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-full bg-slate-100 px-3 py-1.5 font-bold text-slate-600">Owner: {agreement.ownerSignature?.signed ? 'signed' : 'awaiting'}</span><span className="rounded-full bg-slate-100 px-3 py-1.5 font-bold text-slate-600">Renter: {agreement.renterSignature?.signed ? 'signed' : 'awaiting'}</span></div></div>
+                <div>
+                  <StatusBadge value={agreement.status} />
+                  <h2 className="mt-3 text-lg font-black text-white">{agreement.property?.title}</h2>
+                  <p className="mt-1 text-sm text-slate-400">{money(agreement.monthlyRent)}/month · {agreement.durationMonths} months · starts {shortDate(agreement.startDate)}</p>
+                  <div className="mt-4 grid gap-2 text-sm text-slate-300 sm:grid-cols-2">{(agreement.clauses || []).map((clause, index) => <p key={`${agreement._id}-${index}`} className={`${glass} p-3`}><span className="font-black text-cyan-300">{index + 1}.</span> {clause}</p>)}</div>
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs"><span className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 font-bold text-slate-400">Owner: {agreement.ownerSignature?.signed ? 'signed' : 'awaiting'}</span><span className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 font-bold text-slate-400">Renter: {agreement.renterSignature?.signed ? 'signed' : 'awaiting'}</span></div>
+                </div>
                 {!mySignature?.signed && agreement.status !== 'cancelled' && <PrimaryButton onClick={() => setActive(agreement)}>Review & accept</PrimaryButton>}
               </div>
             </Panel>
           )
         }) : <EmptyState title="No agreements yet" />}
       </div>
-      <Modal open={Boolean(active)} onClose={() => setActive(null)} title="Accept rental agreement"><p className="mb-4 text-sm leading-6 text-slate-500">By continuing you confirm that you reviewed the displayed terms and explicitly accept this rental agreement.</p><TextInput value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="Your legal name" /><PrimaryButton className="mt-4 w-full" onClick={submit}>I accept this agreement</PrimaryButton></Modal>
+      <Modal open={Boolean(active)} onClose={() => setActive(null)} title="Accept rental agreement"><p className="mb-4 text-sm leading-6 text-slate-400">By continuing you confirm that you reviewed the displayed terms and explicitly accept this rental agreement.</p><TextInput value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="Your legal name" /><PrimaryButton className="mt-4 w-full" onClick={submit}>I accept this agreement</PrimaryButton></Modal>
     </>
   )
 }
@@ -187,8 +197,8 @@ export function ConditionReportsPage({ owner = false }) {
     <>
       <PageHeader eyebrow="Property condition" title="Condition reports" text="Create move-in and move-out records, attach private evidence and confirm the shared record." action={tenancies.length ? <Select value={selected || ''} onChange={(event) => setTenancyId(event.target.value)}>{tenancies.map((tenancy) => <option key={tenancy._id} value={tenancy._id}>{tenancy.property?.title}</option>)}</Select> : null} />
       {!selected ? <EmptyState title="No tenancy available" /> : <div className="grid gap-6 xl:grid-cols-[.8fr_1.2fr]">
-        <Panel><h2 className="font-black">Create report</h2><div className="mt-4 space-y-3"><Select value={type} onChange={(event) => setType(event.target.value)}><option value="move_in">Move in</option><option value="move_out">Move out</option></Select>{items.map((item, index) => <div key={index} className="rounded-2xl border border-slate-200 p-3"><div className="grid gap-2 sm:grid-cols-2"><TextInput value={item.area} onChange={(event) => updateItem(index, 'area', event.target.value)} placeholder="Area / room" /><Select value={item.condition} onChange={(event) => updateItem(index, 'condition', event.target.value)}>{['excellent','good','fair','poor','damaged'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></div><TextArea className="mt-2 min-h-20" value={item.notes} onChange={(event) => updateItem(index, 'notes', event.target.value)} placeholder="Notes" />{items.length > 1 && <button onClick={() => removeItem(index)} className="mt-2 text-xs font-black text-rose-600">Remove item</button>}</div>)}<SecondaryButton onClick={addItem}><Plus className="h-4 w-4" /> Add area</SecondaryButton><TextArea value={overallNotes} onChange={(event) => setOverallNotes(event.target.value)} placeholder="Overall notes" /><PrimaryButton className="w-full" onClick={submit}>Create condition report</PrimaryButton></div></Panel>
-        <div className="space-y-4">{isLoading ? <LoadingState /> : (data?.reports || []).length ? data.reports.map((report) => <Panel key={report._id}><div className="flex items-start justify-between gap-4"><div><StatusBadge value={report.status} /><h3 className="mt-2 font-black">{pretty(report.reportType)} report</h3></div>{report.status !== 'confirmed' && <SecondaryButton onClick={async () => { try { await confirm(report._id).unwrap(); toast.success('Report confirmed'); refetch() } catch (error) { toast.error(errorMessage(error)) } }}>Confirm my side</SecondaryButton>}</div><div className="mt-4 space-y-2">{report.items?.map((item) => <div key={item._id || item.area} className="rounded-2xl bg-slate-50 p-3 text-sm"><strong>{item.area}</strong><span className="ml-2 text-slate-500">{pretty(item.condition)}</span>{item.notes && <p className="mt-1 text-slate-500">{item.notes}</p>}</div>)}</div><div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-400"><span>Owner {report.ownerConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>Renter {report.renterConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>{report.evidence?.length || 0} evidence file(s)</span></div>{report.status !== 'confirmed' && !report.ownerConfirmation?.confirmed && !report.renterConfirmation?.confirmed && <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-xs font-black text-emerald-700">Add evidence<input type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={async (event) => { const files = [...event.target.files]; if (!files.length) return; try { await upload({ id: report._id, files }).unwrap(); toast.success('Evidence uploaded'); refetch() } catch (error) { toast.error(errorMessage(error)) } }} /></label>}</Panel>) : <EmptyState title="No condition reports yet" />}</div>
+        <Panel><h2 className="font-black text-white">Create report</h2><div className="mt-4 space-y-3"><Select value={type} onChange={(event) => setType(event.target.value)}><option value="move_in">Move in</option><option value="move_out">Move out</option></Select>{items.map((item, index) => <div key={index} className={`${glass} p-3`}><div className="grid gap-2 sm:grid-cols-2"><TextInput value={item.area} onChange={(event) => updateItem(index, 'area', event.target.value)} placeholder="Area / room" /><Select value={item.condition} onChange={(event) => updateItem(index, 'condition', event.target.value)}>{['excellent','good','fair','poor','damaged'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></div><TextArea className="mt-2 min-h-20" value={item.notes} onChange={(event) => updateItem(index, 'notes', event.target.value)} placeholder="Notes" />{items.length > 1 && <button onClick={() => removeItem(index)} className="mt-2 text-xs font-black text-rose-300">Remove item</button>}</div>)}<SecondaryButton onClick={addItem}><Plus className="h-4 w-4" /> Add area</SecondaryButton><TextArea value={overallNotes} onChange={(event) => setOverallNotes(event.target.value)} placeholder="Overall notes" /><PrimaryButton className="w-full" onClick={submit}>Create condition report</PrimaryButton></div></Panel>
+        <div className="space-y-4">{isLoading ? <LoadingState /> : (data?.reports || []).length ? data.reports.map((report) => <Panel key={report._id}><div className="flex items-start justify-between gap-4"><div><StatusBadge value={report.status} /><h3 className="mt-2 font-black text-white">{pretty(report.reportType)} report</h3></div>{report.status !== 'confirmed' && <SecondaryButton onClick={async () => { try { await confirm(report._id).unwrap(); toast.success('Report confirmed'); refetch() } catch (error) { toast.error(errorMessage(error)) } }}>Confirm my side</SecondaryButton>}</div><div className="mt-4 space-y-2">{report.items?.map((item) => <div key={item._id || item.area} className={`${glass} p-3 text-sm`}><strong className="text-white">{item.area}</strong><span className="ml-2 text-slate-400">{pretty(item.condition)}</span>{item.notes && <p className="mt-1 text-slate-400">{item.notes}</p>}</div>)}</div><div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500"><span>Owner {report.ownerConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>Renter {report.renterConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>{report.evidence?.length || 0} evidence file(s)</span></div>{report.status !== 'confirmed' && !report.ownerConfirmation?.confirmed && !report.renterConfirmation?.confirmed && <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-xs font-black text-cyan-300">Add evidence<input type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={async (event) => { const files = [...event.target.files]; if (!files.length) return; try { await upload({ id: report._id, files }).unwrap(); toast.success('Evidence uploaded'); refetch() } catch (error) { toast.error(errorMessage(error)) } }} /></label>}</Panel>) : <EmptyState title="No condition reports yet" />}</div>
       </div>}
     </>
   )
@@ -212,8 +222,8 @@ export function ReviewsPage({ owner = false }) {
     <>
       <PageHeader eyebrow="Reputation" title="Reviews" text="Reviews unlock only after a tenancy has ended, keeping feedback tied to a real rental relationship." action={<PrimaryButton onClick={() => setOpen(true)}><Plus className="h-4 w-4" /> Write review</PrimaryButton>} />
       <div className="grid gap-6 xl:grid-cols-2">
-        <Panel><h2 className="font-black">Written by you</h2><div className="mt-4 space-y-3">{mine?.reviews?.length ? mine.reviews.map((review) => <div key={review._id} className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between"><strong className="text-sm">{review.property?.title}</strong><span className="text-amber-500">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-500">{review.comment || 'No written comment'}</p></div>) : <p className="text-sm text-slate-400">No reviews written yet.</p>}</div></Panel>
-        <Panel><h2 className="font-black">Received</h2><div className="mt-4 space-y-3">{received?.reviews?.length ? received.reviews.map((review) => <div key={review._id} className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between"><strong className="text-sm">{review.reviewer?.name}</strong><span className="text-amber-500">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-500">{review.comment || 'No written comment'}</p></div>) : <p className="text-sm text-slate-400">No reviews received yet.</p>}</div></Panel>
+        <Panel><h2 className="font-black text-white">Written by you</h2><div className="mt-4 space-y-3">{mine?.reviews?.length ? mine.reviews.map((review) => <div key={review._id} className={`${glass} p-4`}><div className="flex items-center justify-between"><strong className="text-sm text-white">{review.property?.title}</strong><span className="text-amber-300">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-400">{review.comment || 'No written comment'}</p></div>) : <p className="text-sm text-slate-500">No reviews written yet.</p>}</div></Panel>
+        <Panel><h2 className="font-black text-white">Received</h2><div className="mt-4 space-y-3">{received?.reviews?.length ? received.reviews.map((review) => <div key={review._id} className={`${glass} p-4`}><div className="flex items-center justify-between"><strong className="text-sm text-white">{review.reviewer?.name}</strong><span className="text-amber-300">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-400">{review.comment || 'No written comment'}</p></div>) : <p className="text-sm text-slate-500">No reviews received yet.</p>}</div></Panel>
       </div>
       <Modal open={open} onClose={() => setOpen(false)} title="Write a review"><div className="space-y-3"><Select value={form.tenancyId} onChange={(event) => setForm({ ...form, tenancyId: event.target.value })}><option value="">Choose ended tenancy</option>{tenancies.filter((tenancy) => tenancy.status === 'ended').map((tenancy) => <option key={tenancy._id} value={tenancy._id}>{tenancy.property?.title}</option>)}</Select><Select value={form.rating} onChange={(event) => setForm({ ...form, rating: Number(event.target.value) })}>{[5,4,3,2,1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</Select><TextArea value={form.comment} onChange={(event) => setForm({ ...form, comment: event.target.value })} placeholder="Share your experience" /><PrimaryButton className="w-full" onClick={submit}>Submit review</PrimaryButton></div></Modal>
     </>
@@ -227,13 +237,34 @@ export function NotificationsPage() {
   const [remove] = useDeleteNotificationMutation()
   if (isLoading) return <LoadingState />
   const items = data?.notifications || []
-  return <><PageHeader eyebrow="Activity centre" title="Notifications" text="Important rental lifecycle updates land here." action={<SecondaryButton onClick={() => readAll()}>Mark all read</SecondaryButton>} /><div className="space-y-3">{items.length ? items.map((notification) => <Panel key={notification._id} className={!notification.isRead ? 'ring-2 ring-emerald-100' : ''}><div className="flex gap-4"><div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${notification.isRead ? 'bg-slate-100 text-slate-500' : 'bg-[#e8f2ed] text-emerald-700'}`}><Bell className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div><p className="font-black">{notification.title}</p><p className="mt-1 text-sm leading-6 text-slate-500">{notification.message}</p><p className="mt-2 text-[10px] font-bold text-slate-400">{dateTime(notification.createdAt)}</p></div><button onClick={() => remove(notification._id)} className="text-slate-300 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button></div>{!notification.isRead && <button onClick={() => read(notification._id)} className="mt-3 text-xs font-black text-emerald-700">Mark read</button>}</div></div></Panel>) : <EmptyState title="You're all caught up" />}</div></>
+
+  return (
+    <>
+      <PageHeader eyebrow="Activity centre" title="Notifications" text="Important rental lifecycle updates land here." action={<SecondaryButton onClick={() => readAll()}>Mark all read</SecondaryButton>} />
+      <div className="space-y-3">{items.length ? items.map((notification, index) => <motion.div key={notification._id} initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: index * .025 }}><Panel className={!notification.isRead ? 'border-cyan-300/20 bg-cyan-300/[0.035]' : ''}><div className="flex gap-4"><div className={`grid h-10 w-10 shrink-0 place-items-center rounded-2xl ${notification.isRead ? 'bg-white/[0.04] text-slate-500' : 'bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/15'}`}><Bell className="h-4 w-4" /></div><div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-3"><div><p className="font-black text-white">{notification.title}</p><p className="mt-1 text-sm leading-6 text-slate-400">{notification.message}</p><p className="mt-2 text-[10px] font-bold text-slate-500">{dateTime(notification.createdAt)}</p></div><button onClick={() => remove(notification._id)} className="text-slate-600 transition hover:text-rose-300"><Trash2 className="h-4 w-4" /></button></div>{!notification.isRead && <button onClick={() => read(notification._id)} className="mt-3 text-xs font-black text-cyan-300">Mark read</button>}</div></div></Panel></motion.div>) : <EmptyState title="You're all caught up" />}</div>
+    </>
+  )
 }
 
 export function ProfilePage() {
   const user = useSelector((state) => state.auth.user)
   const { data: verification } = useGetMyVerificationQuery()
-  return <><PageHeader eyebrow="Account" title="Your profile" text="Your authenticated identity and verification state used across the rental platform." /><div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]"><Panel><div className="flex items-center gap-4">{user?.avatar?.url ? <img src={user.avatar.url} alt="" className="h-20 w-20 rounded-[24px] object-cover" /> : <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-[#e8f2ed] text-2xl font-black text-[#245545]">{user?.name?.[0]}</div>}<div><h2 className="text-xl font-black">{user?.name}</h2><p className="text-sm text-slate-500">{user?.email}</p></div></div><div className="mt-6 flex flex-wrap gap-2"><StatusBadge value={user?.emailVerified ? 'verified' : 'pending'} /><StatusBadge value={user?.accountStatus || 'active'} /></div></Panel><Panel><h2 className="font-black">Account details</h2><div className="mt-5 grid gap-4 sm:grid-cols-2">{[['Email',user?.email],['Phone',user?.phone || 'Not provided'],['Role',pretty(user?.role)],['Owner verification',verification?.ownerVerified ? 'Verified owner' : pretty(verification?.verification?.status || 'Not submitted')],['Account created',shortDate(user?.createdAt)],['Phone status',user?.phoneVerified ? 'Verified' : 'Not verified']].map(([label,value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-400">{label}</p><p className="mt-1 text-sm font-black">{value}</p></div>)}</div><p className="mt-5 text-xs leading-5 text-slate-400">Profile editing is not exposed by the current backend API, so this screen intentionally presents verified account data without fake edit controls.</p></Panel></div></>
+  return (
+    <>
+      <PageHeader eyebrow="Account" title="Your profile" text="Your authenticated identity and verification state used across the rental platform." />
+      <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
+        <Panel>
+          <div className="flex items-center gap-4">{user?.avatar?.url ? <img src={user.avatar.url} alt="" className="h-20 w-20 rounded-[24px] object-cover ring-1 ring-white/10" /> : <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-gradient-to-br from-cyan-300/20 to-violet-500/20 text-2xl font-black text-cyan-100 ring-1 ring-white/10">{user?.name?.[0]}</div>}<div><h2 className="text-xl font-black text-white">{user?.name}</h2><p className="text-sm text-slate-400">{user?.email}</p></div></div>
+          <div className="mt-6 flex flex-wrap gap-2"><StatusBadge value={user?.emailVerified ? 'verified' : 'pending'} /><StatusBadge value={user?.accountStatus || 'active'} /></div>
+        </Panel>
+        <Panel>
+          <h2 className="font-black text-white">Account details</h2>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">{[['Email',user?.email],['Phone',user?.phone || 'Not provided'],['Role',pretty(user?.role)],['Owner verification',verification?.ownerVerified ? 'Verified owner' : pretty(verification?.verification?.status || 'Not submitted')],['Account created',shortDate(user?.createdAt)],['Phone status',user?.phoneVerified ? 'Verified' : 'Not verified']].map(([label,value]) => <div key={label} className={`${glass} p-4`}><p className="text-xs font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}</div>
+          <p className="mt-5 text-xs leading-5 text-slate-500">Profile editing is not exposed by the current backend API, so this screen intentionally presents verified account data without fake edit controls.</p>
+        </Panel>
+      </div>
+    </>
+  )
 }
 
 export function ReportsPage() {
@@ -242,7 +273,14 @@ export function ReportsPage() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ targetType: 'property', targetId: '', reason: 'misleading_listing', description: '' })
   const submit = async () => { try { await create(form).unwrap(); toast.success('Report submitted'); setOpen(false) } catch (error) { toast.error(errorMessage(error)) } }
-  return <><PageHeader eyebrow="Safety" title="Your reports" text="Report a property or user for review by platform administrators." action={<PrimaryButton onClick={() => setOpen(true)}>New report</PrimaryButton>} /><div className="space-y-3">{data?.reports?.length ? data.reports.map((report) => <Panel key={report._id}><div className="flex items-center justify-between gap-4"><div><StatusBadge value={report.status} /><p className="mt-2 font-black">{pretty(report.reason)}</p><p className="mt-1 text-sm text-slate-500">{report.property?.title || report.reportedUser?.name || pretty(report.targetType)}</p></div><ShieldCheck className="h-5 w-5 text-slate-400" /></div></Panel>) : <EmptyState title="No reports submitted" />}</div><Modal open={open} onClose={() => setOpen(false)} title="Submit a safety report"><div className="space-y-3"><Select value={form.targetType} onChange={(event) => setForm({ ...form, targetType: event.target.value })}><option value="property">Property</option><option value="user">User</option></Select><TextInput value={form.targetId} onChange={(event) => setForm({ ...form, targetId: event.target.value })} placeholder="Target ID" /><Select value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })}>{['fraud','misleading_listing','harassment','inappropriate_content','duplicate_listing','safety_concern','other'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select><TextArea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Describe the issue" /><PrimaryButton className="w-full" onClick={submit}>Submit report</PrimaryButton></div></Modal></>
+
+  return (
+    <>
+      <PageHeader eyebrow="Safety" title="Your reports" text="Report a property or user for review by platform administrators." action={<PrimaryButton onClick={() => setOpen(true)}>New report</PrimaryButton>} />
+      <div className="space-y-3">{data?.reports?.length ? data.reports.map((report) => <Panel key={report._id}><div className="flex items-center justify-between gap-4"><div><StatusBadge value={report.status} /><p className="mt-2 font-black text-white">{pretty(report.reason)}</p><p className="mt-1 text-sm text-slate-400">{report.property?.title || report.reportedUser?.name || pretty(report.targetType)}</p></div><ShieldCheck className="h-5 w-5 text-slate-600" /></div></Panel>) : <EmptyState title="No reports submitted" />}</div>
+      <Modal open={open} onClose={() => setOpen(false)} title="Submit a safety report"><div className="space-y-3"><Select value={form.targetType} onChange={(event) => setForm({ ...form, targetType: event.target.value })}><option value="property">Property</option><option value="user">User</option></Select><TextInput value={form.targetId} onChange={(event) => setForm({ ...form, targetId: event.target.value })} placeholder="Target ID" /><Select value={form.reason} onChange={(event) => setForm({ ...form, reason: event.target.value })}>{['fraud','misleading_listing','harassment','inappropriate_content','duplicate_listing','safety_concern','other'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select><TextArea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} placeholder="Describe the issue" /><PrimaryButton className="w-full" onClick={submit}>Submit report</PrimaryButton></div></Modal>
+    </>
+  )
 }
 
 export function OwnerVerificationPage() {
@@ -253,7 +291,25 @@ export function OwnerVerificationPage() {
   const current = data?.verification
   const canSubmit = !current || ['rejected','resubmission_required'].includes(current.status)
   const send = async () => { try { await submit(form).unwrap(); toast.success('Verification submitted') } catch (error) { toast.error(errorMessage(error)) } }
-  return <><PageHeader eyebrow="Trust & safety" title="Owner verification" text="Identity verification is required before listing a property. Documents are private and reviewed by administrators." /><div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]"><Panel><div className="grid h-14 w-14 place-items-center rounded-2xl bg-[#e8f2ed] text-emerald-700"><ShieldCheck className="h-6 w-6" /></div><h2 className="mt-5 text-xl font-black">Verification status</h2><div className="mt-3"><StatusBadge value={data?.ownerVerified ? 'verified' : current?.status || 'not_submitted'} /></div>{current?.rejectionReason && <p className="mt-4 rounded-2xl bg-rose-50 p-4 text-sm text-rose-700">{current.rejectionReason}</p>}{current && <p className="mt-4 text-xs text-slate-400">Attempt #{current.attemptNumber} · submitted {shortDate(current.submittedAt)}</p>}</Panel><Panel><h2 className="font-black">{canSubmit ? 'Submit identity documents' : data?.ownerVerified ? 'Identity verified' : 'Under review'}</h2>{canSubmit ? <div className="mt-5 space-y-4"><TextInput maxLength={4} inputMode="numeric" value={form.cnicLast4} onChange={(event) => setForm({ ...form, cnicLast4: event.target.value.replace(/\D/g,'') })} placeholder="Last 4 CNIC digits" />{[['cnicFront','CNIC front'],['cnicBack','CNIC back'],['selfie','Selfie']].map(([key,label]) => <label key={key} className="block rounded-2xl border border-dashed border-slate-300 p-4 text-sm font-bold text-slate-600">{label}<input type="file" accept="image/png,image/jpeg" className="mt-2 block w-full text-xs" onChange={(event) => setForm({ ...form, [key]: event.target.files?.[0] || null })} /></label>)}<PrimaryButton disabled={submitState.isLoading || form.cnicLast4.length !== 4 || !form.cnicFront || !form.cnicBack || !form.selfie} className="w-full" onClick={send}>Submit for review</PrimaryButton></div> : <p className="mt-4 text-sm leading-6 text-slate-500">{data?.ownerVerified ? 'You can now create and submit property listings.' : 'Your documents are waiting for an administrator decision.'}</p>}</Panel></div></>
+
+  return (
+    <>
+      <PageHeader eyebrow="Trust & safety" title="Owner verification" text="Identity verification is required before listing a property. Documents are private and reviewed by administrators." />
+      <div className="grid gap-6 lg:grid-cols-[.75fr_1.25fr]">
+        <Panel>
+          <div className="grid h-14 w-14 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/15"><ShieldCheck className="h-6 w-6" /></div>
+          <h2 className="mt-5 text-xl font-black text-white">Verification status</h2>
+          <div className="mt-3"><StatusBadge value={data?.ownerVerified ? 'verified' : current?.status || 'not_submitted'} /></div>
+          {current?.rejectionReason && <p className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-400/[0.06] p-4 text-sm text-rose-300">{current.rejectionReason}</p>}
+          {current && <p className="mt-4 text-xs text-slate-500">Attempt #{current.attemptNumber} · submitted {shortDate(current.submittedAt)}</p>}
+        </Panel>
+        <Panel>
+          <h2 className="font-black text-white">{canSubmit ? 'Submit identity documents' : data?.ownerVerified ? 'Identity verified' : 'Under review'}</h2>
+          {canSubmit ? <div className="mt-5 space-y-4"><TextInput maxLength={4} inputMode="numeric" value={form.cnicLast4} onChange={(event) => setForm({ ...form, cnicLast4: event.target.value.replace(/\D/g,'') })} placeholder="Last 4 CNIC digits" />{[['cnicFront','CNIC front'],['cnicBack','CNIC back'],['selfie','Selfie']].map(([key,label]) => <label key={key} className="block rounded-2xl border border-dashed border-white/12 bg-white/[0.025] p-4 text-sm font-bold text-slate-300 transition hover:border-cyan-300/25">{label}<input type="file" accept="image/png,image/jpeg" className="mt-2 block w-full text-xs text-slate-500 file:mr-3 file:rounded-full file:border-0 file:bg-cyan-300/10 file:px-3 file:py-2 file:font-bold file:text-cyan-200" onChange={(event) => setForm({ ...form, [key]: event.target.files?.[0] || null })} /></label>)}<PrimaryButton disabled={submitState.isLoading || form.cnicLast4.length !== 4 || !form.cnicFront || !form.cnicBack || !form.selfie} className="w-full" onClick={send}>Submit for review</PrimaryButton></div> : <p className="mt-4 text-sm leading-6 text-slate-400">{data?.ownerVerified ? 'You can now create and submit property listings.' : 'Your documents are waiting for an administrator decision.'}</p>}
+        </Panel>
+      </div>
+    </>
+  )
 }
 
 export function OwnerPropertiesPage() {
@@ -262,5 +318,13 @@ export function OwnerPropertiesPage() {
   const [remove] = useDeletePropertyMutation()
   if (isLoading) return <LoadingState />
   const properties = data?.properties || []
-  return <><PageHeader eyebrow="Portfolio" title="Your properties" text="Create, edit, upload images and submit listings for admin publication." action={<a href="/owner/properties/new" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-[#102f26] px-4 text-sm font-black text-white"><Plus className="h-4 w-4" /> Add property</a>} /><div className="grid gap-4 xl:grid-cols-2">{properties.length ? properties.map((property) => <Panel key={property._id}><div className="flex gap-4">{property.images?.[0]?.url ? <img src={property.images.find((image) => image.isCover)?.url || property.images[0].url} alt="" className="h-24 w-28 rounded-2xl object-cover" /> : <div className="grid h-24 w-28 place-items-center rounded-2xl bg-slate-100"><FileCheck2 className="h-5 w-5 text-slate-300" /></div>}<div className="min-w-0 flex-1"><StatusBadge value={property.listingStatus} /><h2 className="mt-2 truncate font-black">{property.title}</h2><p className="mt-1 text-sm text-slate-500">{property.address?.area} · {money(property.monthlyRent)}</p></div></div>{property.rejectionReason && <p className="mt-4 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{property.rejectionReason}</p>}<div className="mt-5 flex flex-wrap gap-2"><a href={`/owner/properties/${property._id}/edit`} className="inline-flex min-h-11 items-center rounded-2xl border border-slate-200 px-4 text-sm font-black">Edit listing</a>{['draft','rejected'].includes(property.listingStatus) && <PrimaryButton onClick={async () => { try { await submit(property._id).unwrap(); toast.success('Property submitted for review') } catch (error) { toast.error(errorMessage(error)) } }}>Submit for review</PrimaryButton>}{property.listingStatus !== 'rented' && <SecondaryButton onClick={async () => { if (!window.confirm('Delete this property?')) return; try { await remove(property._id).unwrap(); toast.success('Property deleted') } catch (error) { toast.error(errorMessage(error)) } }}>Delete</SecondaryButton>}</div></Panel>) : <EmptyState title="No properties yet" text="Create your first property after owner verification is approved." />}</div></>
+
+  return (
+    <>
+      <PageHeader eyebrow="Portfolio" title="Your properties" text="Create, edit, upload images and submit listings for admin publication." action={<Link to="/owner/properties/new" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-4 text-sm font-black text-[#07101e]"><Plus className="h-4 w-4" /> Add property</Link>} />
+      <div className="grid gap-4 xl:grid-cols-2">
+        {properties.length ? properties.map((property, index) => <motion.div key={property._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .04 }}><Panel className="h-full"><div className="flex gap-4">{property.images?.[0]?.url ? <img src={property.images.find((image) => image.isCover)?.url || property.images[0].url} alt="" className="h-24 w-28 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-24 w-28 place-items-center rounded-2xl bg-white/[0.04]"><FileCheck2 className="h-5 w-5 text-slate-600" /></div>}<div className="min-w-0 flex-1"><StatusBadge value={property.listingStatus} /><h2 className="mt-2 truncate font-black text-white">{property.title}</h2><p className="mt-1 text-sm text-slate-400">{property.address?.area} · {money(property.monthlyRent)}</p></div></div>{property.rejectionReason && <p className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-400/[0.06] p-3 text-sm text-rose-300">{property.rejectionReason}</p>}<div className="mt-5 flex flex-wrap gap-2"><Link to={`/owner/properties/${property._id}/edit`} className="inline-flex min-h-11 items-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/25">Edit listing</Link>{['draft','rejected'].includes(property.listingStatus) && <PrimaryButton onClick={async () => { try { await submit(property._id).unwrap(); toast.success('Property submitted for review') } catch (error) { toast.error(errorMessage(error)) } }}>Submit for review</PrimaryButton>}{property.listingStatus !== 'rented' && <SecondaryButton onClick={async () => { if (!window.confirm('Delete this property?')) return; try { await remove(property._id).unwrap(); toast.success('Property deleted') } catch (error) { toast.error(errorMessage(error)) } }}>Delete</SecondaryButton>}</div></Panel></motion.div>) : <EmptyState title="No properties yet" text="Create your first property after owner verification is approved." />}
+      </div>
+    </>
+  )
 }
