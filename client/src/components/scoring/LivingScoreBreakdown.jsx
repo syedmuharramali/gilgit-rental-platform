@@ -23,20 +23,21 @@ function LivingScoreBreakdown({ breakdown = {} }) {
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,.04)]"
+            whileHover={{ y: -3 }}
+            className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4 shadow-[0_12px_35px_rgba(0,0,0,.14)] backdrop-blur-xl"
           >
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2.5">
-                <span className="grid h-9 w-9 place-items-center rounded-2xl bg-emerald-50 text-emerald-700"><Icon className="h-4 w-4" /></span>
+                <span className="grid h-9 w-9 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200"><Icon className="h-4 w-4" /></span>
                 <div>
-                  <p className="text-sm font-black text-slate-900">{label}</p>
-                  <p className="text-xs text-slate-400">{value} / {max} points</p>
+                  <p className="text-sm font-black text-white">{label}</p>
+                  <p className="text-xs text-slate-500">{value} / {max} points</p>
                 </div>
               </div>
-              <span className="text-sm font-black text-slate-600">{percent}%</span>
+              <span className="text-sm font-black text-slate-300">{percent}%</span>
             </div>
-            <div className="mt-4 h-2 overflow-hidden rounded-full bg-slate-100">
-              <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: .8, delay: .15 + index * .04 }} className="h-full rounded-full bg-[#2f7d66]" />
+            <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <motion.div initial={{ width: 0 }} animate={{ width: `${percent}%` }} transition={{ duration: .8, delay: .15 + index * .04 }} className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500" />
             </div>
           </motion.div>
         )
