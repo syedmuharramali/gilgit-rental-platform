@@ -15,6 +15,20 @@ const loginSchema = z.object({
   password: z.string().min(1, 'Password is required'),
 })
 
+const getPostLoginDestination = (user, requestedPath) => {
+  if (user?.role === 'admin') {
+    return typeof requestedPath === 'string' && requestedPath.startsWith('/admin')
+      ? requestedPath
+      : '/admin'
+  }
+
+  if (typeof requestedPath === 'string' && !requestedPath.startsWith('/admin')) {
+    return requestedPath
+  }
+
+  return '/dashboard'
+}
+
 function FieldShell({ error, icon: Icon, children }) {
   return (
     <div className={`relative flex h-14 items-center rounded-[18px] border bg-white/[0.045] transition focus-within:bg-white/[0.07] focus-within:ring-4 focus-within:ring-cyan-300/[0.035] ${error ? 'border-rose-400/60' : 'border-white/10 focus-within:border-cyan-300/30'}`}>
@@ -28,12 +42,16 @@ function LoginPage() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { status, error, token } = useSelector((state) => state.auth)
+  const { status, error, token, user } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
 
-  useEffect(() => { if (token) navigate(location.state?.from || '/dashboard', { replace: true }) }, [token, navigate, location.state])
+  useEffect(() => {
+    if (!token || !user) return
+    navigate(getPostLoginDestination(user, location.state?.from), { replace: true })
+  }, [token, user, navigate, location.state])
+
   useEffect(() => { if (error) toast.error(error); return () => dispatch(clearAuthError()) }, [error, dispatch])
 
   const onSubmit = async (form) => {
