@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Outlet, useLocation } from 'react-router-dom'
 import PublicFooter from '../components/navigation/PublicFooter'
@@ -18,12 +19,16 @@ function PublicLayout() {
     ? ['Property Details | Gilgit Rental', 'Review rental details, amenities, location, Living Score, reviews and owner information.']
     : metadata[location.pathname] || ['Gilgit Rental Platform', 'A verified rental marketplace built for Gilgit.']
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [location.pathname])
+
   return (
-    <div className="min-h-screen bg-[#f6f8f7] text-slate-950">
+    <div className="min-h-screen bg-[#070b14] text-white">
       <Helmet>
         <title>{title}</title>
         <meta name="description" content={description} />
-        <meta name="theme-color" content="#102f26" />
+        <meta name="theme-color" content="#070b14" />
       </Helmet>
       <PublicNavbar />
       <Outlet />
