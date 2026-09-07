@@ -7,7 +7,10 @@ export const propertiesApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: (result) =>
         result?.properties
-          ? [...result.properties.map((property) => ({ type: 'Property', id: property._id })), { type: 'Property', id: 'LIST' }]
+          ? [
+              ...result.properties.map((property) => ({ type: 'Property', id: property._id })),
+              { type: 'Property', id: 'LIST' },
+            ]
           : [{ type: 'Property', id: 'LIST' }],
     }),
     getProperty: builder.query({
@@ -26,7 +29,11 @@ export const propertiesApi = baseApi.injectEndpoints({
     }),
     updateProperty: builder.mutation({
       query: ({ id, ...body }) => ({ url: `/properties/${id}`, method: 'PATCH', body }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     deleteProperty: builder.mutation({
       query: (id) => ({ url: `/properties/${id}`, method: 'DELETE' }),
@@ -34,7 +41,11 @@ export const propertiesApi = baseApi.injectEndpoints({
     }),
     submitProperty: builder.mutation({
       query: (id) => ({ url: `/properties/${id}/submit`, method: 'PATCH' }),
-      invalidatesTags: (_result, _error, id) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, id) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     uploadPropertyImages: builder.mutation({
       query: ({ id, files }) => {
@@ -42,7 +53,11 @@ export const propertiesApi = baseApi.injectEndpoints({
         files.forEach((file) => body.append('images', file))
         return { url: `/properties/${id}/images`, method: 'POST', body }
       },
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     reorderPropertyImages: builder.mutation({
       query: ({ id, imageIds }) => ({
@@ -50,15 +65,27 @@ export const propertiesApi = baseApi.injectEndpoints({
         method: 'PATCH',
         body: { imageIds },
       }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     setCoverImage: builder.mutation({
       query: ({ id, imageId }) => ({ url: `/properties/${id}/images/${imageId}/cover`, method: 'PATCH' }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     deletePropertyImage: builder.mutation({
       query: ({ id, imageId }) => ({ url: `/properties/${id}/images/${imageId}`, method: 'DELETE' }),
-      invalidatesTags: (_result, _error, { id }) => [{ type: 'Property', id }, { type: 'Property', id: 'MINE' }],
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
   }),
 })
