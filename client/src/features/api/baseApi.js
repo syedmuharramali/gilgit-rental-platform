@@ -16,6 +16,9 @@ export const baseApi = createApi({
       return headers
     },
   }),
+  refetchOnMountOrArgChange: true,
+  refetchOnFocus: true,
+  refetchOnReconnect: true,
   tagTypes: [
     'Property',
     'Favorite',
