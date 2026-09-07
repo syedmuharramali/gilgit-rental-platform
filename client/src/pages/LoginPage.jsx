@@ -9,13 +9,14 @@ import { z } from 'zod'
 import AuthLayout from '../layouts/AuthLayout'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import { clearAuthError, googleSignIn, loginUser } from '../features/auth/authSlice'
+import { useGetMyVerificationQuery } from '../features/verification/verificationApi'
 
 const loginSchema = z.object({
   email: z.string().trim().email('Enter a valid email address'),
   password: z.string().min(1, 'Password is required'),
 })
 
-const getPostLoginDestination = (user, requestedPath) => {
+const getPostLoginDestination = (user, ownerVerified, requestedPath) => {
   if (user?.role === 'admin') {
     return typeof requestedPath === 'string' && requestedPath.startsWith('/admin')
       ? requestedPath
@@ -26,7 +27,7 @@ const getPostLoginDestination = (user, requestedPath) => {
     return requestedPath
   }
 
-  return '/dashboard'
+  return ownerVerified ? '/owner' : '/dashboard'
 }
 
 function FieldShell({ error, icon: Icon, children }) {
@@ -45,12 +46,21 @@ function LoginPage() {
   const { status, error, token, user } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
+  const shouldCheckVerification = Boolean(token && user && user.role !== 'admin')
+  const { data: verificationData, isFetching: isCheckingVerification } = useGetMyVerificationQuery(undefined, {
+    skip: !shouldCheckVerification,
+  })
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
 
   useEffect(() => {
     if (!token || !user) return
-    navigate(getPostLoginDestination(user, location.state?.from), { replace: true })
-  }, [token, user, navigate, location.state])
+    if (user.role !== 'admin' && isCheckingVerification) return
+
+    navigate(
+      getPostLoginDestination(user, Boolean(verificationData?.ownerVerified), location.state?.from),
+      { replace: true },
+    )
+  }, [token, user, verificationData, isCheckingVerification, navigate, location.state])
 
   useEffect(() => { if (error) toast.error(error); return () => dispatch(clearAuthError()) }, [error, dispatch])
 
