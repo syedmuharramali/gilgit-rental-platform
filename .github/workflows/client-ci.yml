@@ -12,9 +12,6 @@ on:
       - 'client/**'
       - '.github/workflows/client-ci.yml'
 
-permissions:
-  contents: write
-
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -32,23 +29,6 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: client/package-lock.json
-
-      - name: Regenerate dependency lockfile
-        run: npm install --package-lock-only
-
-      - name: Persist dependency lockfile
-        if: github.event_name == 'push'
-        working-directory: .
-        run: |
-          if git diff --quiet -- client/package-lock.json; then
-            echo "Lockfile is already synchronized."
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add client/package-lock.json
-            git commit -m "chore(client): synchronize dependency lockfile"
-            git push origin HEAD:development
-          fi
 
       - name: Install dependencies
         run: npm ci
