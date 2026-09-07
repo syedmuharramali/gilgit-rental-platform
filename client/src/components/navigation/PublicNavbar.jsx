@@ -1,4 +1,4 @@
-import { Bell, Compass, Heart, Menu, Search, Sparkles, WandSparkles, X } from 'lucide-react'
+import { Bell, Compass, Heart, Menu, Search, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useSelector } from 'react-redux'
