@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Building2, ChevronRight, FileCheck2, Sparkles, Wrench } from 'lucide-react'
+import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useSelector } from 'react-redux'
@@ -57,6 +58,9 @@ import {
 } from '../../components/workspace/WorkspaceUI'
 
 const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
+const muted = 'text-slate-400'
+const subtle = 'text-slate-300'
+const softCard = 'rounded-2xl border border-white/[0.07] bg-white/[0.035]'
 
 export function DashboardOverviewPage({ owner = false }) {
   const user = useSelector((state) => state.auth.user)
@@ -85,25 +89,33 @@ export function DashboardOverviewPage({ owner = false }) {
         title={`Welcome back, ${user?.name?.split(' ')[0] || 'there'}.`}
         text={owner ? 'Manage listings, renter requests, tenancy operations and property care from one connected workspace.' : 'Track everything from discovery to applications, tenancy, rent, agreements and property care.'}
       />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {cards.map(([label, value, to, Icon]) => (
-          <Link key={label} to={to}>
-            <Panel className="h-full transition hover:-translate-y-1 hover:shadow-lg">
-              <div className="grid h-11 w-11 place-items-center rounded-2xl bg-[#e8f2ed] text-[#245545]"><Icon className="h-5 w-5" /></div>
-              <p className="mt-6 text-3xl font-black tracking-[-.05em]">{value}</p>
-              <p className="mt-1 text-sm font-bold text-slate-500">{label}</p>
-            </Panel>
-          </Link>
+        {cards.map(([label, value, to, Icon], index) => (
+          <motion.div key={label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.06 }} whileHover={{ y: -6 }}>
+            <Link to={to}>
+              <Panel className="group h-full overflow-hidden transition hover:border-cyan-300/20">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 text-cyan-200 ring-1 ring-white/10"><Icon className="h-5 w-5" /></div>
+                  <span className="text-[10px] font-black uppercase tracking-[.16em] text-slate-500">0{index + 1}</span>
+                </div>
+                <p className="mt-7 text-3xl font-black tracking-[-.05em] text-white">{value}</p>
+                <p className="mt-1 text-sm font-bold text-slate-400">{label}</p>
+                <div className="mt-5 h-px bg-gradient-to-r from-cyan-300/20 via-white/5 to-transparent" />
+              </Panel>
+            </Link>
+          </motion.div>
         ))}
       </div>
-      <Panel className="mt-6 overflow-hidden bg-[#102f26] text-white">
-        <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+
+      <Panel className="relative mt-6 overflow-hidden bg-[radial-gradient(circle_at_85%_20%,rgba(56,189,248,.14),transparent_28%),linear-gradient(135deg,#0c1322,#11182a)]">
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
           <div>
-            <p className="text-xs font-black uppercase tracking-[.18em] text-emerald-300">Rental lifecycle</p>
-            <h2 className="mt-3 text-2xl font-black tracking-[-.04em]">Every next step stays connected.</h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-white/60">Applications, viewings, agreements, rent records, condition reports, maintenance and reviews all connect back to the same property journey.</p>
+            <p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Rental lifecycle</p>
+            <h2 className="mt-3 text-2xl font-black tracking-[-.04em] text-white">Every next step stays connected.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">Applications, viewings, agreements, rent records, condition reports, maintenance and reviews all connect back to the same property journey.</p>
           </div>
-          <Link to={owner ? '/owner/properties' : '/properties'} className="inline-flex items-center gap-2 rounded-full bg-emerald-300 px-5 py-3 text-sm font-black text-[#102f26]">Continue <ChevronRight className="h-4 w-4" /></Link>
+          <Link to={owner ? '/owner/properties' : '/properties'} className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-5 py-3 text-sm font-black text-[#07101e] shadow-lg">Continue <ChevronRight className="h-4 w-4" /></Link>
         </div>
       </Panel>
     </>
@@ -122,12 +134,7 @@ export function ApplicationsPage({ owner = false }) {
   const [tenancyForm, setTenancyForm] = useState({ startDate: '', durationMonths: '', agreedMonthlyRent: '', securityDeposit: '' })
 
   const act = async (fn, payload, success) => {
-    try {
-      await fn(payload).unwrap()
-      toast.success(success)
-    } catch (error) {
-      toast.error(errorMessage(error))
-    }
+    try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) }
   }
 
   const openTenancy = (application) => {
@@ -151,9 +158,7 @@ export function ApplicationsPage({ owner = false }) {
       }).unwrap()
       toast.success('Tenancy created')
       setTenancyApplication(null)
-    } catch (error) {
-      toast.error(errorMessage(error))
-    }
+    } catch (error) { toast.error(errorMessage(error)) }
   }
 
   if (query.isLoading) return <LoadingState />
@@ -163,26 +168,29 @@ export function ApplicationsPage({ owner = false }) {
     <>
       <PageHeader eyebrow={owner ? 'Owner inbox' : 'Your applications'} title="Rental applications" text={owner ? 'Review renter requests and move accepted applications into tenancy.' : 'Follow the status of every home you have applied for.'} />
       <div className="space-y-4">
-        {items.length ? items.map((item) => (
-          <Panel key={item._id}>
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <div className="flex flex-wrap items-center gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-400">{pretty(item.applicationType)}</span></div>
-                <h2 className="mt-3 text-lg font-black">{item.property?.title || 'Property'}</h2>
-                <p className="mt-1 text-sm text-slate-500">{owner ? `${item.applicant?.name || 'Applicant'} · ${item.applicant?.email || ''}` : `${item.property?.address?.area || ''} · ${money(item.property?.monthlyRent)}/month`}</p>
-                {item.applicationType === 'group' && <p className="mt-2 text-xs font-bold text-violet-600">Group application · {(item.roommates?.length || 0) + 1} people</p>}
-                {item.message && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{item.message}</p>}
-                {item.rejectionReason && <p className="mt-3 rounded-2xl bg-rose-50 p-3 text-sm text-rose-700">{item.rejectionReason}</p>}
+        {items.length ? items.map((item, index) => (
+          <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+            <Panel className="hover:border-cyan-300/15">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-500">{pretty(item.applicationType)}</span></div>
+                  <h2 className="mt-3 text-lg font-black text-white">{item.property?.title || 'Property'}</h2>
+                  <p className={`mt-1 text-sm ${muted}`}>{owner ? `${item.applicant?.name || 'Applicant'} · ${item.applicant?.email || ''}` : `${item.property?.address?.area || ''} · ${money(item.property?.monthlyRent)}/month`}</p>
+                  {item.applicationType === 'group' && <p className="mt-2 text-xs font-bold text-violet-300">Group application · {(item.roommates?.length || 0) + 1} people</p>}
+                  {item.message && <p className={`mt-3 max-w-2xl text-sm leading-6 ${subtle}`}>{item.message}</p>}
+                  {item.rejectionReason && <p className="mt-3 rounded-2xl border border-rose-400/15 bg-rose-400/8 p-3 text-sm text-rose-300">{item.rejectionReason}</p>}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
+                  {owner && item.status === 'accepted' && <PrimaryButton onClick={() => openTenancy(item)}>Create tenancy</PrimaryButton>}
+                  {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
+                </div>
               </div>
-              <div className="flex flex-wrap gap-2">
-                {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
-                {owner && item.status === 'accepted' && <PrimaryButton onClick={() => openTenancy(item)}>Create tenancy</PrimaryButton>}
-                {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
-              </div>
-            </div>
-          </Panel>
+            </Panel>
+          </motion.div>
         )) : <EmptyState title="No applications yet" text={owner ? 'Applications for your published properties will appear here.' : 'Browse rentals and apply when you find the right home.'} />}
       </div>
+
       <Modal open={Boolean(tenancyApplication)} onClose={() => setTenancyApplication(null)} title="Create tenancy">
         <div className="space-y-3">
           <TextInput type="date" value={tenancyForm.startDate} onChange={(e) => setTenancyForm({ ...tenancyForm, startDate: e.target.value })} />
@@ -216,17 +224,19 @@ export function ViewingsPage({ owner = false }) {
     <>
       <PageHeader eyebrow="Visits" title={owner ? 'Viewing requests' : 'Your viewings'} text="Schedule and track in-person property visits without losing the conversation context." />
       <div className="grid gap-4 xl:grid-cols-2">
-        {items.length ? items.map((item) => (
-          <Panel key={item._id}>
-            <div className="flex items-start justify-between gap-4"><div><StatusBadge value={item.status} /><h2 className="mt-3 font-black">{item.property?.title}</h2><p className="mt-1 text-sm text-slate-500">{dateTime(item.requestedDateTime)}</p>{owner && <p className="mt-2 text-sm font-bold text-slate-700">{item.renter?.name}</p>}</div><FileCheck2 className="h-5 w-5 text-emerald-700" /></div>
-            {item.message && <p className="mt-4 text-sm leading-6 text-slate-600">{item.message}</p>}
-            {item.ownerResponse && <p className="mt-3 rounded-2xl bg-slate-50 p-3 text-sm text-slate-600">Owner response: {item.ownerResponse}</p>}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {owner && item.status === 'requested' && <><PrimaryButton onClick={() => act(confirm, { id: item._id, ownerResponse: 'Viewing confirmed. See you at the requested time.' }, 'Viewing confirmed')}>Confirm</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, ownerResponse: 'Unable to host this viewing time.' }, 'Viewing rejected')}>Reject</SecondaryButton></>}
-              {owner && item.status === 'confirmed' && <PrimaryButton onClick={() => act(complete, item._id, 'Viewing completed')}>Mark completed</PrimaryButton>}
-              {!owner && ['requested', 'confirmed'].includes(item.status) && <SecondaryButton onClick={() => act(cancel, item._id, 'Viewing cancelled')}>Cancel</SecondaryButton>}
-            </div>
-          </Panel>
+        {items.length ? items.map((item, index) => (
+          <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .04 }}>
+            <Panel className="h-full">
+              <div className="flex items-start justify-between gap-4"><div><StatusBadge value={item.status} /><h2 className="mt-3 font-black text-white">{item.property?.title}</h2><p className={`mt-1 text-sm ${muted}`}>{dateTime(item.requestedDateTime)}</p>{owner && <p className="mt-2 text-sm font-bold text-slate-200">{item.renter?.name}</p>}</div><div className="grid h-10 w-10 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200 ring-1 ring-cyan-300/15"><FileCheck2 className="h-5 w-5" /></div></div>
+              {item.message && <p className={`mt-4 text-sm leading-6 ${subtle}`}>{item.message}</p>}
+              {item.ownerResponse && <p className="mt-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3 text-sm text-slate-300">Owner response: {item.ownerResponse}</p>}
+              <div className="mt-5 flex flex-wrap gap-2">
+                {owner && item.status === 'requested' && <><PrimaryButton onClick={() => act(confirm, { id: item._id, ownerResponse: 'Viewing confirmed. See you at the requested time.' }, 'Viewing confirmed')}>Confirm</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, ownerResponse: 'Unable to host this viewing time.' }, 'Viewing rejected')}>Reject</SecondaryButton></>}
+                {owner && item.status === 'confirmed' && <PrimaryButton onClick={() => act(complete, item._id, 'Viewing completed')}>Mark completed</PrimaryButton>}
+                {!owner && ['requested', 'confirmed'].includes(item.status) && <SecondaryButton onClick={() => act(cancel, item._id, 'Viewing cancelled')}>Cancel</SecondaryButton>}
+              </div>
+            </Panel>
+          </motion.div>
         )) : <EmptyState title="No viewings yet" />}
       </div>
     </>
@@ -256,14 +266,16 @@ export function TenanciesPage({ owner = false }) {
           <Panel key={item._id}>
             <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
               <div>
-                <div className="flex gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-400">{item.durationMonths} months</span></div>
-                <h2 className="mt-3 text-xl font-black">{item.property?.title}</h2>
-                <p className="mt-1 text-sm text-slate-500">{item.property?.address?.area} · starts {shortDate(item.startDate)}</p>
-                <div className="mt-5 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-3"><div><p className="text-xs text-slate-400">Monthly rent</p><strong className="text-sm">{money(item.agreedMonthlyRent)}</strong></div><div><p className="text-xs text-slate-400">Deposit</p><strong className="text-sm">{money(item.securityDeposit)}</strong></div><div><p className="text-xs text-slate-400">{owner ? 'Renter' : 'Owner'}</p><strong className="text-sm">{owner ? item.renter?.name : item.owner?.name}</strong></div></div>
+                <div className="flex gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-500">{item.durationMonths} months</span></div>
+                <h2 className="mt-3 text-xl font-black text-white">{item.property?.title}</h2>
+                <p className={`mt-1 text-sm ${muted}`}>{item.property?.address?.area} · starts {shortDate(item.startDate)}</p>
+                <div className="mt-5 grid max-w-xl grid-cols-2 gap-3 sm:grid-cols-3">
+                  {[['Monthly rent',money(item.agreedMonthlyRent)],['Deposit',money(item.securityDeposit)],[owner ? 'Renter' : 'Owner',owner ? item.renter?.name : item.owner?.name]].map(([label,value]) => <div key={label} className={`${softCard} p-4`}><p className="text-xs text-slate-500">{label}</p><strong className="mt-1 block text-sm text-white">{value}</strong></div>)}
+                </div>
               </div>
               <div className="flex flex-wrap gap-2 lg:max-w-56 lg:flex-col">
                 {item.status === 'active' && owner && <><PrimaryButton onClick={() => act(generate, item._id, 'Rent schedule created')}>Generate rent ledger</PrimaryButton><SecondaryButton onClick={() => act(createAgreement, { tenancyId: item._id }, 'Agreement created')}>Create agreement</SecondaryButton><SecondaryButton onClick={() => act(end, { id: item._id, reason: 'Tenancy completed' }, 'Tenancy ended')}>End tenancy</SecondaryButton></>}
-                <Link to={`${owner ? '/owner' : '/dashboard'}/condition-reports?tenancy=${item._id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-slate-200 px-4 text-sm font-black">Condition reports</Link>
+                <Link to={`${owner ? '/owner' : '/dashboard'}/condition-reports?tenancy=${item._id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/25 hover:bg-white/[0.06]">Condition reports</Link>
               </div>
             </div>
           </Panel>
@@ -297,8 +309,12 @@ export function RentPage({ owner = false }) {
   return (
     <>
       <PageHeader eyebrow="Financial record" title="Rent ledger" text="Manual payment records keep both parties aligned without pretending a payment gateway exists." />
-      <div className="mb-6 grid gap-4 sm:grid-cols-3"><Panel><p className="text-xs font-bold text-slate-400">Total scheduled</p><p className="mt-2 text-2xl font-black">{money(totals.due)}</p></Panel><Panel><p className="text-xs font-bold text-slate-400">Recorded paid</p><p className="mt-2 text-2xl font-black text-emerald-700">{money(totals.paid)}</p></Panel><Panel><p className="text-xs font-bold text-slate-400">Outstanding</p><p className="mt-2 text-2xl font-black text-amber-700">{money(totals.due - totals.paid)}</p></Panel></div>
-      <div className="space-y-3">{records.length ? records.map((record) => <Panel key={record._id}><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><StatusBadge value={record.status} /><span className="text-xs font-bold text-slate-400">{record.period}</span></div><p className="mt-2 font-black">{record.property?.title}</p><p className="mt-1 text-sm text-slate-500">Due {shortDate(record.dueDate)} · {money(record.amountPaid)} / {money(record.amountDue)}</p>{record.notes && <p className="mt-2 text-xs text-slate-400">{record.notes}</p>}</div>{owner && record.status !== 'paid' && <PrimaryButton onClick={() => { setPayment(record); setAmount(String(Number(record.amountDue) - Number(record.amountPaid))) }}>Record payment</PrimaryButton>}</div></Panel>) : <EmptyState title="No rent records yet" />}</div>
+      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+        <Panel><p className="text-xs font-bold text-slate-500">Total scheduled</p><p className="mt-2 text-2xl font-black text-white">{money(totals.due)}</p></Panel>
+        <Panel><p className="text-xs font-bold text-slate-500">Recorded paid</p><p className="mt-2 text-2xl font-black text-cyan-200">{money(totals.paid)}</p></Panel>
+        <Panel><p className="text-xs font-bold text-slate-500">Outstanding</p><p className="mt-2 text-2xl font-black text-amber-200">{money(totals.due - totals.paid)}</p></Panel>
+      </div>
+      <div className="space-y-3">{records.length ? records.map((record) => <Panel key={record._id}><div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><StatusBadge value={record.status} /><span className="text-xs font-bold text-slate-500">{record.period}</span></div><p className="mt-2 font-black text-white">{record.property?.title}</p><p className={`mt-1 text-sm ${muted}`}>Due {shortDate(record.dueDate)} · {money(record.amountPaid)} / {money(record.amountDue)}</p>{record.notes && <p className="mt-2 text-xs text-slate-500">{record.notes}</p>}</div>{owner && record.status !== 'paid' && <PrimaryButton onClick={() => { setPayment(record); setAmount(String(Number(record.amountDue) - Number(record.amountPaid))) }}>Record payment</PrimaryButton>}</div></Panel>) : <EmptyState title="No rent records yet" />}</div>
       <Modal open={Boolean(payment)} onClose={() => setPayment(null)} title="Record rent payment"><div className="space-y-4"><TextInput type="number" min="1" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder="Payment amount" /><TextArea value={notes} onChange={(event) => setNotes(event.target.value)} placeholder="Optional payment note" /><PrimaryButton className="w-full" onClick={submit}>Save payment</PrimaryButton></div></Modal>
     </>
   )
@@ -328,9 +344,9 @@ export function MaintenancePage({ owner = false }) {
       <div className="grid gap-4 xl:grid-cols-2">
         {items.length ? items.map((request) => (
           <Panel key={request._id}>
-            <div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap gap-2"><StatusBadge value={request.status} /><span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-black uppercase text-slate-500">{pretty(request.priority)}</span></div><h2 className="mt-3 font-black">{request.title}</h2><p className="mt-1 text-xs text-slate-400">{request.property?.title} · {pretty(request.category)}</p></div><Wrench className="h-5 w-5 text-emerald-700" /></div>
-            <p className="mt-4 text-sm leading-6 text-slate-600">{request.description}</p>
-            {request.ownerResponse && <p className="mt-4 rounded-2xl bg-[#edf5f1] p-3 text-sm text-[#245545]"><strong>Owner:</strong> {request.ownerResponse}</p>}
+            <div className="flex items-start justify-between gap-4"><div><div className="flex flex-wrap gap-2"><StatusBadge value={request.status} /><span className="rounded-full border border-white/8 bg-white/[0.04] px-2 py-1 text-[10px] font-black uppercase text-slate-400">{pretty(request.priority)}</span></div><h2 className="mt-3 font-black text-white">{request.title}</h2><p className="mt-1 text-xs text-slate-500">{request.property?.title} · {pretty(request.category)}</p></div><div className="grid h-10 w-10 place-items-center rounded-2xl bg-violet-400/10 text-violet-200 ring-1 ring-violet-300/15"><Wrench className="h-5 w-5" /></div></div>
+            <p className={`mt-4 text-sm leading-6 ${subtle}`}>{request.description}</p>
+            {request.ownerResponse && <p className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.05] p-3 text-sm text-cyan-100"><strong>Owner:</strong> {request.ownerResponse}</p>}
             <div className="mt-5 flex gap-2">{owner && request.status !== 'resolved' && request.status !== 'cancelled' && <PrimaryButton onClick={async () => { try { await update({ id: request._id, status: request.status === 'pending' ? 'in_progress' : 'resolved', ownerResponse: request.status === 'pending' ? 'We are working on this request.' : 'This issue has been resolved.' }).unwrap(); toast.success('Maintenance updated') } catch (error) { toast.error(errorMessage(error)) } }}>{request.status === 'pending' ? 'Start work' : 'Resolve'}</PrimaryButton>}{!owner && request.status === 'pending' && <SecondaryButton onClick={async () => { try { await cancel(request._id).unwrap(); toast.success('Request cancelled') } catch (error) { toast.error(errorMessage(error)) } }}>Cancel</SecondaryButton>}</div>
           </Panel>
         )) : <EmptyState title="No maintenance requests" />}
