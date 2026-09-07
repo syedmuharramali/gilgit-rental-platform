@@ -18,7 +18,10 @@ export const scoringApi = baseApi.injectEndpoints({
         body,
       }),
       transformResponse: (response) => response.data.preferences,
-      invalidatesTags: [{ type: 'Property', id: 'PREFERENCES' }],
+      invalidatesTags: [
+        { type: 'Property', id: 'PREFERENCES' },
+        { type: 'Property', id: 'MATCHES' },
+      ],
     }),
     getMatches: builder.query({
       query: (limit = 20) => ({
