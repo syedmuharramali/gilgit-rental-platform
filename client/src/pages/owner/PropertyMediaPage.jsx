@@ -12,7 +12,9 @@ import {
 } from '../../features/properties/propertiesApi'
 import { EmptyState, LoadingState, PageHeader, Panel, PrimaryButton, SecondaryButton, Select } from '../../components/workspace/WorkspaceUI'
 
+const ONE_MB = 1024 * 1024
 const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
+const formatBytes = (bytes = 0) => bytes < ONE_MB ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / ONE_MB).toFixed(2)} MB`
 
 export default function PropertyMediaPage() {
   const { data: myData, isLoading: loadingProperties } = useGetMyPropertiesQuery()
@@ -25,22 +27,39 @@ export default function PropertyMediaPage() {
   const [setCover, coverState] = useSetCoverImageMutation()
   const [deleteImage, deleteState] = useDeletePropertyImageMutation()
   const [files, setFiles] = useState([])
+  const [uploadProgress, setUploadProgress] = useState({ percent: 0, loaded: 0, total: 0, saving: false })
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { 'image/jpeg': [], 'image/png': [] },
-    maxFiles: 8,
-    maxSize: 5 * 1024 * 1024,
-    onDrop: setFiles,
+    maxFiles: 1,
+    maxSize: ONE_MB,
+    disabled: uploadState.isLoading,
+    onDrop: (acceptedFiles) => setFiles(acceptedFiles.slice(0, 1)),
+    onDropRejected: () => toast.error('Choose one JPG or PNG image smaller than 1 MB.'),
   })
 
   const images = useMemo(() => [...(property?.images || [])].sort((a, b) => a.order - b.order), [property?.images])
 
   const upload = async () => {
-    if (!files.length || !propertyId) return
+    if (!files.length || !propertyId || uploadState.isLoading) return
+
+    setUploadProgress({ percent: 0, loaded: 0, total: files[0].size, saving: false })
+
     try {
-      await uploadImages({ id: propertyId, files }).unwrap()
+      await uploadImages({
+        id: propertyId,
+        files,
+        onProgress: ({ loaded, total, percent }) => {
+          setUploadProgress({ percent, loaded, total, saving: percent >= 100 })
+        },
+      }).unwrap()
       setFiles([])
-      toast.success('Property images uploaded')
-    } catch (error) { toast.error(errorMessage(error)) }
+      setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
+      toast.success('Property image uploaded')
+    } catch (error) {
+      setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
+      toast.error(errorMessage(error))
+    }
   }
 
   const move = async (index, direction) => {
@@ -63,13 +82,34 @@ export default function PropertyMediaPage() {
       {!propertyId ? <EmptyState title="Create a property first" text="Media management becomes available after a draft listing exists." /> : isLoading ? <LoadingState /> : (
         <div className="space-y-6">
           <Panel>
-            <div {...getRootProps()} className={`cursor-pointer rounded-[26px] border-2 border-dashed p-8 text-center transition ${isDragActive ? 'border-cyan-300/45 bg-cyan-300/8' : 'border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
+            <div {...getRootProps()} className={`rounded-[26px] border-2 border-dashed p-8 text-center transition ${uploadState.isLoading ? 'cursor-not-allowed border-white/8 bg-white/[0.015] opacity-55' : isDragActive ? 'cursor-pointer border-cyan-300/45 bg-cyan-300/8' : 'cursor-pointer border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
               <input {...getInputProps()} />
               <UploadCloud className="mx-auto h-8 w-8 text-cyan-300" />
-              <p className="mt-3 font-black text-white">Drop JPG or PNG property photos here</p>
-              <p className="mt-1 text-xs text-white/35">Up to 8 files per upload, 5 MB each. A property may contain up to 10 images.</p>
+              <p className="mt-3 font-black text-white">Drop one JPG or PNG property photo here</p>
+              <p className="mt-1 text-xs text-white/35">One image at a time · maximum 1 MB per image · up to 10 images per property</p>
             </div>
-            {files.length > 0 && <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.055] p-4"><p className="text-sm font-bold text-cyan-100">{files.length} image(s) selected</p><PrimaryButton disabled={uploadState.isLoading} onClick={upload}><ImagePlus className="h-4 w-4" /> Upload</PrimaryButton></div>}
+
+            {files.length > 0 && <div className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.055] p-4">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-bold text-cyan-100">{files[0].name}</p>
+                  <p className="mt-1 text-xs text-slate-500">{formatBytes(files[0].size)} · ready to upload</p>
+                </div>
+                <PrimaryButton disabled={uploadState.isLoading} onClick={upload}><ImagePlus className="h-4 w-4" /> {uploadState.isLoading ? 'Uploading…' : 'Upload image'}</PrimaryButton>
+              </div>
+
+              {uploadState.isLoading && (
+                <div className="mt-4">
+                  <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-400">
+                    <span>{uploadProgress.saving ? 'Upload complete · saving securely…' : `Uploading ${uploadProgress.percent}%`}</span>
+                    <span>{formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total || files[0].size)}</span>
+                  </div>
+                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]">
+                    <div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress.percent}%` }} />
+                  </div>
+                </div>
+              )}
+            </div>}
           </Panel>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
