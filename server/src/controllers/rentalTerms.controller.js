@@ -79,12 +79,6 @@ const parseTermsPayload = ({ body, application, property }) => {
   };
 };
 
-/*
-|--------------------------------------------------------------------------
-| Get rental terms for current user
-| GET /api/rental-terms
-|--------------------------------------------------------------------------
-*/
 exports.getMyRentalTerms = asyncHandler(async (req, res) => {
   const terms = await RentalTerms.find({
     $or: [
@@ -107,12 +101,6 @@ exports.getMyRentalTerms = asyncHandler(async (req, res) => {
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Owner proposes or revises rental terms
-| PUT /api/rental-terms/application/:applicationId
-|--------------------------------------------------------------------------
-*/
 exports.proposeRentalTerms = asyncHandler(async (req, res, next) => {
   const { applicationId } = req.params;
 
@@ -134,12 +122,17 @@ exports.proposeRentalTerms = asyncHandler(async (req, res, next) => {
     _id: application.property,
     owner: req.user._id,
     listingStatus: "published",
-    reservationStatus: "reserved",
     isDeleted: { $ne: true },
   });
 
   if (!property) {
-    return next(new AppError("Reserved property not found", 404));
+    return next(new AppError("Property is no longer available for rental terms", 404));
+  }
+
+  if (property.reservationStatus !== "reserved") {
+    property.reservationStatus = "reserved";
+    property.reservedAt = new Date();
+    await property.save({ validateBeforeSave: false });
   }
 
   const values = parseTermsPayload({
@@ -198,12 +191,6 @@ exports.proposeRentalTerms = asyncHandler(async (req, res, next) => {
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Renter accepts rental terms
-| PATCH /api/rental-terms/:id/accept
-|--------------------------------------------------------------------------
-*/
 exports.acceptRentalTerms = asyncHandler(async (req, res, next) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return next(new AppError("Invalid rental terms ID", 400));
@@ -246,12 +233,6 @@ exports.acceptRentalTerms = asyncHandler(async (req, res, next) => {
   });
 });
 
-/*
-|--------------------------------------------------------------------------
-| Renter requests changes
-| PATCH /api/rental-terms/:id/request-changes
-|--------------------------------------------------------------------------
-*/
 exports.requestRentalTermChanges = asyncHandler(async (req, res, next) => {
   if (!mongoose.isValidObjectId(req.params.id)) {
     return next(new AppError("Invalid rental terms ID", 400));
