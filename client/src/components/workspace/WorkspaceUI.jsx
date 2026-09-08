@@ -51,12 +51,17 @@ export function LoadingState() {
 export function Modal({ open, onClose, title, children }) {
   const titleId = useId()
   const closeRef = useRef(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return undefined
     const previousOverflow = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    const handleKeyDown = (event) => { if (event.key === 'Escape') onClose?.() }
+    const handleKeyDown = (event) => { if (event.key === 'Escape') onCloseRef.current?.() }
     window.addEventListener('keydown', handleKeyDown)
     const frame = window.requestAnimationFrame(() => closeRef.current?.focus())
     return () => {
@@ -64,7 +69,7 @@ export function Modal({ open, onClose, title, children }) {
       window.removeEventListener('keydown', handleKeyDown)
       document.body.style.overflow = previousOverflow
     }
-  }, [open, onClose])
+  }, [open])
 
   return (
     <AnimatePresence>
