@@ -90,6 +90,6 @@ export function TextArea({ className = '', ...props }) {
   const ariaLabel = props['aria-label'] || props.placeholder
   return <textarea {...props} aria-label={ariaLabel} className={`min-h-28 p-4 ${control} ${className}`} />
 }
-export function Select({ className = '', ...props }) { return <select {...props} className={`h-12 px-4 [color-scheme:dark] ${control} ${className}`} /> }
+export function Select({ className = '', ...props }) { return <select {...props} className={`h-12 px-4 [color-scheme:dark] [&>option]:bg-[#0d1423] [&>option]:text-slate-100 ${control} ${className}`} /> }
 export function PrimaryButton({ children, className = '', type = 'button', ...props }) { return <motion.button whileTap={{ scale: .98 }} type={type} {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-4 text-sm font-black text-[#07101e] shadow-[0_14px_35px_rgba(56,189,248,.16)] transition hover:-translate-y-.5 disabled:cursor-wait disabled:opacity-50 ${className}`}>{children}</motion.button> }
 export function SecondaryButton({ children, className = '', type = 'button', ...props }) { return <motion.button whileTap={{ scale: .98 }} type={type} {...props} className={`inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.045] px-4 text-sm font-black text-slate-200 transition hover:-translate-y-.5 hover:border-cyan-300/25 hover:bg-white/[0.075] disabled:opacity-50 ${className}`}>{children}</motion.button> }
