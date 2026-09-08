@@ -141,8 +141,8 @@ export function ApplicationsPage({ owner = false }) {
     setTenancyApplication(application)
     setTenancyForm({
       startDate: application.preferredMoveInDate?.slice(0, 10) || '',
-      durationMonths: application.expectedStayMonths ? String(application.expectedStayMonths) : '',
-      agreedMonthlyRent: application.property?.monthlyRent ? String(application.property.monthlyRent) : '',
+      durationMonths: application.expectedStayMonths != null ? String(application.expectedStayMonths) : '',
+      agreedMonthlyRent: application.property?.monthlyRent != null ? String(application.property.monthlyRent) : '',
       securityDeposit: '',
     })
   }
@@ -152,9 +152,9 @@ export function ApplicationsPage({ owner = false }) {
       await createTenancy({
         applicationId: tenancyApplication._id,
         ...(tenancyForm.startDate && { startDate: tenancyForm.startDate }),
-        ...(tenancyForm.durationMonths && { durationMonths: Number(tenancyForm.durationMonths) }),
-        ...(tenancyForm.agreedMonthlyRent && { agreedMonthlyRent: Number(tenancyForm.agreedMonthlyRent) }),
-        ...(tenancyForm.securityDeposit && { securityDeposit: Number(tenancyForm.securityDeposit) }),
+        ...(tenancyForm.durationMonths !== '' && { durationMonths: Number(tenancyForm.durationMonths) }),
+        ...(tenancyForm.agreedMonthlyRent !== '' && { agreedMonthlyRent: Number(tenancyForm.agreedMonthlyRent) }),
+        ...(tenancyForm.securityDeposit !== '' && { securityDeposit: Number(tenancyForm.securityDeposit) }),
       }).unwrap()
       toast.success('Tenancy created')
       setTenancyApplication(null)
@@ -192,12 +192,57 @@ export function ApplicationsPage({ owner = false }) {
       </div>
 
       <Modal open={Boolean(tenancyApplication)} onClose={() => setTenancyApplication(null)} title="Create tenancy">
-        <div className="space-y-3">
-          <TextInput type="date" value={tenancyForm.startDate} onChange={(e) => setTenancyForm({ ...tenancyForm, startDate: e.target.value })} />
-          <TextInput type="number" min="1" max="120" value={tenancyForm.durationMonths} onChange={(e) => setTenancyForm({ ...tenancyForm, durationMonths: e.target.value })} placeholder="Duration in months" />
-          <TextInput type="number" min="0" value={tenancyForm.agreedMonthlyRent} onChange={(e) => setTenancyForm({ ...tenancyForm, agreedMonthlyRent: e.target.value })} placeholder="Agreed monthly rent" />
-          <TextInput type="number" min="0" value={tenancyForm.securityDeposit} onChange={(e) => setTenancyForm({ ...tenancyForm, securityDeposit: e.target.value })} placeholder="Security deposit (optional)" />
-          <PrimaryButton disabled={createTenancyState.isLoading} className="w-full" onClick={createFromApplication}>Create tenancy</PrimaryButton>
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
+            <p className="text-sm font-black text-cyan-100">Start the active rental relationship</p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Creating a tenancy connects this accepted renter to the property, marks the property as rented, and unlocks the agreement, rent ledger, condition reports and maintenance workflow.</p>
+          </div>
+
+          {tenancyApplication && (
+            <div className="grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:grid-cols-2">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Property</p>
+                <p className="mt-1 text-sm font-black text-white">{tenancyApplication.property?.title || 'Property'}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Renter</p>
+                <p className="mt-1 text-sm font-black text-white">{tenancyApplication.applicant?.name || 'Accepted applicant'}</p>
+              </div>
+            </div>
+          )}
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Tenancy start date</span>
+            <TextInput aria-label="Tenancy start date" type="date" value={tenancyForm.startDate} onChange={(event) => setTenancyForm((current) => ({ ...current, startDate: event.target.value }))} />
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">The date the renter's tenancy begins. If the renter supplied a preferred move-in date, it is filled in automatically. If left blank, the server uses that preferred date or today's date.</span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Tenancy duration</span>
+            <div className="relative">
+              <TextInput aria-label="Tenancy duration in months" type="number" min="1" max="120" value={tenancyForm.durationMonths} onChange={(event) => setTenancyForm((current) => ({ ...current, durationMonths: event.target.value }))} placeholder="6" className="pr-20" />
+              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">months</span>
+            </div>
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">How long the agreed rental period will last. The renter's expected stay is used as the starting value when available.</span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Agreed monthly rent (PKR)</span>
+            <TextInput aria-label="Agreed monthly rent in PKR" type="number" min="0" value={tenancyForm.agreedMonthlyRent} onChange={(event) => setTenancyForm((current) => ({ ...current, agreedMonthlyRent: event.target.value }))} placeholder="45000" />
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">The monthly amount both sides agreed to. It starts with the property's listed rent of {money(tenancyApplication?.property?.monthlyRent || 0)} and can be adjusted here if the final deal changed.</span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Security deposit (PKR) <span className="font-semibold text-slate-600">(optional override)</span></span>
+            <TextInput aria-label="Security deposit in PKR" type="number" min="0" value={tenancyForm.securityDeposit} onChange={(event) => setTenancyForm((current) => ({ ...current, securityDeposit: event.target.value }))} placeholder="Leave blank to use the property's listed deposit" />
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">Enter a value only if the final agreed deposit differs from the property's listed security deposit. Enter 0 if no deposit will be charged.</span>
+          </label>
+
+          <div className="rounded-2xl border border-amber-300/12 bg-amber-300/[0.045] p-4 text-xs leading-5 text-amber-100/75">
+            Creating this tenancy will mark the property as rented and notify the renter. Check the dates and financial terms before continuing.
+          </div>
+
+          <PrimaryButton disabled={createTenancyState.isLoading} className="w-full" onClick={createFromApplication}>{createTenancyState.isLoading ? 'Creating tenancy…' : 'Create tenancy'}</PrimaryButton>
         </div>
       </Modal>
     </>
