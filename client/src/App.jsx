@@ -29,12 +29,12 @@ import {
   MessagesPage,
   NotificationsPage,
   OwnerPropertiesPage,
-  OwnerVerificationPage,
   ProfilePage,
   ReportsPage,
   ReviewsPage,
 } from './pages/workspace/AccountPages'
 import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
+import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
 import {
   ApplicationsPage,
   DashboardOverviewPage,
