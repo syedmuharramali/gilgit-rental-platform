@@ -1,8 +1,6 @@
 import {
   Check,
   CheckCircle2,
-  CircleDollarSign,
-  Home,
   ImagePlus,
   Info,
   MapPin,
@@ -34,6 +32,8 @@ import {
   useUpdatePropertyMutation,
   useUploadPropertyImagesMutation,
 } from '../../features/properties/propertiesApi'
+
+const ONE_MB = 1024 * 1024
 
 const blank = {
   title: '',
@@ -79,6 +79,7 @@ const steps = [
 
 const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
 const choiceClass = (active) => `rounded-2xl border p-4 text-left transition ${active ? 'border-cyan-300/35 bg-cyan-300/[0.09] text-cyan-100 shadow-[0_12px_34px_rgba(34,211,238,.06)]' : 'border-white/[0.08] bg-white/[0.025] text-slate-400 hover:border-white/15 hover:bg-white/[0.045] hover:text-slate-200'}`
+const formatBytes = (bytes = 0) => bytes < ONE_MB ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / ONE_MB).toFixed(2)} MB`
 
 function Field({ label, hint, required = false, optional = false, children, className = '' }) {
   return (
@@ -133,6 +134,7 @@ export default function PropertyEditorPage() {
   const [step, setStep] = useState(initialStep)
   const [form, setForm] = useState(blank)
   const [newFiles, setNewFiles] = useState([])
+  const [uploadProgress, setUploadProgress] = useState({ percent: 0, loaded: 0, total: 0, saving: false })
   const { data: property, isLoading } = useGetPropertyQuery(id, { skip: !editing })
   const { data: amenityData } = useGetAmenitiesQuery()
   const [createProperty, createState] = useCreatePropertyMutation()
@@ -143,10 +145,18 @@ export default function PropertyEditorPage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: { 'image/jpeg': [], 'image/png': [] },
-    maxFiles: 8,
-    maxSize: 5 * 1024 * 1024,
-    onDrop: (acceptedFiles) => setNewFiles(acceptedFiles),
-    onDropRejected: () => toast.error('Use JPG or PNG images under 5 MB each. You can select up to 8 at once.'),
+    maxFiles: 1,
+    maxSize: ONE_MB,
+    disabled: uploadState.isLoading,
+    onDrop: (acceptedFiles) => setNewFiles(acceptedFiles.slice(0, 1)),
+    onDropRejected: (rejections) => {
+      const rejectedFile = rejections?.[0]?.file
+      if (rejectedFile?.size > ONE_MB) {
+        toast.error(`${rejectedFile.name} is ${formatBytes(rejectedFile.size)}. Property images must be smaller than 1 MB.`)
+        return
+      }
+      toast.error('Choose one JPG or PNG image smaller than 1 MB.')
+    },
   })
 
   useEffect(() => {
@@ -346,12 +356,24 @@ export default function PropertyEditorPage() {
   }
 
   const upload = async () => {
-    if (!newFiles.length || !id) return
+    if (!newFiles.length || !id || uploadState.isLoading) return
+
+    const file = newFiles[0]
+    setUploadProgress({ percent: 0, loaded: 0, total: file.size, saving: false })
+
     try {
-      await uploadImages({ id, files: newFiles }).unwrap()
+      await uploadImages({
+        id,
+        files: [file],
+        onProgress: ({ loaded, total, percent }) => {
+          setUploadProgress({ percent, loaded, total: total || file.size, saving: percent >= 100 })
+        },
+      }).unwrap()
       setNewFiles([])
-      toast.success('Property images uploaded')
+      setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
+      toast.success('Property image uploaded')
     } catch (error) {
+      setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
       toast.error(errorMessage(error))
     }
   }
@@ -378,8 +400,6 @@ export default function PropertyEditorPage() {
 
   const images = property?.images || []
   const hasCover = images.some((image) => image.isCover)
-  const selectedUploadSize = newFiles.reduce((total, file) => total + file.size, 0)
-  const selectedUploadMegabytes = (selectedUploadSize / (1024 * 1024)).toFixed(1)
   const saving = createState.isLoading || updateState.isLoading
 
   return (
@@ -429,10 +449,7 @@ export default function PropertyEditorPage() {
             <p className="mt-1 text-sm text-slate-500">{steps[step].text}</p>
           </div>
           <div className="h-1.5 w-full max-w-48 overflow-hidden rounded-full bg-white/[0.06] sm:w-40">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500"
-              animate={{ width: `${((step + 1) / steps.length) * 100}%` }}
-            />
+            <motion.div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500" animate={{ width: `${((step + 1) / steps.length) * 100}%` }} />
           </div>
         </div>
 
@@ -460,19 +477,10 @@ export default function PropertyEditorPage() {
             <div>
               <StepNotice>Enter amounts in Pakistani rupees. The security deposit can be zero, and negotiable rent simply tells renters that discussion is possible.</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Monthly rent (PKR)" required hint="Amount charged each month, for example 45000.">
-                  <TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder="45000" />
-                </Field>
-                <Field label="Security deposit (PKR)" hint="One-time refundable deposit. Enter 0 if no deposit is required.">
-                  <TextInput type="number" min="0" inputMode="numeric" value={form.securityDeposit} onChange={(event) => set('securityDeposit', event.target.value)} placeholder="90000" />
-                </Field>
-                <Field label="Available from" required hint="The earliest date a renter can move in.">
-                  <TextInput type="date" value={form.availableFrom} onChange={(event) => set('availableFrom', event.target.value)} />
-                </Field>
-                <div>
-                  <div className="mb-2 text-xs font-black text-slate-200">Negotiation</div>
-                  <ToggleCard checked={form.negotiable} onChange={(event) => set('negotiable', event.target.checked)} title="Rent is negotiable" text="Turn this on only if you are willing to discuss the listed monthly rent." />
-                </div>
+                <Field label="Monthly rent (PKR)" required hint="Amount charged each month, for example 45000."><TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder="45000" /></Field>
+                <Field label="Security deposit (PKR)" hint="One-time refundable deposit. Enter 0 if no deposit is required."><TextInput type="number" min="0" inputMode="numeric" value={form.securityDeposit} onChange={(event) => set('securityDeposit', event.target.value)} placeholder="90000" /></Field>
+                <Field label="Available from" required hint="The earliest date a renter can move in."><TextInput type="date" value={form.availableFrom} onChange={(event) => set('availableFrom', event.target.value)} /></Field>
+                <div><div className="mb-2 text-xs font-black text-slate-200">Negotiation</div><ToggleCard checked={form.negotiable} onChange={(event) => set('negotiable', event.target.checked)} title="Rent is negotiable" text="Turn this on only if you are willing to discuss the listed monthly rent." /></div>
               </div>
             </div>
           )}
@@ -481,39 +489,14 @@ export default function PropertyEditorPage() {
             <div>
               <StepNotice>These details help renters compare properties. Use 0 bedrooms for hostel beds or room-style listings when a separate bedroom count does not apply.</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Minimum stay" required hint="Minimum number of months the renter must stay (1–120).">
-                  <TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" />
-                </Field>
-                <Field label="Bedrooms" required hint="Number of bedrooms included in the rental.">
-                  <TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" />
-                </Field>
-                <Field label="Bathrooms" required hint="Number of bathrooms available to the renter.">
-                  <TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" />
-                </Field>
-                <Field label="Floor" optional hint="Example: 1 for first floor. Leave empty if it does not apply.">
-                  <TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" />
-                </Field>
-                <Field label="Total area" optional hint="Enter the size, then choose its unit.">
-                  <TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" />
-                </Field>
-                <Field label="Area unit" hint="Unit used for the total property area.">
-                  <Select aria-label="Area unit" value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}>
-                    <option value="sqft">Square feet (sqft)</option>
-                    <option value="sqm">Square metres (sqm)</option>
-                    <option value="kanal">Kanal</option>
-                    <option value="marla">Marla</option>
-                  </Select>
-                </Field>
-                <Field label="Furnishing" hint="Choose the condition in which the property will be handed over.">
-                  <Select aria-label="Furnishing status" value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>
-                    <option value="furnished">Furnished</option>
-                    <option value="semi_furnished">Semi furnished</option>
-                    <option value="unfurnished">Unfurnished</option>
-                  </Select>
-                </Field>
-                <Field label="Maximum occupants" required hint="Highest number of people you allow to live in the property.">
-                  <TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" />
-                </Field>
+                <Field label="Minimum stay" required hint="Minimum number of months the renter must stay (1–120)."><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>
+                <Field label="Bedrooms" required hint="Number of bedrooms included in the rental."><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>
+                <Field label="Bathrooms" required hint="Number of bathrooms available to the renter."><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
+                <Field label="Floor" optional hint="Example: 1 for first floor. Leave empty if it does not apply."><TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" /></Field>
+                <Field label="Total area" optional hint="Enter the size, then choose its unit."><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
+                <Field label="Area unit" hint="Unit used for the total property area."><Select aria-label="Area unit" value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}><option value="sqft">Square feet (sqft)</option><option value="sqm">Square metres (sqm)</option><option value="kanal">Kanal</option><option value="marla">Marla</option></Select></Field>
+                <Field label="Furnishing" hint="Choose the condition in which the property will be handed over."><Select aria-label="Furnishing status" value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}><option value="furnished">Furnished</option><option value="semi_furnished">Semi furnished</option><option value="unfurnished">Unfurnished</option></Select></Field>
+                <Field label="Maximum occupants" required hint="Highest number of people you allow to live in the property."><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>
               </div>
             </div>
           )}
@@ -522,28 +505,13 @@ export default function PropertyEditorPage() {
             <div>
               <StepNotice>Area and city are required. Street, landmark and map coordinates are optional, but they make the listing easier to understand.</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Area / neighbourhood" required hint="Example: Jutial, Danyore, Konodas or another local area.">
-                  <TextInput value={form.area} onChange={(event) => set('area', event.target.value)} placeholder="Jutial" />
-                </Field>
-                <Field label="Street / road" optional hint="Street, road or block information if available.">
-                  <TextInput value={form.street} onChange={(event) => set('street', event.target.value)} placeholder="Main Jutial Road" />
-                </Field>
-                <Field label="City" required hint="Defaults to Gilgit but can be changed if the property is elsewhere in the supported area.">
-                  <TextInput value={form.city} onChange={(event) => set('city', event.target.value)} placeholder="Gilgit" />
-                </Field>
-                <Field label="Nearby landmark" optional hint="A well-known nearby place that helps renters recognize the location.">
-                  <TextInput value={form.landmark} onChange={(event) => set('landmark', event.target.value)} placeholder="Near Jutial Bus Stand" />
-                </Field>
-                <Field label="Latitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty.">
-                  <TextInput type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(event) => set('latitude', event.target.value)} placeholder="35.9208" />
-                </Field>
-                <Field label="Longitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty.">
-                  <TextInput type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(event) => set('longitude', event.target.value)} placeholder="74.3089" />
-                </Field>
-                <div className="sm:col-span-2 flex gap-3 rounded-[22px] border border-cyan-300/15 bg-cyan-300/[0.055] p-4 text-sm leading-6 text-cyan-100/75">
-                  <MapPin className="mt-1 h-4 w-4 shrink-0 text-cyan-300" />
-                  <p>Coordinates power the map pin. Leave them empty rather than guessing—the written area and city are enough to save the draft.</p>
-                </div>
+                <Field label="Area / neighbourhood" required hint="Example: Jutial, Danyore, Konodas or another local area."><TextInput value={form.area} onChange={(event) => set('area', event.target.value)} placeholder="Jutial" /></Field>
+                <Field label="Street / road" optional hint="Street, road or block information if available."><TextInput value={form.street} onChange={(event) => set('street', event.target.value)} placeholder="Main Jutial Road" /></Field>
+                <Field label="City" required hint="Defaults to Gilgit but can be changed if the property is elsewhere in the supported area."><TextInput value={form.city} onChange={(event) => set('city', event.target.value)} placeholder="Gilgit" /></Field>
+                <Field label="Nearby landmark" optional hint="A well-known nearby place that helps renters recognize the location."><TextInput value={form.landmark} onChange={(event) => set('landmark', event.target.value)} placeholder="Near Jutial Bus Stand" /></Field>
+                <Field label="Latitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty."><TextInput type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(event) => set('latitude', event.target.value)} placeholder="35.9208" /></Field>
+                <Field label="Longitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty."><TextInput type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(event) => set('longitude', event.target.value)} placeholder="74.3089" /></Field>
+                <div className="sm:col-span-2 flex gap-3 rounded-[22px] border border-cyan-300/15 bg-cyan-300/[0.055] p-4 text-sm leading-6 text-cyan-100/75"><MapPin className="mt-1 h-4 w-4 shrink-0 text-cyan-300" /><p>Coordinates power the map pin. Leave them empty rather than guessing—the written area and city are enough to save the draft.</p></div>
               </div>
             </div>
           )}
@@ -551,30 +519,11 @@ export default function PropertyEditorPage() {
           {step === 4 && (
             <div>
               <StepNotice>Click a card to select or remove an amenity. At least one amenity is required before the listing can be submitted for review.</StepNotice>
-              <div className="mb-4 flex items-center justify-between gap-4">
-                <p className="text-sm font-black text-white">Available amenities</p>
-                <span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-1.5 text-xs font-black text-cyan-200">{form.amenities.length} selected</span>
-              </div>
+              <div className="mb-4 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">Available amenities</p><span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-1.5 text-xs font-black text-cyan-200">{form.amenities.length} selected</span></div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {(amenityData?.amenities || []).map((amenity) => {
                   const selected = form.amenities.includes(amenity._id)
-                  return (
-                    <button
-                      type="button"
-                      aria-pressed={selected}
-                      key={amenity._id}
-                      onClick={() => toggleAmenity(amenity._id)}
-                      className={`${choiceClass(selected)} flex items-start justify-between gap-3`}
-                    >
-                      <span>
-                        <span className="block text-sm font-black">{amenity.name}</span>
-                        <span className="mt-1 block text-[10px] font-semibold opacity-55">{pretty(amenity.category)}</span>
-                      </span>
-                      <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? 'border-cyan-300 bg-cyan-300 text-[#07101e]' : 'border-white/10 bg-white/[0.03] text-transparent'}`}>
-                        <Check className="h-3.5 w-3.5" />
-                      </span>
-                    </button>
-                  )
+                  return <button type="button" aria-pressed={selected} key={amenity._id} onClick={() => toggleAmenity(amenity._id)} className={`${choiceClass(selected)} flex items-start justify-between gap-3`}><span><span className="block text-sm font-black">{amenity.name}</span><span className="mt-1 block text-[10px] font-semibold opacity-55">{pretty(amenity.category)}</span></span><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? 'border-cyan-300 bg-cyan-300 text-[#07101e]' : 'border-white/10 bg-white/[0.03] text-transparent'}`}><Check className="h-3.5 w-3.5" /></span></button>
                 })}
               </div>
             </div>
@@ -590,76 +539,47 @@ export default function PropertyEditorPage() {
                 <ToggleCard checked={form.winterAccessible} onChange={(event) => set('winterAccessible', event.target.checked)} title="Winter accessible" text="The property remains reasonably reachable during winter conditions." />
               </div>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                <Field label="Water availability" hint="Rate the normal reliability of running water at the property.">
-                  <Select aria-label="Water availability" value={form.waterAvailability} onChange={(event) => set('waterAvailability', event.target.value)}>
-                    <option value="unknown">Unknown / not confirmed</option>
-                    <option value="excellent">Excellent — consistently reliable</option>
-                    <option value="good">Good — usually reliable</option>
-                    <option value="limited">Limited — available with restrictions</option>
-                    <option value="unreliable">Unreliable — frequent interruptions</option>
-                  </Select>
-                </Field>
-                <Field label="Road access" hint="Rate how easily renters can normally reach the property by road.">
-                  <Select aria-label="Road access" value={form.roadAccess} onChange={(event) => set('roadAccess', event.target.value)}>
-                    <option value="unknown">Unknown / not confirmed</option>
-                    <option value="excellent">Excellent — easy vehicle access</option>
-                    <option value="good">Good — generally accessible</option>
-                    <option value="limited">Limited — some access restrictions</option>
-                    <option value="difficult">Difficult — challenging road access</option>
-                  </Select>
-                </Field>
+                <Field label="Water availability" hint="Rate the normal reliability of running water at the property."><Select aria-label="Water availability" value={form.waterAvailability} onChange={(event) => set('waterAvailability', event.target.value)}><option value="unknown">Unknown / not confirmed</option><option value="excellent">Excellent — consistently reliable</option><option value="good">Good — usually reliable</option><option value="limited">Limited — available with restrictions</option><option value="unreliable">Unreliable — frequent interruptions</option></Select></Field>
+                <Field label="Road access" hint="Rate how easily renters can normally reach the property by road."><Select aria-label="Road access" value={form.roadAccess} onChange={(event) => set('roadAccess', event.target.value)}><option value="unknown">Unknown / not confirmed</option><option value="excellent">Excellent — easy vehicle access</option><option value="good">Good — generally accessible</option><option value="limited">Limited — some access restrictions</option><option value="difficult">Difficult — challenging road access</option></Select></Field>
               </div>
-              {!editing && (
-                <div className="mt-5 rounded-2xl border border-violet-400/15 bg-violet-400/[0.055] p-4">
-                  <p className="text-sm font-black text-violet-100">Next: save the draft and add photos</p>
-                  <p className="mt-1 text-xs leading-5 text-slate-400">Your property record must exist before images can be attached. The next button will create the draft and take you directly to the Images step.</p>
-                </div>
-              )}
+              {!editing && <div className="mt-5 rounded-2xl border border-violet-400/15 bg-violet-400/[0.055] p-4"><p className="text-sm font-black text-violet-100">Next: save the draft and add photos</p><p className="mt-1 text-xs leading-5 text-slate-400">Your property record must exist before images can be attached. The next button will create the draft and take you directly to the Images step.</p></div>}
             </div>
           )}
 
           {step === 6 && (
             <div>
-              <StepNotice>Upload at least three clear JPG or PNG photos. Smaller files upload faster; keep each image under 5 MB. The first uploaded image becomes the initial cover automatically.</StepNotice>
+              <StepNotice>Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically.</StepNotice>
               {!editing ? (
-                <div className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.02] p-9 text-center">
-                  <ImagePlus className="mx-auto h-8 w-8 text-slate-600" />
-                  <p className="mt-3 font-black text-white">Save the listing first</p>
-                  <p className="mt-1 text-sm text-slate-500">Complete steps 1–6 and save the draft before adding property photos.</p>
-                </div>
+                <div className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.02] p-9 text-center"><ImagePlus className="mx-auto h-8 w-8 text-slate-600" /><p className="mt-3 font-black text-white">Save the listing first</p><p className="mt-1 text-sm text-slate-500">Complete steps 1–6 and save the draft before adding property photos.</p></div>
               ) : (
                 <>
-                  <div {...getRootProps()} className={`cursor-pointer rounded-[28px] border-2 border-dashed p-9 text-center transition ${isDragActive ? 'border-cyan-300/45 bg-cyan-300/[0.08]' : 'border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
+                  <div {...getRootProps()} className={`rounded-[28px] border-2 border-dashed p-9 text-center transition ${uploadState.isLoading ? 'cursor-not-allowed border-white/8 bg-white/[0.015] opacity-55' : isDragActive ? 'cursor-pointer border-cyan-300/45 bg-cyan-300/[0.08]' : 'cursor-pointer border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
                     <input {...getInputProps()} />
                     <UploadCloud className="mx-auto h-8 w-8 text-cyan-300" />
-                    <p className="mt-3 font-black text-white">Drag photos here or click to choose files</p>
-                    <p className="mt-1 text-xs text-slate-500">JPG or PNG · up to 8 files per upload · 5 MB maximum per file · 10 images per property</p>
+                    <p className="mt-3 font-black text-white">Drag one photo here or click to choose a file</p>
+                    <p className="mt-1 text-xs text-slate-500">JPG or PNG · one image at a time · 1 MB maximum per image · 10 images per property</p>
                   </div>
 
                   {newFiles.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.05] p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-black text-cyan-100">{newFiles.length} image(s) ready · {selectedUploadMegabytes} MB total</p>
-                          <p className="mt-1 text-[11px] text-slate-500">Review the file names below, then upload them together.</p>
+                        <div><p className="text-sm font-black text-cyan-100">{newFiles[0].name}</p><p className="mt-1 text-[11px] text-slate-500">{formatBytes(newFiles[0].size)} · ready to upload</p></div>
+                        <PrimaryButton disabled={uploadState.isLoading} onClick={upload}>{uploadState.isLoading ? 'Uploading…' : 'Upload image'}</PrimaryButton>
+                      </div>
+
+                      {uploadState.isLoading && (
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-400">
+                            <span>{uploadProgress.saving ? 'Upload complete · saving securely…' : `Uploading ${uploadProgress.percent}%`}</span>
+                            <span>{formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total || newFiles[0].size)}</span>
+                          </div>
+                          <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress.percent}%` }} /></div>
                         </div>
-                        <PrimaryButton disabled={uploadState.isLoading} onClick={upload}>{uploadState.isLoading ? 'Uploading…' : 'Upload images'}</PrimaryButton>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {newFiles.map((file) => (
-                          <span key={`${file.name}-${file.size}`} className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-bold text-slate-300">
-                            {file.name} · {(file.size / (1024 * 1024)).toFixed(1)} MB
-                          </span>
-                        ))}
-                      </div>
+                      )}
                     </div>
                   )}
 
-                  <div className="mt-5 flex items-center justify-between gap-4">
-                    <p className="text-sm font-black text-white">Uploaded photos</p>
-                    <span className={`rounded-full px-3 py-1.5 text-xs font-black ${images.length >= 3 ? 'bg-cyan-300/10 text-cyan-200' : 'bg-amber-300/10 text-amber-200'}`}>{images.length}/3 minimum</span>
-                  </div>
-
+                  <div className="mt-5 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">Uploaded photos</p><span className={`rounded-full px-3 py-1.5 text-xs font-black ${images.length >= 3 ? 'bg-cyan-300/10 text-cyan-200' : 'bg-amber-300/10 text-amber-200'}`}>{images.length}/3 minimum</span></div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {images.map((image) => (
                       <div key={image.id} className="group relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.03]">
@@ -682,7 +602,6 @@ export default function PropertyEditorPage() {
                 <p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Listing preview</p>
                 <h2 className="mt-3 text-2xl font-black tracking-[-.04em] text-white">{form.title || 'Untitled property'}</h2>
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">{form.description || 'Add a property description.'}</p>
-
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {[
                     ['Monthly rent', form.monthlyRent ? `PKR ${Number(form.monthlyRent).toLocaleString()}` : '—'],
@@ -691,12 +610,7 @@ export default function PropertyEditorPage() {
                     ['Bedrooms', form.bedrooms],
                     ['Bathrooms', form.bathrooms],
                     ['Amenities', form.amenities.length],
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
-                      <p className="text-[10px] font-bold text-slate-500">{label}</p>
-                      <p className="mt-1 text-sm font-black text-white">{value}</p>
-                    </div>
-                  ))}
+                  ].map(([label, value]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4"><p className="text-[10px] font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}
                 </div>
               </div>
 
@@ -709,14 +623,7 @@ export default function PropertyEditorPage() {
                     [`At least 3 images (${images.length} uploaded)`, images.length >= 3],
                     ['Exactly one cover image selected', hasCover && images.filter((image) => image.isCover).length === 1],
                     [`At least 1 amenity (${form.amenities.length} selected)`, form.amenities.length >= 1],
-                  ].map(([label, ready]) => (
-                    <div key={label} className="flex items-center gap-2">
-                      <span className={`grid h-5 w-5 place-items-center rounded-full ${ready ? 'bg-cyan-300 text-[#07101e]' : 'bg-amber-300/10 text-amber-200'}`}>
-                        {ready ? <Check className="h-3 w-3" /> : <span className="text-[9px] font-black">!</span>}
-                      </span>
-                      <span className={ready ? 'text-slate-300' : 'text-amber-200'}>{label}</span>
-                    </div>
-                  ))}
+                  ].map(([label, ready]) => <div key={label} className="flex items-center gap-2"><span className={`grid h-5 w-5 place-items-center rounded-full ${ready ? 'bg-cyan-300 text-[#07101e]' : 'bg-amber-300/10 text-amber-200'}`}>{ready ? <Check className="h-3 w-3" /> : <span className="text-[9px] font-black">!</span>}</span><span className={ready ? 'text-slate-300' : 'text-amber-200'}>{label}</span></div>)}
                 </div>
                 <p className="mt-4 border-t border-white/[0.07] pt-4 text-xs leading-6 text-slate-500">When everything is ready, return to Your Properties and click “Submit for review”. The property remains a private draft until then.</p>
               </div>
@@ -726,21 +633,10 @@ export default function PropertyEditorPage() {
 
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/[0.07] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <SecondaryButton disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</SecondaryButton>
-
           <div className="flex flex-col gap-2 sm:flex-row">
-            {editing && step <= 5 && (
-              <SecondaryButton disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save changes'}</SecondaryButton>
-            )}
-
-            {step < steps.length - 1 && (
-              <PrimaryButton disabled={saving} onClick={nextStep}>
-                {!editing && step === 5 ? 'Save draft & add photos' : step === 6 ? 'Review listing' : 'Continue'}
-              </PrimaryButton>
-            )}
-
-            {editing && step === steps.length - 1 && (
-              <PrimaryButton onClick={() => navigate('/owner/properties')}>Back to your properties</PrimaryButton>
-            )}
+            {editing && step <= 5 && <SecondaryButton disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save changes'}</SecondaryButton>}
+            {step < steps.length - 1 && <PrimaryButton disabled={saving || uploadState.isLoading} onClick={nextStep}>{!editing && step === 5 ? 'Save draft & add photos' : step === 6 ? 'Review listing' : 'Continue'}</PrimaryButton>}
+            {editing && step === steps.length - 1 && <PrimaryButton onClick={() => navigate('/owner/properties')}>Back to your properties</PrimaryButton>}
           </div>
         </div>
       </Panel>
