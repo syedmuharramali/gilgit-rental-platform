@@ -144,12 +144,6 @@ applicationSchema.index(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| Only one accepted application per property
-|--------------------------------------------------------------------------
-*/
-
 applicationSchema.index(
   {
     property: 1,
@@ -178,6 +172,35 @@ applicationSchema.index({
   property: 1,
   status: 1,
   createdAt: -1,
+});
+
+/*
+|--------------------------------------------------------------------------
+| Reserve a listing as soon as an application is accepted
+|--------------------------------------------------------------------------
+|
+| The listing remains publicly visible, but the separate reservation state
+| lets the frontend explain that a renter has been selected and prevents the
+| flow from pretending the rental is already active.
+|--------------------------------------------------------------------------
+*/
+applicationSchema.post("save", async function (application) {
+  if (application.status !== "accepted") return;
+
+  const Property = mongoose.model("Property");
+
+  await Property.updateOne(
+    {
+      _id: application.property,
+      listingStatus: "published",
+    },
+    {
+      $set: {
+        reservationStatus: "reserved",
+        reservedAt: new Date(),
+      },
+    }
+  );
 });
 
 const Application =
