@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Building2, ChevronRight, FileCheck2, MessageCircle, Sparkles, Wrench } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useNavigate } from 'react-router-dom'
@@ -13,6 +13,12 @@ import {
 } from '../../features/applications/applicationsApi'
 import { useStartApplicationConversationMutation } from '../../features/messages/messagesApi'
 import {
+  useAcceptRentalTermsMutation,
+  useGetMyRentalTermsQuery,
+  useProposeRentalTermsMutation,
+  useRequestRentalTermChangesMutation,
+} from '../../features/rentalTerms/rentalTermsApi'
+import {
   useCancelViewingMutation,
   useCompleteViewingMutation,
   useConfirmViewingMutation,
@@ -21,7 +27,6 @@ import {
   useRejectViewingMutation,
 } from '../../features/viewings/viewingsApi'
 import {
-  useCreateTenancyMutation,
   useEndTenancyMutation,
   useGetMyTenanciesQuery,
   useGetOwnedTenanciesQuery,
@@ -128,13 +133,27 @@ export function ApplicationsPage({ owner = false }) {
   const myQuery = useGetMyApplicationsQuery(undefined, { skip: owner })
   const receivedQuery = useGetReceivedApplicationsQuery(undefined, { skip: !owner })
   const query = owner ? receivedQuery : myQuery
+  const { data: rentalTermsData, isLoading: termsLoading } = useGetMyRentalTermsQuery()
   const [accept] = useAcceptApplicationMutation()
   const [reject] = useRejectApplicationMutation()
   const [withdraw] = useWithdrawApplicationMutation()
   const [startApplicationConversation, conversationState] = useStartApplicationConversationMutation()
-  const [createTenancy, createTenancyState] = useCreateTenancyMutation()
-  const [tenancyApplication, setTenancyApplication] = useState(null)
-  const [tenancyForm, setTenancyForm] = useState({ startDate: '', durationMonths: '', agreedMonthlyRent: '', securityDeposit: '' })
+  const [proposeRentalTerms, proposeState] = useProposeRentalTermsMutation()
+  const [acceptRentalTerms, acceptTermsState] = useAcceptRentalTermsMutation()
+  const [requestRentalTermChanges, requestChangesState] = useRequestRentalTermChangesMutation()
+  const [termsApplication, setTermsApplication] = useState(null)
+  const [termsForm, setTermsForm] = useState({ startDate: '', durationMonths: '', monthlyRent: '', securityDeposit: '', occupants: '1' })
+  const [changeTerms, setChangeTerms] = useState(null)
+  const [changeMessage, setChangeMessage] = useState('')
+
+  const termsByApplication = useMemo(() => {
+    const map = new Map()
+    for (const terms of rentalTermsData?.terms || []) {
+      const applicationId = terms.application?._id || terms.application
+      if (applicationId) map.set(String(applicationId), terms)
+    }
+    return map
+  }, [rentalTermsData])
 
   const act = async (fn, payload, success) => {
     try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) }
@@ -158,113 +177,147 @@ export function ApplicationsPage({ owner = false }) {
     }
   }
 
-  const openTenancy = (application) => {
-    setTenancyApplication(application)
-    setTenancyForm({
-      startDate: application.preferredMoveInDate?.slice(0, 10) || '',
-      durationMonths: application.expectedStayMonths != null ? String(application.expectedStayMonths) : '',
-      agreedMonthlyRent: application.property?.monthlyRent != null ? String(application.property.monthlyRent) : '',
-      securityDeposit: '',
+  const openTerms = (application, existingTerms) => {
+    setTermsApplication(application)
+    setTermsForm({
+      startDate: existingTerms?.startDate?.slice(0, 10) || application.preferredMoveInDate?.slice(0, 10) || '',
+      durationMonths: existingTerms?.durationMonths != null
+        ? String(existingTerms.durationMonths)
+        : application.expectedStayMonths != null
+          ? String(application.expectedStayMonths)
+          : '',
+      monthlyRent: existingTerms?.monthlyRent != null
+        ? String(existingTerms.monthlyRent)
+        : application.property?.monthlyRent != null
+          ? String(application.property.monthlyRent)
+          : '',
+      securityDeposit: existingTerms?.securityDeposit != null ? String(existingTerms.securityDeposit) : '',
+      occupants: existingTerms?.occupants != null
+        ? String(existingTerms.occupants)
+        : application.occupants != null
+          ? String(application.occupants)
+          : '1',
     })
   }
 
-  const createFromApplication = async () => {
+  const submitTerms = async () => {
     try {
-      await createTenancy({
-        applicationId: tenancyApplication._id,
-        ...(tenancyForm.startDate && { startDate: tenancyForm.startDate }),
-        ...(tenancyForm.durationMonths !== '' && { durationMonths: Number(tenancyForm.durationMonths) }),
-        ...(tenancyForm.agreedMonthlyRent !== '' && { agreedMonthlyRent: Number(tenancyForm.agreedMonthlyRent) }),
-        ...(tenancyForm.securityDeposit !== '' && { securityDeposit: Number(tenancyForm.securityDeposit) }),
-      }).unwrap()
-      toast.success('Tenancy created')
-      setTenancyApplication(null)
-    } catch (error) { toast.error(errorMessage(error)) }
+      const payload = {
+        applicationId: termsApplication._id,
+        ...(termsForm.startDate && { startDate: termsForm.startDate }),
+        ...(termsForm.durationMonths !== '' && { durationMonths: Number(termsForm.durationMonths) }),
+        ...(termsForm.monthlyRent !== '' && { monthlyRent: Number(termsForm.monthlyRent) }),
+        ...(termsForm.securityDeposit !== '' && { securityDeposit: Number(termsForm.securityDeposit) }),
+        ...(termsForm.occupants !== '' && { occupants: Number(termsForm.occupants) }),
+      }
+      await proposeRentalTerms(payload).unwrap()
+      toast.success('Rental terms sent to renter')
+      setTermsApplication(null)
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
   }
 
-  if (query.isLoading) return <LoadingState />
+  const acceptTerms = async (terms) => {
+    try {
+      await acceptRentalTerms(terms._id).unwrap()
+      toast.success('Rental terms accepted')
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  const submitChangeRequest = async () => {
+    try {
+      await requestRentalTermChanges({ id: changeTerms._id, message: changeMessage }).unwrap()
+      toast.success('Change request sent to owner')
+      setChangeTerms(null)
+      setChangeMessage('')
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
+  }
+
+  if (query.isLoading || termsLoading) return <LoadingState />
   const items = query.data?.applications || []
 
   return (
     <>
-      <PageHeader eyebrow={owner ? 'Owner inbox' : 'Your applications'} title="Rental applications" text={owner ? 'Review renter requests, keep the conversation open, and decide who you want to proceed with.' : 'Follow each application and keep talking with the property owner while your rental journey moves forward.'} />
+      <PageHeader eyebrow={owner ? 'Owner inbox' : 'Your applications'} title="Rental applications" text={owner ? 'Review renter requests, keep the conversation open, and confirm final rental terms with the renter you select.' : 'Follow each application, keep talking with the owner, and review final rental terms before any agreement is created.'} />
       <div className="space-y-4">
-        {items.length ? items.map((item, index) => (
-          <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
-            <Panel className="hover:border-cyan-300/15">
-              <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-500">{pretty(item.applicationType)}</span></div>
-                  <h2 className="mt-3 text-lg font-black text-white">{item.property?.title || 'Property'}</h2>
-                  <p className={`mt-1 text-sm ${muted}`}>{owner ? `${item.applicant?.name || 'Applicant'} · ${item.applicant?.email || ''}` : `${item.property?.address?.area || ''} · ${money(item.property?.monthlyRent)}/month`}</p>
-                  {item.applicationType === 'group' && <p className="mt-2 text-xs font-bold text-violet-300">Group application · {(item.roommates?.length || 0) + 1} people</p>}
-                  {item.message && <p className={`mt-3 max-w-2xl text-sm leading-6 ${subtle}`}>{item.message}</p>}
-                  {item.rejectionReason && <p className="mt-3 rounded-2xl border border-rose-400/15 bg-rose-400/8 p-3 text-sm text-rose-300">{item.rejectionReason}</p>}
+        {items.length ? items.map((item, index) => {
+          const terms = termsByApplication.get(String(item._id))
+          return (
+            <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
+              <Panel className="hover:border-cyan-300/15">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2"><StatusBadge value={item.status} /><span className="text-xs font-bold text-slate-500">{pretty(item.applicationType)}</span>{item.property?.reservationStatus === 'reserved' && <span className="rounded-full bg-violet-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[.1em] text-violet-200 ring-1 ring-violet-300/20">Reserved</span>}</div>
+                    <h2 className="mt-3 text-lg font-black text-white">{item.property?.title || 'Property'}</h2>
+                    <p className={`mt-1 text-sm ${muted}`}>{owner ? `${item.applicant?.name || 'Applicant'} · ${item.applicant?.email || ''}` : `${item.property?.address?.area || ''} · ${money(item.property?.monthlyRent)}/month`}</p>
+                    {item.applicationType === 'group' && <p className="mt-2 text-xs font-bold text-violet-300">Group application · {(item.roommates?.length || 0) + 1} people</p>}
+                    {item.message && <p className={`mt-3 max-w-2xl text-sm leading-6 ${subtle}`}>{item.message}</p>}
+                    {item.rejectionReason && <p className="mt-3 rounded-2xl border border-rose-400/15 bg-rose-400/8 p-3 text-sm text-rose-300">{item.rejectionReason}</p>}
+
+                    {item.status === 'accepted' && !terms && (
+                      <div className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4 text-sm text-slate-300">
+                        {owner ? 'This renter has been selected. Confirm the final rent, deposit, move-in date and duration before an agreement is created.' : 'Your application was accepted. The owner is preparing the final rental terms for you to review.'}
+                      </div>
+                    )}
+
+                    {item.status === 'accepted' && terms && (
+                      <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs font-black uppercase tracking-[.12em] text-cyan-300">Rental terms</p><StatusBadge value={terms.status} /></div>
+                        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-5">
+                          {[['Rent', money(terms.monthlyRent)], ['Deposit', money(terms.securityDeposit)], ['Move-in', shortDate(terms.startDate)], ['Duration', `${terms.durationMonths} months`], ['Occupants', terms.occupants]].map(([label, value]) => <div key={label} className="rounded-xl bg-black/15 p-3"><p className="text-[10px] font-bold uppercase tracking-[.08em] text-slate-600">{label}</p><p className="mt-1 text-xs font-black text-slate-200">{value}</p></div>)}
+                        </div>
+                        {terms.changeRequestMessage && <p className="mt-3 rounded-xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-xs leading-5 text-amber-100/80"><strong>Requested change:</strong> {terms.changeRequestMessage}</p>}
+                        {terms.status === 'accepted' && <p className="mt-3 text-xs font-bold text-cyan-200">Terms accepted by the renter. The rental agreement is the next step.</p>}
+                        {terms.status === 'proposed' && owner && <p className="mt-3 text-xs text-slate-500">Waiting for the renter to accept these terms or request a change.</p>}
+                        {terms.status === 'change_requested' && owner && <p className="mt-3 text-xs text-amber-200/80">The renter requested changes. Discuss them in messages, then revise and resend the terms.</p>}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-60 lg:justify-end">
+                    <SecondaryButton disabled={conversationState.isLoading} onClick={() => openConversation(item)}><MessageCircle className="h-4 w-4" /> {owner ? 'Message renter' : 'Message owner'}</SecondaryButton>
+                    {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
+                    {owner && item.status === 'accepted' && (!terms || ['proposed', 'change_requested'].includes(terms.status)) && <PrimaryButton onClick={() => openTerms(item, terms)}>{terms ? 'Revise rental terms' : 'Confirm rental terms'}</PrimaryButton>}
+                    {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
+                    {!owner && item.status === 'accepted' && terms?.status === 'proposed' && <><PrimaryButton disabled={acceptTermsState.isLoading} onClick={() => acceptTerms(terms)}>Accept terms</PrimaryButton><SecondaryButton onClick={() => { setChangeTerms(terms); setChangeMessage('') }}>Request changes</SecondaryButton></>}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <SecondaryButton disabled={conversationState.isLoading} onClick={() => openConversation(item)}><MessageCircle className="h-4 w-4" /> {owner ? 'Message renter' : 'Message owner'}</SecondaryButton>
-                  {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
-                  {owner && item.status === 'accepted' && <PrimaryButton onClick={() => openTenancy(item)}>Create tenancy</PrimaryButton>}
-                  {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
-                </div>
-              </div>
-            </Panel>
-          </motion.div>
-        )) : <EmptyState title="No applications yet" text={owner ? 'Applications for your published properties will appear here.' : 'Browse rentals and apply when you find the right home.'} />}
+              </Panel>
+            </motion.div>
+          )
+        }) : <EmptyState title="No applications yet" text={owner ? 'Applications for your published properties will appear here.' : 'Browse rentals and apply when you find the right home.'} />}
       </div>
 
-      <Modal open={Boolean(tenancyApplication)} onClose={() => setTenancyApplication(null)} title="Create tenancy">
+      <Modal open={Boolean(termsApplication)} onClose={() => setTermsApplication(null)} title="Confirm rental terms">
         <div className="space-y-5">
           <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
-            <p className="text-sm font-black text-cyan-100">Start the active rental relationship</p>
-            <p className="mt-1 text-xs leading-5 text-slate-400">Creating a tenancy connects this accepted renter to the property, marks the property as rented, and unlocks the agreement, rent ledger, condition reports and maintenance workflow.</p>
+            <p className="text-sm font-black text-cyan-100">Send the final proposal to the renter</p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">These values should reflect what you and the renter discussed. Sending them does not start a tenancy or charge either person.</p>
           </div>
 
-          {tenancyApplication && (
-            <div className="grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:grid-cols-2">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Property</p>
-                <p className="mt-1 text-sm font-black text-white">{tenancyApplication.property?.title || 'Property'}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Renter</p>
-                <p className="mt-1 text-sm font-black text-white">{tenancyApplication.applicant?.name || 'Accepted applicant'}</p>
-              </div>
-            </div>
-          )}
+          {termsApplication && <div className="grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:grid-cols-2"><div><p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Property</p><p className="mt-1 text-sm font-black text-white">{termsApplication.property?.title || 'Property'}</p></div><div><p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">Renter</p><p className="mt-1 text-sm font-black text-white">{termsApplication.applicant?.name || 'Accepted applicant'}</p></div></div>}
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-black text-slate-200">Tenancy start date</span>
-            <TextInput aria-label="Tenancy start date" type="date" value={tenancyForm.startDate} onChange={(event) => setTenancyForm((current) => ({ ...current, startDate: event.target.value }))} />
-            <span className="mt-2 block text-[11px] leading-5 text-slate-500">The date the renter's tenancy begins. If the renter supplied a preferred move-in date, it is filled in automatically. If left blank, the server uses that preferred date or today's date.</span>
-          </label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Move-in date</span><TextInput type="date" aria-label="Move-in date" value={termsForm.startDate} onChange={(event) => setTermsForm((current) => ({ ...current, startDate: event.target.value }))} /><span className="mt-2 block text-[11px] leading-5 text-slate-500">The date both sides expect the rental period to begin.</span></label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Rental duration</span><div className="relative"><TextInput type="number" min="1" max="120" aria-label="Rental duration in months" value={termsForm.durationMonths} onChange={(event) => setTermsForm((current) => ({ ...current, durationMonths: event.target.value }))} className="pr-20" /><span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">months</span></div></label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Final monthly rent (PKR)</span><TextInput type="number" min="0" aria-label="Final monthly rent" value={termsForm.monthlyRent} onChange={(event) => setTermsForm((current) => ({ ...current, monthlyRent: event.target.value }))} /><span className="mt-2 block text-[11px] leading-5 text-slate-500">Use the final negotiated monthly amount, not necessarily the original listing price.</span></label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Security deposit (PKR)</span><TextInput type="number" min="0" aria-label="Security deposit" value={termsForm.securityDeposit} onChange={(event) => setTermsForm((current) => ({ ...current, securityDeposit: event.target.value }))} placeholder="Leave blank to use the listed deposit" /><span className="mt-2 block text-[11px] leading-5 text-slate-500">Leave blank to keep the property's listed deposit, or enter the final agreed amount.</span></label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Occupants</span><TextInput type="number" min="1" aria-label="Occupants" value={termsForm.occupants} onChange={(event) => setTermsForm((current) => ({ ...current, occupants: event.target.value }))} /><span className="mt-2 block text-[11px] leading-5 text-slate-500">Total people who will live in the property under this rental arrangement.</span></label>
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-black text-slate-200">Tenancy duration</span>
-            <div className="relative">
-              <TextInput aria-label="Tenancy duration in months" type="number" min="1" max="120" value={tenancyForm.durationMonths} onChange={(event) => setTenancyForm((current) => ({ ...current, durationMonths: event.target.value }))} placeholder="6" className="pr-20" />
-              <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">months</span>
-            </div>
-            <span className="mt-2 block text-[11px] leading-5 text-slate-500">How long the agreed rental period will last. The renter's expected stay is used as the starting value when available.</span>
-          </label>
+          <div className="rounded-2xl border border-violet-300/12 bg-violet-300/[0.04] p-4 text-xs leading-5 text-slate-400">The property is reserved while you finalize the deal. The renter can accept these terms or request changes and continue the conversation with you.</div>
+          <PrimaryButton disabled={proposeState.isLoading} className="w-full" onClick={submitTerms}>{proposeState.isLoading ? 'Sending terms…' : 'Send terms to renter'}</PrimaryButton>
+        </div>
+      </Modal>
 
-          <label className="block">
-            <span className="mb-2 block text-xs font-black text-slate-200">Agreed monthly rent (PKR)</span>
-            <TextInput aria-label="Agreed monthly rent in PKR" type="number" min="0" value={tenancyForm.agreedMonthlyRent} onChange={(event) => setTenancyForm((current) => ({ ...current, agreedMonthlyRent: event.target.value }))} placeholder="45000" />
-            <span className="mt-2 block text-[11px] leading-5 text-slate-500">The monthly amount both sides agreed to. It starts with the property's listed rent of {money(tenancyApplication?.property?.monthlyRent || 0)} and can be adjusted here if the final deal changed.</span>
-          </label>
-
-          <label className="block">
-            <span className="mb-2 block text-xs font-black text-slate-200">Security deposit (PKR) <span className="font-semibold text-slate-600">(optional override)</span></span>
-            <TextInput aria-label="Security deposit in PKR" type="number" min="0" value={tenancyForm.securityDeposit} onChange={(event) => setTenancyForm((current) => ({ ...current, securityDeposit: event.target.value }))} placeholder="Leave blank to use the property's listed deposit" />
-            <span className="mt-2 block text-[11px] leading-5 text-slate-500">Enter a value only if the final agreed deposit differs from the property's listed security deposit. Enter 0 if no deposit will be charged.</span>
-          </label>
-
-          <div className="rounded-2xl border border-amber-300/12 bg-amber-300/[0.045] p-4 text-xs leading-5 text-amber-100/75">
-            Creating this tenancy will mark the property as rented and notify the renter. Check the dates and financial terms before continuing.
-          </div>
-
-          <PrimaryButton disabled={createTenancyState.isLoading} className="w-full" onClick={createFromApplication}>{createTenancyState.isLoading ? 'Creating tenancy…' : 'Create tenancy'}</PrimaryButton>
+      <Modal open={Boolean(changeTerms)} onClose={() => setChangeTerms(null)} title="Request changes">
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-amber-300/12 bg-amber-300/[0.045] p-4"><p className="text-sm font-black text-amber-100">Tell the owner what you would like to change</p><p className="mt-1 text-xs leading-5 text-slate-400">For example, you can ask about the move-in date, deposit, rent, duration or number of occupants. You can keep discussing the details in Messages.</p></div>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">Requested changes</span><TextArea maxLength={1000} value={changeMessage} onChange={(event) => setChangeMessage(event.target.value)} placeholder="Example: Could we make the security deposit PKR 40,000 instead of PKR 50,000?" /></label>
+          <PrimaryButton disabled={requestChangesState.isLoading || changeMessage.trim().length < 3} className="w-full" onClick={submitChangeRequest}>{requestChangesState.isLoading ? 'Sending request…' : 'Send change request'}</PrimaryButton>
         </div>
       </Modal>
     </>
