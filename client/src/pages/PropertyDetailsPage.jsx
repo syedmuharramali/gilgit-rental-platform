@@ -5,8 +5,10 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronLeft,
+  ChevronRight,
   Flag,
   Flame,
+  Images,
   MapPin,
   MessageCircle,
   Plus,
@@ -16,6 +18,7 @@ import {
   Trash2,
   UsersRound,
   Waves,
+  X,
   Zap,
 } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -61,6 +64,8 @@ function PropertyDetailsPage() {
   const [startConversation, messageState] = useStartConversationMutation()
   const [createReport, reportState] = useCreateReportMutation()
   const [modal, setModal] = useState(null)
+  const [previewIndex, setPreviewIndex] = useState(0)
+  const [galleryIndex, setGalleryIndex] = useState(null)
   const [application, setApplication] = useState({ applicationType: 'individual', roommates: [], message: '', preferredMoveInDate: '', expectedStayMonths: '6', occupants: '1' })
   const [viewing, setViewing] = useState({ requestedDateTime: '', message: '' })
   const [report, setReport] = useState({ reason: 'misleading_listing', description: '' })
@@ -69,9 +74,12 @@ function PropertyDetailsPage() {
 
   if (error || !property) return <main className="grid min-h-[70vh] place-items-center bg-[#070b14] px-5 py-16 text-center text-white"><div><p className="text-2xl font-black">Property not found</p><p className="mt-2 text-sm text-slate-500">This listing may no longer be publicly available.</p><Link to="/properties" className="mt-5 inline-flex rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-5 py-3 text-sm font-black text-[#07101e]">Back to rentals</Link></div></main>
 
-  const images = property.images || []
+  const images = [...(property.images || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
   const cover = images.find((image) => image.isCover) || images[0]
-  const secondary = images.filter((image) => image.id !== cover?.id).slice(0, 2)
+  const galleryImages = cover ? [cover, ...images.filter((image) => image.id !== cover.id)] : images
+  const displayedImage = galleryImages[previewIndex] || cover
+  const secondary = galleryImages.slice(1, 5)
+  const activeGalleryImage = galleryIndex == null ? null : galleryImages[galleryIndex]
   const ownerId = property.owner?._id || property.owner?.id || property.owner
   const isOwner = String(ownerId) === String(user?.id)
 
@@ -85,6 +93,21 @@ function PropertyDetailsPage() {
     setApplication((current) => ({ ...current, roommates: [...current.roommates, blankRoommate()] }))
   }
   const removeRoommate = (index) => setApplication((current) => ({ ...current, roommates: current.roommates.filter((_, roommateIndex) => roommateIndex !== index) }))
+
+  const openGallery = (index = previewIndex) => {
+    if (!galleryImages.length) return
+    setGalleryIndex(index)
+  }
+
+  const previousGalleryImage = () => setGalleryIndex((current) => {
+    if (current == null || galleryImages.length <= 1) return current
+    return current === 0 ? galleryImages.length - 1 : current - 1
+  })
+
+  const nextGalleryImage = () => setGalleryIndex((current) => {
+    if (current == null || galleryImages.length <= 1) return current
+    return current === galleryImages.length - 1 ? 0 : current + 1
+  })
 
   const submitApplication = async () => {
     try {
@@ -117,29 +140,74 @@ function PropertyDetailsPage() {
     <main className="relative overflow-hidden bg-[#070b14] pb-24 text-white">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_82%_8%,rgba(56,189,248,.10),transparent_22%),radial-gradient(circle_at_15%_45%,rgba(139,92,246,.08),transparent_28%)]" />
 
-      <section className="relative z-10 px-5 py-5 sm:px-8 lg:px-10">
+      <section className="relative z-10 px-4 py-4 sm:px-8 sm:py-5 lg:px-10">
         <div className="mx-auto max-w-[1440px]"><Link to="/properties" className="inline-flex items-center gap-2 text-sm font-bold text-slate-400 transition hover:text-white"><ChevronLeft className="h-4 w-4" /> Back to rentals</Link></div>
       </section>
 
-      <section className="relative z-10 px-5 sm:px-8 lg:px-10">
-        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="mx-auto grid max-w-[1440px] gap-3 overflow-hidden rounded-[36px] border border-white/[0.08] bg-white/[0.03] p-3 shadow-[0_35px_110px_rgba(0,0,0,.32)] lg:grid-cols-[1.3fr_.7fr] lg:grid-rows-2">
-          <div className="relative min-h-[360px] overflow-hidden rounded-[28px] bg-[#111827] lg:row-span-2 lg:min-h-[620px]">
-            {cover?.url ? <img src={cover.url} alt={cover.alt || property.title} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.18),transparent_34%),linear-gradient(145deg,#111827,#0b1220)] font-bold text-white/60">No property image</div>}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#040711]/60 via-transparent to-transparent" />
-            <div className="absolute bottom-5 left-5 flex flex-wrap gap-2"><span className="rounded-full border border-white/15 bg-[#070b14]/70 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl">{pretty(property.propertyType)}</span><span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#070b14]/70 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl"><ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> Verified</span></div>
+      <section className="relative z-10 px-3 sm:px-8 lg:px-10">
+        <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-[1440px] overflow-hidden rounded-[26px] border border-white/[0.08] bg-white/[0.03] p-2 shadow-[0_35px_110px_rgba(0,0,0,.32)] sm:rounded-[32px] sm:p-3">
+          <div className="grid gap-2 lg:h-[540px] lg:grid-cols-[1.28fr_.72fr] xl:h-[580px]">
+            <button
+              type="button"
+              onClick={() => openGallery(previewIndex)}
+              className="group relative aspect-[4/3] w-full overflow-hidden rounded-[22px] bg-[#111827] text-left sm:aspect-[16/10] sm:rounded-[26px] lg:aspect-auto lg:h-full"
+              aria-label={galleryImages.length > 1 ? `Open photo gallery with ${galleryImages.length} images` : 'View property photo'}
+            >
+              {displayedImage?.url ? <img src={displayedImage.url} alt={displayedImage.alt || property.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.015]" /> : <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.18),transparent_34%),linear-gradient(145deg,#111827,#0b1220)] font-bold text-white/60">No property image</div>}
+              <div className="absolute inset-0 bg-gradient-to-t from-[#040711]/65 via-transparent to-[#040711]/10" />
+              {galleryImages.length > 1 && <span className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.1em] text-white shadow-lg backdrop-blur-xl sm:right-4 sm:top-4"><Images className="h-3.5 w-3.5 text-cyan-300" /> {galleryImages.length} photos</span>}
+              <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 sm:bottom-5 sm:left-5"><span className="rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl">{pretty(property.propertyType)}</span><span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl"><ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> Verified</span></div>
+            </button>
+
+            <div className="hidden min-h-0 grid-cols-2 grid-rows-2 gap-2 lg:grid">
+              {secondary.map((image, index) => {
+                const actualIndex = index + 1
+                const hiddenCount = galleryImages.length - 5
+                return (
+                  <button
+                    type="button"
+                    key={image.id}
+                    onClick={() => openGallery(actualIndex)}
+                    className="group relative min-h-0 overflow-hidden rounded-[22px] bg-[#111827]"
+                    aria-label={`Open photo ${actualIndex + 1} of ${galleryImages.length}`}
+                  >
+                    <img src={image.url} alt={image.alt || property.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]" />
+                    <span className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" />
+                    {index === 3 && hiddenCount > 0 && <span className="absolute inset-0 grid place-items-center bg-[#050816]/62 text-sm font-black backdrop-blur-[2px]">+{hiddenCount} more photo{hiddenCount === 1 ? '' : 's'}</span>}
+                  </button>
+                )
+              })}
+            </div>
           </div>
-          {secondary.map((image) => <div key={image.id} className="hidden overflow-hidden rounded-[26px] bg-[#111827] lg:block"><img src={image.url} alt={image.alt || property.title} className="h-full w-full object-cover transition duration-700 hover:scale-[1.03]" /></div>)}
+
+          {galleryImages.length > 1 && (
+            <div className="mt-2 flex gap-2 overflow-x-auto pb-1 lg:hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {galleryImages.map((image, index) => (
+                <button
+                  key={image.id}
+                  type="button"
+                  onClick={() => setPreviewIndex(index)}
+                  aria-label={`Show photo ${index + 1} of ${galleryImages.length}`}
+                  aria-pressed={previewIndex === index}
+                  className={`relative h-[72px] w-[94px] shrink-0 overflow-hidden rounded-[16px] border transition sm:h-[88px] sm:w-[118px] ${previewIndex === index ? 'border-cyan-300/70 ring-2 ring-cyan-300/15' : 'border-white/10 opacity-70 hover:opacity-100'}`}
+                >
+                  <img src={image.url} alt="" className="h-full w-full object-cover" />
+                  <span className="absolute bottom-1.5 right-1.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#050816]/75 px-1 text-[9px] font-black text-white backdrop-blur">{index + 1}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </motion.div>
       </section>
 
-      <section className="relative z-10 px-5 pt-10 sm:px-8 lg:px-10">
+      <section className="relative z-10 px-4 pt-8 sm:px-8 sm:pt-10 lg:px-10">
         <div className="mx-auto grid max-w-[1440px] gap-8 lg:grid-cols-[1fr_390px]">
           <div>
             <div className="flex flex-col gap-5 border-b border-white/[0.08] pb-8 sm:flex-row sm:items-start sm:justify-between">
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-black uppercase tracking-[.22em] text-cyan-300">Premium rental in Gilgit</p>
-                <h1 className="mt-3 text-4xl font-black tracking-[-0.06em] sm:text-5xl lg:text-6xl">{property.title}</h1>
-                <p className="mt-4 flex items-center gap-2 text-sm text-slate-400"><MapPin className="h-4 w-4 text-cyan-300" /> {property.address?.area}, {property.address?.city}</p>
+                <h1 className="mt-3 text-3xl font-black leading-[1.04] tracking-[-0.055em] sm:text-5xl lg:text-[56px]">{property.title}</h1>
+                <p className="mt-4 flex items-center gap-2 text-sm text-slate-400"><MapPin className="h-4 w-4 shrink-0 text-cyan-300" /> {property.address?.area}, {property.address?.city}</p>
               </div>
               <FavoriteButton propertyId={property._id} showLabel className="min-h-12 shrink-0 border border-white/10 bg-white/[0.05] px-4 text-sm font-black text-white shadow-sm backdrop-blur-xl" />
             </div>
@@ -174,6 +242,25 @@ function PropertyDetailsPage() {
           </aside>
         </div>
       </section>
+
+      {galleryIndex != null && activeGalleryImage && (
+        <div className="fixed inset-0 z-[100] flex flex-col bg-[#03050b]/96 p-3 backdrop-blur-xl sm:p-5" role="dialog" aria-modal="true" aria-label="Property photo gallery">
+          <div className="mx-auto flex w-full max-w-[1500px] items-center justify-between gap-4 pb-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-[.16em] text-cyan-300">Property photos</p>
+              <p className="mt-1 text-sm font-bold text-slate-400">{galleryIndex + 1} of {galleryImages.length}</p>
+            </div>
+            <button type="button" onClick={() => setGalleryIndex(null)} className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-white/[0.06] text-white transition hover:bg-white/[0.1]" aria-label="Close gallery"><X className="h-5 w-5" /></button>
+          </div>
+
+          <div className="relative mx-auto flex min-h-0 w-full max-w-[1500px] flex-1 items-center justify-center overflow-hidden rounded-[24px] border border-white/[0.08] bg-black/30 sm:rounded-[30px]">
+            <motion.img key={activeGalleryImage.id} initial={{ opacity: 0.45, scale: 0.99 }} animate={{ opacity: 1, scale: 1 }} src={activeGalleryImage.url} alt={activeGalleryImage.alt || property.title} className="max-h-full max-w-full object-contain" />
+            {galleryImages.length > 1 && <><button type="button" onClick={previousGalleryImage} className="absolute left-2 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-[#070b14]/75 text-white shadow-xl backdrop-blur-xl transition hover:bg-[#070b14] sm:left-4 sm:h-12 sm:w-12" aria-label="Previous photo"><ChevronLeft className="h-5 w-5" /></button><button type="button" onClick={nextGalleryImage} className="absolute right-2 grid h-11 w-11 place-items-center rounded-full border border-white/15 bg-[#070b14]/75 text-white shadow-xl backdrop-blur-xl transition hover:bg-[#070b14] sm:right-4 sm:h-12 sm:w-12" aria-label="Next photo"><ChevronRight className="h-5 w-5" /></button></>}
+          </div>
+
+          {galleryImages.length > 1 && <div className="mx-auto mt-3 flex w-full max-w-[1500px] gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">{galleryImages.map((image, index) => <button key={image.id} type="button" onClick={() => setGalleryIndex(index)} aria-label={`View photo ${index + 1}`} aria-pressed={galleryIndex === index} className={`h-16 w-20 shrink-0 overflow-hidden rounded-xl border transition sm:h-20 sm:w-28 ${galleryIndex === index ? 'border-cyan-300 ring-2 ring-cyan-300/15' : 'border-white/10 opacity-55 hover:opacity-100'}`}><img src={image.url} alt="" className="h-full w-full object-cover" /></button>)}</div>}
+        </div>
+      )}
 
       <Modal open={modal === 'apply'} onClose={() => setModal(null)} title="Apply for this home">
         <div className="space-y-4"><div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1"><button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'individual', roommates: [] }))} className={`rounded-xl px-3 py-2 text-xs font-black ${application.applicationType === 'individual' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500'}`}>Individual</button><button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'group', roommates: current.roommates.length ? current.roommates : [blankRoommate()] }))} className={`rounded-xl px-3 py-2 text-xs font-black ${application.applicationType === 'group' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500'}`}>Group / roommates</button></div><TextArea value={application.message} onChange={(event) => setApplication({ ...application, message: event.target.value })} placeholder="Introduce yourself to the owner" /><TextInput type="date" value={application.preferredMoveInDate} onChange={(event) => setApplication({ ...application, preferredMoveInDate: event.target.value })} /><div className="grid grid-cols-2 gap-3"><TextInput type="number" min="1" max="120" value={application.expectedStayMonths} onChange={(event) => setApplication({ ...application, expectedStayMonths: event.target.value })} placeholder="Stay months" />{application.applicationType === 'individual' && <TextInput type="number" min="1" max={property.maxOccupants || 20} value={application.occupants} onChange={(event) => setApplication({ ...application, occupants: event.target.value })} placeholder="Occupants" />}</div>{application.applicationType === 'group' && <div className="space-y-3"><div className="flex items-center justify-between"><p className="text-sm font-black">Roommates</p><SecondaryButton type="button" onClick={addRoommate}><Plus className="h-4 w-4" /> Add roommate</SecondaryButton></div>{application.roommates.map((roommate, index) => <div key={index} className="rounded-2xl border border-white/10 bg-white/[0.025] p-3"><div className="grid gap-2 sm:grid-cols-2"><TextInput value={roommate.name} onChange={(event) => updateRoommate(index, 'name', event.target.value)} placeholder="Full name" /><TextInput type="email" value={roommate.email} onChange={(event) => updateRoommate(index, 'email', event.target.value)} placeholder="Email" /></div><div className="mt-2 flex gap-2"><TextInput value={roommate.phone} onChange={(event) => updateRoommate(index, 'phone', event.target.value)} placeholder="Phone (optional)" /><button type="button" onClick={() => removeRoommate(index)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-400/10 text-rose-300"><Trash2 className="h-4 w-4" /></button></div></div>)}</div>}<PrimaryButton disabled={applicationState.isLoading || (application.applicationType === 'group' && application.roommates.length === 0)} className="w-full" onClick={submitApplication}>Submit application</PrimaryButton></div>
