@@ -47,20 +47,45 @@ function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
   const shouldCheckVerification = Boolean(token && user && user.role !== 'admin')
-  const { data: verificationData, isFetching: isCheckingVerification } = useGetMyVerificationQuery(undefined, {
+  const {
+    data: verificationData,
+    isLoading: isVerificationLoading,
+    isFetching: isCheckingVerification,
+    isUninitialized: isVerificationUninitialized,
+    isError: verificationFailed,
+  } = useGetMyVerificationQuery(undefined, {
     skip: !shouldCheckVerification,
   })
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
 
   useEffect(() => {
     if (!token || !user) return
-    if (user.role !== 'admin' && isCheckingVerification) return
+
+    if (user.role !== 'admin') {
+      if (
+        isVerificationUninitialized ||
+        isVerificationLoading ||
+        isCheckingVerification
+      ) return
+
+      if (!verificationData && !verificationFailed) return
+    }
 
     navigate(
       getPostLoginDestination(user, Boolean(verificationData?.ownerVerified), location.state?.from),
       { replace: true },
     )
-  }, [token, user, verificationData, isCheckingVerification, navigate, location.state])
+  }, [
+    token,
+    user,
+    verificationData,
+    isVerificationLoading,
+    isCheckingVerification,
+    isVerificationUninitialized,
+    verificationFailed,
+    navigate,
+    location.state,
+  ])
 
   useEffect(() => { if (error) toast.error(error); return () => dispatch(clearAuthError()) }, [error, dispatch])
 
