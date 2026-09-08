@@ -82,6 +82,7 @@ function PropertyDetailsPage() {
   const activeGalleryImage = galleryIndex == null ? null : galleryImages[galleryIndex]
   const ownerId = property.owner?._id || property.owner?.id || property.owner
   const isOwner = String(ownerId) === String(user?.id)
+  const isReserved = property.reservationStatus === 'reserved'
 
   const requireAuth = (next) => {
     if (!token) return navigate('/login', { state: { from: `/properties/${id}` } })
@@ -156,7 +157,7 @@ function PropertyDetailsPage() {
               {displayedImage?.url ? <img src={displayedImage.url} alt={displayedImage.alt || property.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.015]" /> : <div className="grid h-full place-items-center bg-[radial-gradient(circle_at_30%_20%,rgba(56,189,248,.18),transparent_34%),linear-gradient(145deg,#111827,#0b1220)] font-bold text-white/60">No property image</div>}
               <div className="absolute inset-0 bg-gradient-to-t from-[#040711]/65 via-transparent to-[#040711]/10" />
               {galleryImages.length > 1 && <span className="absolute right-3 top-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.1em] text-white shadow-lg backdrop-blur-xl sm:right-4 sm:top-4"><Images className="h-3.5 w-3.5 text-cyan-300" /> {galleryImages.length} photos</span>}
-              <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 sm:bottom-5 sm:left-5"><span className="rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl">{pretty(property.propertyType)}</span><span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl"><ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> Verified</span></div>
+              <div className="absolute bottom-4 left-4 flex flex-wrap gap-2 sm:bottom-5 sm:left-5"><span className="rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl">{pretty(property.propertyType)}</span><span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#070b14]/75 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] backdrop-blur-2xl"><ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> Verified</span>{isReserved && <span className="rounded-full border border-violet-300/25 bg-violet-400/20 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-violet-100 backdrop-blur-2xl">Reserved</span>}</div>
             </button>
 
             <div className="hidden min-h-0 grid-cols-2 grid-rows-2 gap-2 lg:grid">
@@ -187,8 +188,7 @@ function PropertyDetailsPage() {
                   key={image.id}
                   type="button"
                   onClick={() => setPreviewIndex(index)}
-                  aria-label={`Show photo ${index + 1} of ${galleryImages.length}`
-                  }
+                  aria-label={`Show photo ${index + 1} of ${galleryImages.length}`}
                   aria-pressed={previewIndex === index}
                   className={`relative h-[72px] w-[94px] shrink-0 overflow-hidden rounded-[16px] border transition sm:h-[88px] sm:w-[118px] ${previewIndex === index ? 'border-cyan-300/70 ring-2 ring-cyan-300/15' : 'border-white/10 opacity-70 hover:opacity-100'}`}
                 >
@@ -235,8 +235,9 @@ function PropertyDetailsPage() {
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
               <p className="text-sm text-slate-500">Monthly rent</p><p className="mt-1 text-3xl font-black tracking-[-0.045em]">{money(property.monthlyRent)}</p>
               {property.negotiable && <span className="mt-2 inline-block rounded-full bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-200 ring-1 ring-amber-300/20">Negotiable</span>}
+              {isReserved && <div className="mt-4 rounded-[20px] border border-violet-300/15 bg-violet-400/[0.07] p-4"><p className="text-xs font-black uppercase tracking-[.12em] text-violet-200">Currently reserved</p><p className="mt-1 text-xs leading-5 text-slate-400">A renter has been selected and the final rental terms are being confirmed. New applications and viewing requests are paused.</p></div>}
               <div className="mt-6 space-y-3 rounded-[22px] border border-white/[0.07] bg-white/[0.03] p-4 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-500">Security deposit</span><strong>{money(property.securityDeposit)}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">Furnishing</span><strong>{pretty(property.furnishedStatus)}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">Available</span><strong>{shortDate(property.availableFrom)}</strong></div></div>
-              {!isOwner && <><PrimaryButton disabled={applicationState.isLoading} className="mt-5 w-full" onClick={() => requireAuth(() => setModal('apply'))}>Apply for this home</PrimaryButton><SecondaryButton disabled={viewingState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(() => setModal('viewing'))}>Schedule a viewing</SecondaryButton><SecondaryButton disabled={messageState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(messageOwner)}><MessageCircle className="h-4 w-4" /> Message owner</SecondaryButton></>}
+              {!isOwner && <>{!isReserved && <><PrimaryButton disabled={applicationState.isLoading} className="mt-5 w-full" onClick={() => requireAuth(() => setModal('apply'))}>Apply for this home</PrimaryButton><SecondaryButton disabled={viewingState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(() => setModal('viewing'))}>Schedule a viewing</SecondaryButton></>}<SecondaryButton disabled={messageState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(messageOwner)}><MessageCircle className="h-4 w-4" /> Message owner</SecondaryButton></>}
               <div className="mt-6 flex items-center gap-3 border-t border-white/[0.07] pt-5">{property.owner?.avatar?.url ? <img src={property.owner.avatar.url} alt="" className="h-11 w-11 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 font-black text-cyan-200">{property.owner?.name?.[0] || 'O'}</div>}<div><p className="text-sm font-black">{property.owner?.name || 'Property owner'}</p><p className="text-xs text-slate-500">Verified rental owner</p></div></div>
               {!isOwner && <button onClick={() => requireAuth(() => setModal('report'))} className="mt-5 inline-flex items-center gap-2 text-xs font-black text-slate-500 transition hover:text-rose-300"><Flag className="h-3.5 w-3.5" /> Report listing</button>}
             </motion.div>
