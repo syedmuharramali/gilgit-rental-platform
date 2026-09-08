@@ -12,6 +12,73 @@ const storage = multer.memoryStorage();
 
 /*
 |--------------------------------------------------------------------------
+| Upload diagnostics
+|--------------------------------------------------------------------------
+|
+| Enabled automatically outside production, or explicitly with:
+| UPLOAD_DIAGNOSTICS=true
+|
+| These logs intentionally avoid tokens, storage keys, document contents,
+| user IDs and original private filenames. They only record stage timing,
+| file counts and aggregate byte sizes so we can locate upload latency.
+|--------------------------------------------------------------------------
+*/
+
+const diagnosticsEnabled = () =>
+  process.env.NODE_ENV !== "production" ||
+  process.env.UPLOAD_DIAGNOSTICS === "true";
+
+const elapsedMs = (startedAt) =>
+  Number(process.hrtime.bigint() - startedAt) / 1e6;
+
+const flattenFiles = (files) => {
+  if (Array.isArray(files)) {
+    return files;
+  }
+
+  if (files && typeof files === "object") {
+    return Object.values(files).flat();
+  }
+
+  return [];
+};
+
+const instrumentMultipart = (label, middleware) =>
+  (req, res, next) => {
+    const startedAt = process.hrtime.bigint();
+
+    middleware(req, res, (error) => {
+      const files = flattenFiles(req.files);
+      const totalBytes = files.reduce(
+        (sum, file) => sum + (Number(file.size) || 0),
+        0
+      );
+      const durationMs = elapsedMs(startedAt);
+
+      req.uploadDiagnostics = {
+        ...(req.uploadDiagnostics || {}),
+        multipartLabel: label,
+        multipartMs: durationMs,
+        fileCount: files.length,
+        totalBytes,
+      };
+
+      if (diagnosticsEnabled()) {
+        console.log(
+          `[UPLOAD_DIAG] multipart ${label} | ${durationMs.toFixed(1)} ms | files=${files.length} | bytes=${totalBytes}`
+        );
+      }
+
+      if (error) {
+        return next(error);
+      }
+
+      return next();
+    });
+  };
+
+/*
+|--------------------------------------------------------------------------
 | Identity verification filter
 |--------------------------------------------------------------------------
 */
@@ -78,20 +145,23 @@ const verificationUpload = multer({
 });
 
 exports.uploadVerificationDocuments =
-  verificationUpload.fields([
-    {
-      name: "cnicFront",
-      maxCount: 1,
-    },
-    {
-      name: "cnicBack",
-      maxCount: 1,
-    },
-    {
-      name: "selfie",
-      maxCount: 1,
-    },
-  ]);
+  instrumentMultipart(
+    "owner-verification",
+    verificationUpload.fields([
+      {
+        name: "cnicFront",
+        maxCount: 1,
+      },
+      {
+        name: "cnicBack",
+        maxCount: 1,
+      },
+      {
+        name: "selfie",
+        maxCount: 1,
+      },
+    ])
+  );
 
 /*
 |--------------------------------------------------------------------------
@@ -111,11 +181,21 @@ const propertyUpload = multer({
 });
 
 exports.uploadPropertyImages =
-  propertyUpload.array(
-    "images",
-    8
+  instrumentMultipart(
+    "property-images",
+    propertyUpload.array(
+      "images",
+      8
+    )
   );
-  const conditionEvidenceUpload = multer({
+
+/*
+|--------------------------------------------------------------------------
+| Condition report evidence upload
+|--------------------------------------------------------------------------
+*/
+
+const conditionEvidenceUpload = multer({
   storage,
 
   limits: {
@@ -127,7 +207,10 @@ exports.uploadPropertyImages =
 });
 
 exports.uploadConditionEvidence =
-  conditionEvidenceUpload.array(
-    "images",
-    6
+  instrumentMultipart(
+    "condition-evidence",
+    conditionEvidenceUpload.array(
+      "images",
+      6
+    )
   );
