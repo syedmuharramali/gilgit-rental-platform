@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { Building2, ChevronRight, FileCheck2, Sparkles, Wrench } from 'lucide-react'
+import { Building2, ChevronRight, FileCheck2, MessageCircle, Sparkles, Wrench } from 'lucide-react'
 import { motion } from 'motion/react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useSelector } from 'react-redux'
 import {
@@ -11,6 +11,7 @@ import {
   useRejectApplicationMutation,
   useWithdrawApplicationMutation,
 } from '../../features/applications/applicationsApi'
+import { useStartApplicationConversationMutation } from '../../features/messages/messagesApi'
 import {
   useCancelViewingMutation,
   useCompleteViewingMutation,
@@ -123,18 +124,38 @@ export function DashboardOverviewPage({ owner = false }) {
 }
 
 export function ApplicationsPage({ owner = false }) {
+  const navigate = useNavigate()
   const myQuery = useGetMyApplicationsQuery(undefined, { skip: owner })
   const receivedQuery = useGetReceivedApplicationsQuery(undefined, { skip: !owner })
   const query = owner ? receivedQuery : myQuery
   const [accept] = useAcceptApplicationMutation()
   const [reject] = useRejectApplicationMutation()
   const [withdraw] = useWithdrawApplicationMutation()
+  const [startApplicationConversation, conversationState] = useStartApplicationConversationMutation()
   const [createTenancy, createTenancyState] = useCreateTenancyMutation()
   const [tenancyApplication, setTenancyApplication] = useState(null)
   const [tenancyForm, setTenancyForm] = useState({ startDate: '', durationMonths: '', agreedMonthlyRent: '', securityDeposit: '' })
 
   const act = async (fn, payload, success) => {
     try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) }
+  }
+
+  const openConversation = async (application) => {
+    try {
+      const result = await startApplicationConversation(application._id).unwrap()
+      const conversationId = result?.data?.conversation?._id || result?.conversation?._id
+
+      if (!conversationId) {
+        toast.error('Conversation could not be opened')
+        return
+      }
+
+      navigate(owner ? '/owner/messages' : '/dashboard/messages', {
+        state: { conversationId },
+      })
+    } catch (error) {
+      toast.error(errorMessage(error))
+    }
   }
 
   const openTenancy = (application) => {
@@ -166,7 +187,7 @@ export function ApplicationsPage({ owner = false }) {
 
   return (
     <>
-      <PageHeader eyebrow={owner ? 'Owner inbox' : 'Your applications'} title="Rental applications" text={owner ? 'Review renter requests and move accepted applications into tenancy.' : 'Follow the status of every home you have applied for.'} />
+      <PageHeader eyebrow={owner ? 'Owner inbox' : 'Your applications'} title="Rental applications" text={owner ? 'Review renter requests, keep the conversation open, and decide who you want to proceed with.' : 'Follow each application and keep talking with the property owner while your rental journey moves forward.'} />
       <div className="space-y-4">
         {items.length ? items.map((item, index) => (
           <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
@@ -181,6 +202,7 @@ export function ApplicationsPage({ owner = false }) {
                   {item.rejectionReason && <p className="mt-3 rounded-2xl border border-rose-400/15 bg-rose-400/8 p-3 text-sm text-rose-300">{item.rejectionReason}</p>}
                 </div>
                 <div className="flex flex-wrap gap-2">
+                  <SecondaryButton disabled={conversationState.isLoading} onClick={() => openConversation(item)}><MessageCircle className="h-4 w-4" /> {owner ? 'Message renter' : 'Message owner'}</SecondaryButton>
                   {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
                   {owner && item.status === 'accepted' && <PrimaryButton onClick={() => openTenancy(item)}>Create tenancy</PrimaryButton>}
                   {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
