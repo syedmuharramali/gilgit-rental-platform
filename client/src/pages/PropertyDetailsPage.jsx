@@ -187,7 +187,8 @@ function PropertyDetailsPage() {
                   key={image.id}
                   type="button"
                   onClick={() => setPreviewIndex(index)}
-                  aria-label={`Show photo ${index + 1} of ${galleryImages.length}`}
+                  aria-label={`Show photo ${index + 1} of ${galleryImages.length}`
+                  }
                   aria-pressed={previewIndex === index}
                   className={`relative h-[72px] w-[94px] shrink-0 overflow-hidden rounded-[16px] border transition sm:h-[88px] sm:w-[118px] ${previewIndex === index ? 'border-cyan-300/70 ring-2 ring-cyan-300/15' : 'border-white/10 opacity-70 hover:opacity-100'}`}
                 >
@@ -263,7 +264,78 @@ function PropertyDetailsPage() {
       )}
 
       <Modal open={modal === 'apply'} onClose={() => setModal(null)} title="Apply for this home">
-        <div className="space-y-4"><div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1"><button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'individual', roommates: [] }))} className={`rounded-xl px-3 py-2 text-xs font-black ${application.applicationType === 'individual' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500'}`}>Individual</button><button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'group', roommates: current.roommates.length ? current.roommates : [blankRoommate()] }))} className={`rounded-xl px-3 py-2 text-xs font-black ${application.applicationType === 'group' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500'}`}>Group / roommates</button></div><TextArea value={application.message} onChange={(event) => setApplication({ ...application, message: event.target.value })} placeholder="Introduce yourself to the owner" /><TextInput type="date" value={application.preferredMoveInDate} onChange={(event) => setApplication({ ...application, preferredMoveInDate: event.target.value })} /><div className="grid grid-cols-2 gap-3"><TextInput type="number" min="1" max="120" value={application.expectedStayMonths} onChange={(event) => setApplication({ ...application, expectedStayMonths: event.target.value })} placeholder="Stay months" />{application.applicationType === 'individual' && <TextInput type="number" min="1" max={property.maxOccupants || 20} value={application.occupants} onChange={(event) => setApplication({ ...application, occupants: event.target.value })} placeholder="Occupants" />}</div>{application.applicationType === 'group' && <div className="space-y-3"><div className="flex items-center justify-between"><p className="text-sm font-black">Roommates</p><SecondaryButton type="button" onClick={addRoommate}><Plus className="h-4 w-4" /> Add roommate</SecondaryButton></div>{application.roommates.map((roommate, index) => <div key={index} className="rounded-2xl border border-white/10 bg-white/[0.025] p-3"><div className="grid gap-2 sm:grid-cols-2"><TextInput value={roommate.name} onChange={(event) => updateRoommate(index, 'name', event.target.value)} placeholder="Full name" /><TextInput type="email" value={roommate.email} onChange={(event) => updateRoommate(index, 'email', event.target.value)} placeholder="Email" /></div><div className="mt-2 flex gap-2"><TextInput value={roommate.phone} onChange={(event) => updateRoommate(index, 'phone', event.target.value)} placeholder="Phone (optional)" /><button type="button" onClick={() => removeRoommate(index)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-400/10 text-rose-300"><Trash2 className="h-4 w-4" /></button></div></div>)}</div>}<PrimaryButton disabled={applicationState.isLoading || (application.applicationType === 'group' && application.roommates.length === 0)} className="w-full" onClick={submitApplication}>Submit application</PrimaryButton></div>
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
+            <p className="text-sm font-black text-cyan-100">Tell the owner about your rental plan</p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">Choose whether you are applying alone or with roommates, then add your preferred move-in date and expected stay. You can update the details with the owner later if needed.</p>
+          </div>
+
+          <div>
+            <p className="mb-2 text-xs font-black text-slate-200">Who is applying?</p>
+            <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1">
+              <button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'individual', roommates: [] }))} className={`rounded-xl px-3 py-2.5 text-xs font-black transition ${application.applicationType === 'individual' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>Individual</button>
+              <button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'group', roommates: current.roommates.length ? current.roommates : [blankRoommate()] }))} className={`rounded-xl px-3 py-2.5 text-xs font-black transition ${application.applicationType === 'group' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>Group / roommates</button>
+            </div>
+            <p className="mt-2 text-[11px] leading-5 text-slate-500">Choose “Individual” if this application is only for you. Choose “Group / roommates” if other people are applying with you.</p>
+          </div>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Message to the owner <span className="font-semibold text-slate-600">(optional)</span></span>
+            <TextArea maxLength={1000} value={application.message} onChange={(event) => setApplication((current) => ({ ...current, message: event.target.value }))} placeholder="Example: I am a working professional looking for a quiet long-term rental. I would like to move in around the selected date." />
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">Briefly introduce yourself and mention anything useful for the owner. Maximum 1000 characters.</span>
+          </label>
+
+          <label className="block">
+            <span className="mb-2 block text-xs font-black text-slate-200">Preferred move-in date <span className="font-semibold text-slate-600">(optional)</span></span>
+            <TextInput aria-label="Preferred move-in date" type="date" value={application.preferredMoveInDate} onChange={(event) => setApplication((current) => ({ ...current, preferredMoveInDate: event.target.value }))} />
+            <span className="mt-2 block text-[11px] leading-5 text-slate-500">Choose the date you would ideally like to start the tenancy.</span>
+          </label>
+
+          <div className={`grid gap-4 ${application.applicationType === 'individual' ? 'sm:grid-cols-2' : ''}`}>
+            <label className="block">
+              <span className="mb-2 block text-xs font-black text-slate-200">Expected stay</span>
+              <TextInput aria-label="Expected stay in months" type="number" min="1" max="120" value={application.expectedStayMonths} onChange={(event) => setApplication((current) => ({ ...current, expectedStayMonths: event.target.value }))} placeholder="6" />
+              <span className="mt-2 block text-[11px] leading-5 text-slate-500">Number of months you expect to rent the property (1–120).</span>
+            </label>
+
+            {application.applicationType === 'individual' && (
+              <label className="block">
+                <span className="mb-2 block text-xs font-black text-slate-200">Number of occupants</span>
+                <TextInput aria-label="Number of occupants" type="number" min="1" max={property.maxOccupants || 20} value={application.occupants} onChange={(event) => setApplication((current) => ({ ...current, occupants: event.target.value }))} placeholder="1" />
+                <span className="mt-2 block text-[11px] leading-5 text-slate-500">Total people who would live here. This property allows up to {property.maxOccupants || 20}.</span>
+              </label>
+            )}
+          </div>
+
+          {application.applicationType === 'group' && (
+            <div className="space-y-3 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black">Roommates</p>
+                  <p className="mt-1 text-[11px] leading-5 text-slate-500">Add the name and email of each person applying with you.</p>
+                </div>
+                <SecondaryButton type="button" onClick={addRoommate}><Plus className="h-4 w-4" /> Add roommate</SecondaryButton>
+              </div>
+              {application.roommates.map((roommate, index) => (
+                <div key={index} className="rounded-2xl border border-white/10 bg-[#0b111e] p-3">
+                  <p className="mb-3 text-xs font-black text-slate-300">Roommate {index + 1}</p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-400">Full name</span><TextInput value={roommate.name} onChange={(event) => updateRoommate(index, 'name', event.target.value)} placeholder="Full name" /></label>
+                    <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-400">Email</span><TextInput type="email" value={roommate.email} onChange={(event) => updateRoommate(index, 'email', event.target.value)} placeholder="Email address" /></label>
+                  </div>
+                  <div className="mt-3 flex items-end gap-2">
+                    <label className="block flex-1"><span className="mb-1.5 block text-[11px] font-bold text-slate-400">Phone <span className="font-semibold text-slate-600">(optional)</span></span><TextInput value={roommate.phone} onChange={(event) => updateRoommate(index, 'phone', event.target.value)} placeholder="Phone number" /></label>
+                    <button type="button" onClick={() => removeRoommate(index)} className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-rose-400/10 text-rose-300" aria-label={`Remove roommate ${index + 1}`}><Trash2 className="h-4 w-4" /></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 text-xs leading-5 text-slate-500">Submitting sends this application to the verified property owner for review. It does not create a tenancy or charge you any money.</div>
+
+          <PrimaryButton disabled={applicationState.isLoading || (application.applicationType === 'group' && application.roommates.length === 0)} className="w-full" onClick={submitApplication}>{applicationState.isLoading ? 'Submitting…' : 'Submit application'}</PrimaryButton>
+        </div>
       </Modal>
 
       <Modal open={modal === 'viewing'} onClose={() => setModal(null)} title="Request a viewing"><div className="space-y-3"><TextInput type="datetime-local" value={viewing.requestedDateTime} onChange={(event) => setViewing({ ...viewing, requestedDateTime: event.target.value })} /><TextArea value={viewing.message} onChange={(event) => setViewing({ ...viewing, message: event.target.value })} placeholder="Optional note for the owner" /><PrimaryButton disabled={viewingState.isLoading || !viewing.requestedDateTime} className="w-full" onClick={submitViewing}>Send viewing request</PrimaryButton></div></Modal>
