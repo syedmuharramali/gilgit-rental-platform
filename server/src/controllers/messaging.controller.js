@@ -22,6 +22,10 @@ const Tenancy = require(
   "../models/tenancy.model"
 );
 
+const Application = require(
+  "../models/application.model"
+);
+
 const AppError = require(
   "../utils/AppError"
 );
@@ -80,6 +84,35 @@ const getAuthorizedConversation = async (
       403
     );
   }
+
+  return conversation;
+};
+
+const populateConversation = async (
+  conversation
+) => {
+  await conversation.populate([
+    {
+      path: "property",
+      select:
+        "title slug propertyType monthlyRent listingStatus address",
+    },
+    {
+      path: "owner",
+      select:
+        "name avatar",
+    },
+    {
+      path: "renter",
+      select:
+        "name avatar",
+    },
+    {
+      path: "lastMessage",
+      select:
+        "body sender recipient isRead createdAt",
+    },
+  ]);
 
   return conversation;
 };
@@ -145,12 +178,6 @@ exports.startConversation =
         );
       }
 
-      /*
-      |--------------------------------------------------------------------------
-      | Property owner cannot start renter conversation with themselves
-      |--------------------------------------------------------------------------
-      */
-
       if (
         property.owner.toString() ===
         req.user._id.toString()
@@ -162,12 +189,6 @@ exports.startConversation =
           )
         );
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | If property is rented, only active renter may start conversation
-      |--------------------------------------------------------------------------
-      */
 
       if (
         property.listingStatus ===
@@ -197,12 +218,6 @@ exports.startConversation =
           );
         }
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Return existing conversation if already created
-      |--------------------------------------------------------------------------
-      */
 
       let conversation =
         await Conversation.findOne({
@@ -237,12 +252,6 @@ exports.startConversation =
 
           created = true;
         } catch (error) {
-          /*
-          |--------------------------------------------------------------------------
-          | Protect against race condition from unique compound index
-          |--------------------------------------------------------------------------
-          */
-
           if (
             error &&
             error.code === 11000
@@ -264,28 +273,9 @@ exports.startConversation =
         }
       }
 
-      await conversation.populate([
-        {
-          path: "property",
-          select:
-            "title slug propertyType monthlyRent listingStatus address",
-        },
-        {
-          path: "owner",
-          select:
-            "name avatar",
-        },
-        {
-          path: "renter",
-          select:
-            "name avatar",
-        },
-        {
-          path: "lastMessage",
-          select:
-            "body sender recipient isRead createdAt",
-        },
-      ]);
+      await populateConversation(
+        conversation
+      );
 
       res
         .status(
@@ -297,6 +287,150 @@ exports.startConversation =
           message: created
             ? "Conversation started successfully"
             : "Conversation already exists",
+
+          data: {
+            conversation,
+          },
+        });
+    }
+  );
+
+/*
+|--------------------------------------------------------------------------
+| Start / get conversation from an application
+| POST /api/messages/conversations/application/:applicationId
+|--------------------------------------------------------------------------
+|
+| Either participant in an application may open the same property
+| conversation. This keeps communication available before and after the
+| application decision without creating duplicate chats.
+|--------------------------------------------------------------------------
+*/
+
+exports.startApplicationConversation =
+  asyncHandler(
+    async (req, res, next) => {
+      const {
+        applicationId,
+      } = req.params;
+
+      if (
+        !mongoose.isValidObjectId(
+          applicationId
+        )
+      ) {
+        return next(
+          new AppError(
+            "Invalid application ID",
+            400
+          )
+        );
+      }
+
+      const application =
+        await Application.findById(
+          applicationId
+        ).select(
+          "property owner applicant"
+        );
+
+      if (!application) {
+        return next(
+          new AppError(
+            "Application not found",
+            404
+          )
+        );
+      }
+
+      const userId =
+        req.user._id.toString();
+
+      const isOwner =
+        application.owner.toString() ===
+        userId;
+
+      const isApplicant =
+        application.applicant.toString() ===
+        userId;
+
+      if (!isOwner && !isApplicant) {
+        return next(
+          new AppError(
+            "You are not authorized to message participants in this application",
+            403
+          )
+        );
+      }
+
+      let conversation =
+        await Conversation.findOne({
+          property:
+            application.property,
+
+          owner:
+            application.owner,
+
+          renter:
+            application.applicant,
+        });
+
+      let created = false;
+
+      if (!conversation) {
+        try {
+          conversation =
+            await Conversation.create({
+              property:
+                application.property,
+
+              owner:
+                application.owner,
+
+              renter:
+                application.applicant,
+
+              lastMessageAt:
+                new Date(),
+            });
+
+          created = true;
+        } catch (error) {
+          if (
+            error &&
+            error.code === 11000
+          ) {
+            conversation =
+              await Conversation.findOne({
+                property:
+                  application.property,
+
+                owner:
+                  application.owner,
+
+                renter:
+                  application.applicant,
+              });
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      await populateConversation(
+        conversation
+      );
+
+      res
+        .status(
+          created ? 201 : 200
+        )
+        .json({
+          success: true,
+
+          message: created
+            ? "Application conversation started successfully"
+            : "Application conversation already exists",
 
           data: {
             conversation,
@@ -376,12 +510,6 @@ exports.getMyConversations =
             },
           });
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Get unread counts efficiently
-      |--------------------------------------------------------------------------
-      */
 
       const conversationIds =
         conversations.map(
@@ -507,12 +635,6 @@ exports.getConversationMessages =
             conversation._id,
         });
 
-      /*
-      |--------------------------------------------------------------------------
-      | Query latest first for efficient pagination
-      |--------------------------------------------------------------------------
-      */
-
       let messages =
         await Message.find({
           conversation:
@@ -536,12 +658,6 @@ exports.getConversationMessages =
           .skip(skip)
           .limit(limit)
           .lean();
-
-      /*
-      |--------------------------------------------------------------------------
-      | Return messages chronologically within page
-      |--------------------------------------------------------------------------
-      */
 
       messages =
         messages.reverse();
@@ -665,21 +781,21 @@ exports.sendMessage =
 
       await conversation.save();
       await safeCreateNotification({
-  user: recipientId,
+        user: recipientId,
 
-  type: "message",
+        type: "message",
 
-  title: "New Message",
+        title: "New Message",
 
-  message:
-    `${req.user.name} sent you a message.`,
+        message:
+          `${req.user.name} sent you a message.`,
 
-  resourceType:
-    "conversation",
+        resourceType:
+          "conversation",
 
-  resourceId:
-    conversation._id,
-});
+        resourceId:
+          conversation._id,
+      });
 
       await message.populate([
         {
@@ -766,3 +882,6 @@ exports.markConversationRead =
       });
     }
   );
+
+module.exports.getAuthorizedConversation =
+  getAuthorizedConversation;
