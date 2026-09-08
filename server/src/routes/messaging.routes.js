@@ -4,6 +4,7 @@ const express = require(
 
 const {
   startConversation,
+  startApplicationConversation,
   getMyConversations,
   getConversationMessages,
   sendMessage,
@@ -38,6 +39,11 @@ router.use(protect);
 router.get(
   "/conversations",
   getMyConversations
+);
+
+router.post(
+  "/conversations/application/:applicationId",
+  startApplicationConversation
 );
 
 router.post(
