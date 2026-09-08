@@ -28,6 +28,18 @@ const wait = (milliseconds) =>
     setTimeout(resolve, milliseconds)
   );
 
+const diagnosticsEnabled = () =>
+  process.env.NODE_ENV !== "production" ||
+  process.env.UPLOAD_DIAGNOSTICS === "true";
+
+const elapsedMs = (startedAt) =>
+  Number(process.hrtime.bigint() - startedAt) / 1e6;
+
+const safeStatusCode = (error) =>
+  Number(error?.code) ||
+  Number(error?.response?.code) ||
+  0;
+
 /*
 |--------------------------------------------------------------------------
 | Create Appwrite file with retry
@@ -36,32 +48,54 @@ const wait = (milliseconds) =>
 | Appwrite Cloud can occasionally return temporary 503/5xx errors.
 | We retry only temporary server errors, not validation/permission errors.
 |
+| Diagnostics record only stage timing, attempt number and file size. They
+| intentionally do not log API keys, tokens, bucket IDs or private filenames.
+|--------------------------------------------------------------------------
 */
 
 const createFileWithRetry = async (
   options,
-  maxAttempts = 3
+  maxAttempts = 3,
+  diagnostics = {}
 ) => {
   let lastError;
+  const overallStartedAt = process.hrtime.bigint();
+  const fileBytes = Number(diagnostics.fileBytes) || 0;
+  const kind = diagnostics.kind || "storage-file";
 
   for (
     let attempt = 1;
     attempt <= maxAttempts;
     attempt++
   ) {
+    const attemptStartedAt = process.hrtime.bigint();
+
+    if (diagnosticsEnabled()) {
+      console.log(
+        `[UPLOAD_DIAG] appwrite start ${kind} | attempt=${attempt}/${maxAttempts} | bytes=${fileBytes}`
+      );
+    }
+
     try {
-      return await storage.createFile(
+      const result = await storage.createFile(
         options
       );
+
+      if (diagnosticsEnabled()) {
+        console.log(
+          `[UPLOAD_DIAG] appwrite success ${kind} | attempt=${attempt}/${maxAttempts} | attemptMs=${elapsedMs(attemptStartedAt).toFixed(1)} | totalMs=${elapsedMs(overallStartedAt).toFixed(1)} | bytes=${fileBytes}`
+        );
+      }
+
+      return result;
     } catch (error) {
       lastError = error;
 
       const statusCode =
-        Number(error.code) ||
-        Number(
-          error.response?.code
-        ) ||
-        0;
+        safeStatusCode(error);
+
+      const attemptDurationMs =
+        elapsedMs(attemptStartedAt);
 
       const isTemporaryError =
         statusCode === 503 ||
@@ -72,6 +106,12 @@ const createFileWithRetry = async (
           error.message
         ).includes("503");
 
+      if (diagnosticsEnabled()) {
+        console.warn(
+          `[UPLOAD_DIAG] appwrite failure ${kind} | attempt=${attempt}/${maxAttempts} | status=${statusCode || "unknown"} | attemptMs=${attemptDurationMs.toFixed(1)} | totalMs=${elapsedMs(overallStartedAt).toFixed(1)} | temporary=${isTemporaryError}`
+        );
+      }
+
       if (
         !isTemporaryError ||
         attempt === maxAttempts
@@ -79,12 +119,17 @@ const createFileWithRetry = async (
         break;
       }
 
-      console.warn(
-        `Appwrite upload temporarily failed. Retry ${attempt}/${maxAttempts}...`
-      );
+      const retryDelayMs =
+        attempt * 1200;
+
+      if (diagnosticsEnabled()) {
+        console.warn(
+          `[UPLOAD_DIAG] appwrite retry wait ${kind} | ${retryDelayMs} ms`
+        );
+      }
 
       await wait(
-        attempt * 1200
+        retryDelayMs
       );
     }
   }
@@ -96,11 +141,7 @@ const createFileWithRetry = async (
   */
 
   const statusCode =
-    Number(lastError?.code) ||
-    Number(
-      lastError?.response?.code
-    ) ||
-    0;
+    safeStatusCode(lastError);
 
   if (
     statusCode === 503 ||
@@ -158,20 +199,27 @@ const uploadPrivateFile = async (
     );
 
   const uploadedFile =
-    await createFileWithRetry({
-      bucketId:
-        process.env
-          .APPWRITE_BUCKET_ID,
+    await createFileWithRetry(
+      {
+        bucketId:
+          process.env
+            .APPWRITE_BUCKET_ID,
 
-      fileId:
-        ID.unique(),
+        fileId:
+          ID.unique(),
 
-      file:
-        inputFile,
+        file:
+          inputFile,
 
-      // Identity documents stay private.
-      permissions: [],
-    });
+        // Identity documents stay private.
+        permissions: [],
+      },
+      3,
+      {
+        kind: "private-image",
+        fileBytes: file.size,
+      }
+    );
 
   return {
     fileId:
@@ -223,23 +271,30 @@ const uploadPublicImage = async (
     );
 
   const uploadedFile =
-    await createFileWithRetry({
-      bucketId:
-        process.env
-          .APPWRITE_BUCKET_ID,
+    await createFileWithRetry(
+      {
+        bucketId:
+          process.env
+            .APPWRITE_BUCKET_ID,
 
-      fileId:
-        ID.unique(),
+        fileId:
+          ID.unique(),
 
-      file:
-        inputFile,
+        file:
+          inputFile,
 
-      permissions: [
-        Permission.read(
-          Role.any()
-        ),
-      ],
-    });
+        permissions: [
+          Permission.read(
+            Role.any()
+          ),
+        ],
+      },
+      3,
+      {
+        kind: "property-image",
+        fileBytes: file.size,
+      }
+    );
 
   return {
     fileId:
@@ -291,11 +346,7 @@ const deleteFile = async (
       lastError = error;
 
       const statusCode =
-        Number(error.code) ||
-        Number(
-          error.response?.code
-        ) ||
-        0;
+        safeStatusCode(error);
 
       /*
       | If Appwrite already says the file
