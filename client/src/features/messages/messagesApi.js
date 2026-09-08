@@ -11,6 +11,10 @@ export const messagesApi = baseApi.injectEndpoints({
       query: (propertyId) => ({ url: `/messages/conversations/${propertyId}`, method: 'POST' }),
       invalidatesTags: [{ type: 'Message', id: 'CONVERSATIONS' }],
     }),
+    startApplicationConversation: builder.mutation({
+      query: (applicationId) => ({ url: `/messages/conversations/application/${applicationId}`, method: 'POST' }),
+      invalidatesTags: [{ type: 'Message', id: 'CONVERSATIONS' }],
+    }),
     getConversationMessages: builder.query({
       query: ({ conversationId, page = 1, limit = 50 }) => ({
         url: `/messages/conversations/${conversationId}/messages`,
@@ -43,6 +47,7 @@ export const messagesApi = baseApi.injectEndpoints({
 export const {
   useGetConversationsQuery,
   useStartConversationMutation,
+  useStartApplicationConversationMutation,
   useGetConversationMessagesQuery,
   useSendMessageMutation,
   useMarkConversationReadMutation,
