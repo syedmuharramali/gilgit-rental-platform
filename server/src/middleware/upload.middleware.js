@@ -9,6 +9,7 @@ const AppError = require("../utils/AppError");
 */
 
 const storage = multer.memoryStorage();
+const ONE_MB = 1024 * 1024;
 
 /*
 |--------------------------------------------------------------------------
@@ -70,6 +71,12 @@ const instrumentMultipart = (label, middleware) =>
       }
 
       if (error) {
+        if (error instanceof multer.MulterError && error.code === "LIMIT_FILE_SIZE") {
+          error.message = label === "owner-verification"
+            ? "Verification images must be 1 MB or smaller"
+            : "Property images must be 1 MB or smaller";
+        }
+
         return next(error);
       }
 
@@ -137,7 +144,7 @@ const verificationUpload = multer({
   storage,
 
   limits: {
-    fileSize: 5 * 1024 * 1024,
+    fileSize: ONE_MB,
     files: 3,
   },
 
@@ -173,8 +180,8 @@ const propertyUpload = multer({
   storage,
 
   limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 8,
+    fileSize: ONE_MB,
+    files: 1,
   },
 
   fileFilter: propertyImageFilter,
@@ -185,7 +192,7 @@ exports.uploadPropertyImages =
     "property-images",
     propertyUpload.array(
       "images",
-      8
+      1
     )
   );
 
