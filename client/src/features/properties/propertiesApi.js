@@ -1,4 +1,11 @@
+import api from '../../services/api'
 import { baseApi } from '../api/baseApi'
+
+const toUploadError = (error) => ({
+  status: error.response?.status || 'CUSTOM_ERROR',
+  data: error.response?.data || { message: error.message || 'Upload failed' },
+  error: error.message || 'Upload failed',
+})
 
 export const propertiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -48,10 +55,26 @@ export const propertiesApi = baseApi.injectEndpoints({
       ],
     }),
     uploadPropertyImages: builder.mutation({
-      query: ({ id, files }) => {
+      async queryFn({ id, files, onProgress }) {
         const body = new FormData()
         files.forEach((file) => body.append('images', file))
-        return { url: `/properties/${id}/images`, method: 'POST', body }
+
+        try {
+          const response = await api.post(`/properties/${id}/images`, body, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+            timeout: 0,
+            onUploadProgress: (event) => {
+              const total = event.total || files.reduce((sum, file) => sum + file.size, 0)
+              const loaded = Math.min(event.loaded || 0, total || event.loaded || 0)
+              const percent = total ? Math.min(100, Math.round((loaded / total) * 100)) : 0
+              onProgress?.({ loaded, total, percent })
+            },
+          })
+
+          return { data: response.data }
+        } catch (error) {
+          return { error: toUploadError(error) }
+        }
       },
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Property', id },
