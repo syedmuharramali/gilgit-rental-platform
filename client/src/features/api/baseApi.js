@@ -36,6 +36,7 @@ export const baseApi = createApi({
     'Property',
     'Favorite',
     'Application',
+    'RentalTerms',
     'Viewing',
     'Tenancy',
     'RentRecord',
