@@ -459,6 +459,23 @@ const propertySchema =
         default: "draft",
       },
 
+      reservationStatus: {
+        type: String,
+
+        enum: [
+          "available",
+          "reserved",
+        ],
+
+        default: "available",
+      },
+
+      reservedAt: {
+        type: Date,
+
+        default: null,
+      },
+
       /*
       |--------------------------------------------------------------------------
       | Review information
