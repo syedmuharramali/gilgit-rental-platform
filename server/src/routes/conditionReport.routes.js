@@ -25,44 +25,27 @@ const {
   "../middleware/upload.middleware"
 );
 
+const {
+  requireActiveTenancyForConditionReport,
+} = require(
+  "../middleware/tenancyLifecycle.middleware"
+);
+
 const router =
   express.Router();
 
-/*
-|--------------------------------------------------------------------------
-| All routes require authentication
-|--------------------------------------------------------------------------
-*/
-
 router.use(protect);
-
-/*
-|--------------------------------------------------------------------------
-| Create condition report
-|--------------------------------------------------------------------------
-*/
 
 router.post(
   "/tenancy/:tenancyId",
+  requireActiveTenancyForConditionReport,
   createConditionReport
 );
-
-/*
-|--------------------------------------------------------------------------
-| Get tenancy condition reports
-|--------------------------------------------------------------------------
-*/
 
 router.get(
   "/tenancy/:tenancyId",
   getTenancyConditionReports
 );
-
-/*
-|--------------------------------------------------------------------------
-| Upload private evidence
-|--------------------------------------------------------------------------
-*/
 
 router.post(
   "/:id/evidence",
@@ -70,22 +53,10 @@ router.post(
   uploadEvidenceController
 );
 
-/*
-|--------------------------------------------------------------------------
-| Securely view evidence
-|--------------------------------------------------------------------------
-*/
-
 router.get(
   "/:id/evidence/:evidenceId",
   viewConditionEvidence
 );
-
-/*
-|--------------------------------------------------------------------------
-| Confirm condition report
-|--------------------------------------------------------------------------
-*/
 
 router.patch(
   "/:id/confirm",
