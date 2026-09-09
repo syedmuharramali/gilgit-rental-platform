@@ -19,11 +19,14 @@ import {
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { logout } from '../features/auth/authSlice'
-import { useGetUnreadCountQuery } from '../features/notifications/notificationsApi'
+import {
+  useGetUnreadCountQuery,
+  useMarkNotificationTypesReadMutation,
+} from '../features/notifications/notificationsApi'
 
 const renterLinks = [
   ['/dashboard', 'Overview', Home],
@@ -81,6 +84,7 @@ function DashboardLayout({ mode = 'renter' }) {
   const location = useLocation()
   const user = useSelector((state) => state.auth.user)
   const { data: unread } = useGetUnreadCountQuery(undefined, { pollingInterval: 30000 })
+  const [markNotificationTypesRead] = useMarkNotificationTypesReadMutation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const links = mode === 'owner' ? ownerLinks : renterLinks
   const notificationPath = mode === 'owner' ? '/owner/notifications' : '/dashboard/notifications'
@@ -102,6 +106,21 @@ function DashboardLayout({ mode = 'renter' }) {
     if (label === 'Notifications') return total
     return total + getBadgeCount(label)
   }, 0)
+
+  useEffect(() => {
+    const currentLink = links.find(([to, label]) => {
+      if (label === 'Notifications') return false
+      return location.pathname === to || location.pathname.startsWith(`${to}/`)
+    })
+
+    if (!currentLink) return
+
+    const [, label] = currentLink
+    const types = badgeTypesByLabel[label]
+    if (!types?.length || getBadgeCount(label) === 0) return
+
+    markNotificationTypesRead(types).catch(() => {})
+  }, [location.pathname, unread?.unreadCount, unread?.byType, links, markNotificationTypesRead])
 
   const signOut = () => {
     setMobileMenuOpen(false)
