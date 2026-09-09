@@ -19,7 +19,7 @@ import {
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { logout } from '../features/auth/authSlice'
@@ -28,41 +28,81 @@ import {
   useMarkNotificationTypesReadMutation,
 } from '../features/notifications/notificationsApi'
 
-const renterLinks = [
-  ['/dashboard', 'Overview', Home],
-  ['/favorites', 'Saved homes', Heart],
-  ['/matches', 'Smart matches', Sparkles],
-  ['/dashboard/applications', 'Applications', ClipboardList],
-  ['/dashboard/viewings', 'Viewings', FileCheck2],
-  ['/dashboard/tenancies', 'Tenancy', Building2],
-  ['/dashboard/rent', 'Rent ledger', WalletCards],
-  ['/dashboard/messages', 'Messages', MessageCircle],
-  ['/dashboard/agreements', 'Agreements', FileCheck2],
-  ['/dashboard/condition-reports', 'Condition reports', ClipboardList],
-  ['/dashboard/maintenance', 'Maintenance', Wrench],
-  ['/dashboard/reviews', 'Reviews', Star],
-  ['/dashboard/reports', 'Safety reports', TriangleAlert],
-  ['/dashboard/notifications', 'Notifications', Bell],
-  ['/dashboard/profile', 'Profile', Settings2],
+const renterGroups = [
+  {
+    label: 'Find a home',
+    links: [
+      ['/dashboard', 'Overview', Home],
+      ['/dashboard/favorites', 'Saved homes', Heart],
+      ['/dashboard/matches', 'Smart matches', Sparkles],
+      ['/dashboard/applications', 'Applications', ClipboardList],
+      ['/dashboard/viewings', 'Viewings', FileCheck2],
+    ],
+  },
+  {
+    label: 'Communication',
+    links: [
+      ['/dashboard/messages', 'Messages', MessageCircle],
+      ['/dashboard/notifications', 'Notifications', Bell],
+    ],
+  },
+  {
+    label: 'My rental',
+    links: [
+      ['/dashboard/tenancies', 'Tenancy', Building2],
+      ['/dashboard/agreements', 'Agreements', FileCheck2],
+      ['/dashboard/rent', 'Rent ledger', WalletCards],
+      ['/dashboard/condition-reports', 'Condition reports', ClipboardList],
+      ['/dashboard/maintenance', 'Maintenance', Wrench],
+    ],
+  },
+  {
+    label: 'Account',
+    links: [
+      ['/dashboard/reviews', 'Reviews', Star],
+      ['/dashboard/reports', 'Safety reports', TriangleAlert],
+      ['/dashboard/profile', 'Profile', Settings2],
+    ],
+  },
 ]
 
-const ownerLinks = [
-  ['/owner', 'Owner overview', Home],
-  ['/owner/verification', 'Verification', ShieldCheck],
-  ['/owner/properties', 'Properties', Building2],
-  ['/owner/media', 'Property media', Images],
-  ['/owner/applications', 'Applications', ClipboardList],
-  ['/owner/viewings', 'Viewings', FileCheck2],
-  ['/owner/tenancies', 'Tenancies', Building2],
-  ['/owner/rent', 'Rent ledger', WalletCards],
-  ['/owner/messages', 'Messages', MessageCircle],
-  ['/owner/agreements', 'Agreements', FileCheck2],
-  ['/owner/condition-reports', 'Condition reports', ClipboardList],
-  ['/owner/maintenance', 'Maintenance', Wrench],
-  ['/owner/reviews', 'Reviews', Star],
-  ['/owner/reports', 'Safety reports', TriangleAlert],
-  ['/owner/notifications', 'Notifications', Bell],
-  ['/owner/profile', 'Profile', Settings2],
+const ownerGroups = [
+  {
+    label: 'Properties',
+    links: [
+      ['/owner', 'Owner overview', Home],
+      ['/owner/properties', 'Properties', Building2],
+      ['/owner/media', 'Property media', Images],
+      ['/owner/applications', 'Applications', ClipboardList],
+      ['/owner/viewings', 'Viewings', FileCheck2],
+    ],
+  },
+  {
+    label: 'Communication',
+    links: [
+      ['/owner/messages', 'Messages', MessageCircle],
+      ['/owner/notifications', 'Notifications', Bell],
+    ],
+  },
+  {
+    label: 'Active rentals',
+    links: [
+      ['/owner/tenancies', 'Tenancies', Building2],
+      ['/owner/agreements', 'Agreements', FileCheck2],
+      ['/owner/rent', 'Rent ledger', WalletCards],
+      ['/owner/condition-reports', 'Condition reports', ClipboardList],
+      ['/owner/maintenance', 'Maintenance', Wrench],
+    ],
+  },
+  {
+    label: 'Account',
+    links: [
+      ['/owner/verification', 'Verification', ShieldCheck],
+      ['/owner/reviews', 'Reviews', Star],
+      ['/owner/reports', 'Safety reports', TriangleAlert],
+      ['/owner/profile', 'Profile', Settings2],
+    ],
+  },
 ]
 
 const badgeTypesByLabel = {
@@ -86,19 +126,21 @@ function DashboardLayout({ mode = 'renter' }) {
   const { data: unread } = useGetUnreadCountQuery(undefined, { pollingInterval: 30000 })
   const [markNotificationTypesRead] = useMarkNotificationTypesReadMutation()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const links = mode === 'owner' ? ownerLinks : renterLinks
+  const groups = mode === 'owner' ? ownerGroups : renterGroups
+  const links = useMemo(() => groups.flatMap((group) => group.links), [groups])
   const notificationPath = mode === 'owner' ? '/owner/notifications' : '/dashboard/notifications'
   const workspaceLabel = mode === 'owner' ? 'Owner workspace' : 'Renter workspace'
-  const primaryMobileLinks = links.slice(0, 4)
-  const secondaryMobileLinks = links.slice(4)
+  const primaryMobileLinks = mode === 'owner'
+    ? [links[0], links[1], links.find(([, label]) => label === 'Applications'), links.find(([, label]) => label === 'Messages')].filter(Boolean)
+    : [links[0], links.find(([, label]) => label === 'Saved homes'), links.find(([, label]) => label === 'Applications'), links.find(([, label]) => label === 'Messages')].filter(Boolean)
+  const primaryPaths = new Set(primaryMobileLinks.map(([to]) => to))
+  const secondaryMobileLinks = links.filter(([to]) => !primaryPaths.has(to))
   const isMoreActive = secondaryMobileLinks.some(([to]) => location.pathname === to || location.pathname.startsWith(`${to}/`))
 
   const getBadgeCount = (label) => {
     if (label === 'Notifications') return unread?.unreadCount || 0
-
     const types = badgeTypesByLabel[label]
     if (!types?.length) return 0
-
     return types.reduce((total, type) => total + (unread?.byType?.[type] || 0), 0)
   }
 
@@ -112,19 +154,35 @@ function DashboardLayout({ mode = 'renter' }) {
       if (label === 'Notifications') return false
       return location.pathname === to || location.pathname.startsWith(`${to}/`)
     })
-
     if (!currentLink) return
-
     const [, label] = currentLink
     const types = badgeTypesByLabel[label]
     if (!types?.length || getBadgeCount(label) === 0) return
-
     markNotificationTypesRead(types).catch(() => {})
   }, [location.pathname, unread?.unreadCount, unread?.byType, links, markNotificationTypesRead])
 
   const signOut = () => {
     setMobileMenuOpen(false)
     dispatch(logout())
+  }
+
+  const renderNavLink = ([to, label, Icon], mobile = false) => {
+    const badgeCount = getBadgeCount(label)
+    return (
+      <NavLink
+        key={to}
+        to={to}
+        end={to === '/dashboard' || to === '/owner'}
+        onClick={mobile ? () => setMobileMenuOpen(false) : undefined}
+        className={({ isActive }) => mobile
+          ? `flex min-h-12 items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold transition ${isActive ? 'border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100' : 'border-white/[0.07] bg-white/[0.025] text-slate-400'}`
+          : `group flex items-center gap-3 rounded-2xl px-4 py-2.5 text-sm font-bold transition ${isActive ? 'bg-gradient-to-r from-cyan-300/15 via-blue-400/10 to-violet-500/10 text-white ring-1 ring-cyan-300/20' : 'text-slate-500 hover:bg-white/[0.045] hover:text-white'}`}
+      >
+        <span className={`${mobile ? '' : 'grid h-8 w-8 place-items-center rounded-xl bg-white/[0.04] text-slate-400 transition group-hover:text-cyan-300'}`}><Icon className="h-4 w-4 shrink-0" /></span>
+        <span className="min-w-0 flex-1 truncate">{label}</span>
+        {badgeCount > 0 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${label === 'Notifications' ? 'bg-rose-500' : 'bg-cyan-500'}`}>{badgeCount}</span>}
+      </NavLink>
+    )
   }
 
   return (
@@ -137,18 +195,14 @@ function DashboardLayout({ mode = 'renter' }) {
           <div><p className="font-black tracking-[-.03em]">Gilgit Rental</p><p className="text-xs text-slate-500">{workspaceLabel}</p></div>
         </div>
 
-        <nav className="flex-1 space-y-1 overflow-y-auto p-4" aria-label={`${workspaceLabel} navigation`}>
-          {links.map(([to, label, Icon]) => {
-            const badgeCount = getBadgeCount(label)
-            return (
-              <NavLink key={to} to={to} end={to === '/dashboard' || to === '/owner'} className={({ isActive }) => `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${isActive ? 'bg-gradient-to-r from-cyan-300/15 via-blue-400/10 to-violet-500/10 text-white ring-1 ring-cyan-300/20' : 'text-slate-500 hover:bg-white/[0.045] hover:text-white'}`}>
-                <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/[0.04] text-slate-400 transition group-hover:text-cyan-300"><Icon className="h-4 w-4" /></span>
-                <span className="min-w-0 flex-1 truncate">{label}</span>
-                {badgeCount > 0 && <span className={`ml-auto rounded-full px-2 py-0.5 text-[10px] font-black text-white ${label === 'Notifications' ? 'bg-rose-500' : 'bg-cyan-500'}`}>{badgeCount}</span>}
-              </NavLink>
-            )
-          })}
-          {user?.role === 'admin' && <NavLink to="/admin" className="mt-3 flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin console</NavLink>}
+        <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label={`${workspaceLabel} navigation`}>
+          {groups.map((group, groupIndex) => (
+            <div key={group.label} className={groupIndex ? 'mt-5' : ''}>
+              <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.18em] text-slate-700">{group.label}</p>
+              <div className="space-y-1">{group.links.map((link) => renderNavLink(link))}</div>
+            </div>
+          ))}
+          {user?.role === 'admin' && <NavLink to="/admin" className="mt-5 flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin console</NavLink>}
         </nav>
 
         <div className="border-t border-white/[0.06] p-4">
@@ -190,20 +244,16 @@ function DashboardLayout({ mode = 'renter' }) {
             <motion.button type="button" aria-label="Close workspace menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-[60] bg-black/65 backdrop-blur-sm lg:hidden" />
             <motion.aside id="mobile-workspace-menu" role="dialog" aria-modal="true" aria-label={`${workspaceLabel} menu`} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 32 }} className="fixed inset-x-0 bottom-0 z-[70] max-h-[82vh] overflow-y-auto rounded-t-[30px] border-t border-white/10 bg-[#0a101c] p-5 pb-8 shadow-[0_-30px_90px_rgba(0,0,0,.45)] lg:hidden">
               <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">All tools</p><h2 className="mt-1 text-lg font-black">{workspaceLabel}</h2></div><button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300"><X className="h-4 w-4" /></button></div>
-              <nav className="grid gap-2 sm:grid-cols-2">
-                {links.map(([to, label, Icon]) => {
-                  const badgeCount = getBadgeCount(label)
-                  return (
-                    <NavLink key={to} to={to} end={to === '/dashboard' || to === '/owner'} onClick={() => setMobileMenuOpen(false)} className={({ isActive }) => `flex min-h-12 items-center gap-3 rounded-2xl border px-4 py-3 text-sm font-bold transition ${isActive ? 'border-cyan-300/20 bg-cyan-300/[0.08] text-cyan-100' : 'border-white/[0.07] bg-white/[0.025] text-slate-400'}`}>
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{label}</span>
-                      {badgeCount > 0 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${label === 'Notifications' ? 'bg-rose-500' : 'bg-cyan-500'}`}>{badgeCount}</span>}
-                    </NavLink>
-                  )
-                })}
+              <div className="space-y-5">
+                {groups.map((group) => (
+                  <div key={group.label}>
+                    <p className="mb-2 px-1 text-[9px] font-black uppercase tracking-[.18em] text-slate-600">{group.label}</p>
+                    <nav className="grid gap-2 sm:grid-cols-2">{group.links.map((link) => renderNavLink(link, true))}</nav>
+                  </div>
+                ))}
                 {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin console</NavLink>}
-              </nav>
-              <div className="mt-4 grid grid-cols-2 gap-2"><Link to={mode === 'owner' ? '/dashboard' : '/owner'} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-3 text-xs font-black text-slate-300">{mode === 'owner' ? 'Renter mode' : 'Owner mode'}</Link><button type="button" onClick={signOut} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-3 text-xs font-black text-rose-300"><LogOut className="h-4 w-4" /> Sign out</button></div>
+              </div>
+              <div className="mt-5 grid grid-cols-2 gap-2"><Link to={mode === 'owner' ? '/dashboard' : '/owner'} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-3 text-xs font-black text-slate-300">{mode === 'owner' ? 'Renter mode' : 'Owner mode'}</Link><button type="button" onClick={signOut} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-3 text-xs font-black text-rose-300"><LogOut className="h-4 w-4" /> Sign out</button></div>
             </motion.aside>
           </>
         )}
