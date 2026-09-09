@@ -3,12 +3,17 @@ const express =
 
 const {
   createTenancy,
-  getMyTenancies,
-  getOwnedTenancies,
-  getTenancyById,
   endTenancy,
 } = require(
   "../controllers/tenancy.controller"
+);
+
+const {
+  getMyTenancies,
+  getOwnedTenancies,
+  getTenancyById,
+} = require(
+  "../controllers/tenancyLifecycle.controller"
 );
 
 const {
