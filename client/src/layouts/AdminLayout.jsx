@@ -11,7 +11,7 @@ const links = [
 
 export default function AdminLayout() {
   return (
-    <div className="min-h-screen bg-[#070b14] text-white">
+    <div className="min-h-screen bg-[#070b14] pb-20 text-white lg:pb-0">
       <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_15%_12%,rgba(139,92,246,.11),transparent_26%),radial-gradient(circle_at_80%_80%,rgba(56,189,248,.08),transparent_25%)]" />
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/[0.07] bg-[#090e19]/95 p-5 backdrop-blur-2xl lg:block">
@@ -27,8 +27,8 @@ export default function AdminLayout() {
         </div>
 
         <nav className="mt-6 space-y-1">
-          {links.map(([to,label,Icon]) => (
-            <NavLink key={to} to={to} end={to === '/admin'} className={({isActive}) => `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${isActive ? 'bg-gradient-to-r from-violet-400/15 to-cyan-300/10 text-white ring-1 ring-violet-300/20' : 'text-slate-500 hover:bg-white/[0.045] hover:text-white'}`}>
+          {links.map(([to, label, Icon]) => (
+            <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-bold transition ${isActive ? 'bg-gradient-to-r from-violet-400/15 to-cyan-300/10 text-white ring-1 ring-violet-300/20' : 'text-slate-500 hover:bg-white/[0.045] hover:text-white'}`}>
               <span className="grid h-8 w-8 place-items-center rounded-xl bg-white/[0.04] text-slate-400 transition group-hover:text-violet-300"><Icon className="h-4 w-4" /></span>
               {label}
             </NavLink>
@@ -39,12 +39,21 @@ export default function AdminLayout() {
       </aside>
 
       <div className="relative z-10 lg:pl-72">
-        <header className="sticky top-0 z-30 flex h-20 items-center justify-between border-b border-white/[0.07] bg-[#070b14]/82 px-5 backdrop-blur-2xl sm:px-8">
+        <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#070b14]/82 px-5 backdrop-blur-2xl sm:px-8 lg:h-20">
           <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">Protected workspace</p><p className="mt-1 text-sm font-black">Administration Console</p></div>
           <span className="inline-flex items-center gap-2 rounded-full border border-violet-300/15 bg-violet-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-violet-200"><ShieldCheck className="h-3.5 w-3.5" /> Admin access</span>
         </header>
         <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
       </div>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/[0.08] bg-[#090e19]/96 px-2 py-2 backdrop-blur-2xl lg:hidden" aria-label="Admin mobile navigation">
+        {links.map(([to, label, Icon]) => (
+          <NavLink key={to} to={to} end={to === '/admin'} className={({ isActive }) => `flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${isActive ? 'bg-violet-400/10 text-violet-200' : 'text-slate-500'}`}>
+            <Icon className="h-4 w-4" />
+            <span className="max-w-full truncate">{label === 'Owner verifications' ? 'Owners' : label === 'Property reviews' ? 'Properties' : label === 'Safety reports' ? 'Reports' : label}</span>
+          </NavLink>
+        ))}
+      </nav>
     </div>
   )
 }
