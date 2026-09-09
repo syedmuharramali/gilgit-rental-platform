@@ -35,12 +35,12 @@ import DashboardOverviewPage from './pages/workspace/DashboardOverviewPage'
 import MessagesPage from './pages/workspace/MessagesPage'
 import NotificationsPage from './pages/workspace/NotificationsPage'
 import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
+import TenanciesPage from './pages/workspace/TenanciesPage'
 import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
 import {
   MaintenancePage,
   RentPage,
-  TenanciesPage,
   ViewingsPage,
 } from './pages/workspace/LifecyclePages'
 
