@@ -86,17 +86,38 @@ exports.getMyNotifications = asyncHandler(
 
 exports.getUnreadCount = asyncHandler(
   async (req, res) => {
-    const count =
-      await Notification.countDocuments({
-        user: req.user._id,
-        isRead: false,
-      });
+    const grouped =
+      await Notification.aggregate([
+        {
+          $match: {
+            user: req.user._id,
+            isRead: false,
+          },
+        },
+        {
+          $group: {
+            _id: "$type",
+            count: {
+              $sum: 1,
+            },
+          },
+        },
+      ]);
+
+    const byType = {};
+    let unreadCount = 0;
+
+    grouped.forEach((item) => {
+      byType[item._id] = item.count;
+      unreadCount += item.count;
+    });
 
     res.status(200).json({
       success: true,
 
       data: {
-        unreadCount: count,
+        unreadCount,
+        byType,
       },
     });
   }
