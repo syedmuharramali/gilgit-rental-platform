@@ -116,6 +116,11 @@ const populateAgreement = async (agreement) => {
 | Create agreement from accepted rental terms
 | POST /api/agreements/rental-terms/:termsId
 |--------------------------------------------------------------------------
+|
+| A pending-agreement tenancy record is created internally so legacy indexes
+| remain safe, but it is not an active rental relationship. The tenancy only
+| becomes upcoming/active after both parties accept the agreement.
+|--------------------------------------------------------------------------
 */
 exports.createAgreementFromTerms = asyncHandler(
   async (req, res, next) => {
@@ -158,21 +163,74 @@ exports.createAgreementFromTerms = asyncHandler(
     }
 
     const clauses = cleanClauses(req.body.clauses);
+    const session = await mongoose.startSession();
+    let agreement;
 
-    const agreement = await RentalAgreement.create({
-      rentalTerms: terms._id,
-      application: terms.application,
-      property: terms.property,
-      owner: terms.owner,
-      renter: terms.renter,
-      startDate: terms.startDate,
-      durationMonths: terms.durationMonths,
-      monthlyRent: terms.monthlyRent,
-      securityDeposit: terms.securityDeposit,
-      occupants: terms.occupants,
-      clauses,
-      createdBy: req.user._id,
-    });
+    try {
+      await session.withTransaction(async () => {
+        let tenancy = await Tenancy.findOne({
+          application: terms.application,
+        }).session(session);
+
+        if (tenancy && ![
+          "pending_agreement",
+          "upcoming",
+          "active",
+        ].includes(tenancy.status)) {
+          throw new AppError(
+            "This application already has a completed tenancy record",
+            409
+          );
+        }
+
+        if (!tenancy) {
+          const created = await Tenancy.create(
+            [
+              {
+                application: terms.application,
+                property: terms.property,
+                owner: terms.owner,
+                renter: terms.renter,
+                startDate: terms.startDate,
+                durationMonths: terms.durationMonths,
+                agreedMonthlyRent: terms.monthlyRent,
+                securityDeposit: terms.securityDeposit,
+                occupants: terms.occupants,
+                status: "pending_agreement",
+              },
+            ],
+            { session }
+          );
+
+          tenancy = created[0];
+        }
+
+        const createdAgreement = await RentalAgreement.create(
+          [
+            {
+              tenancy: tenancy._id,
+              rentalTerms: terms._id,
+              application: terms.application,
+              property: terms.property,
+              owner: terms.owner,
+              renter: terms.renter,
+              startDate: terms.startDate,
+              durationMonths: terms.durationMonths,
+              monthlyRent: terms.monthlyRent,
+              securityDeposit: terms.securityDeposit,
+              occupants: terms.occupants,
+              clauses,
+              createdBy: req.user._id,
+            },
+          ],
+          { session }
+        );
+
+        agreement = createdAgreement[0];
+      });
+    } finally {
+      await session.endSession();
+    }
 
     await populateAgreement(agreement);
 
@@ -442,7 +500,7 @@ exports.signAgreement = asyncHandler(
     let agreement;
     let otherParty;
     let becameExecuted = false;
-    let tenancyCreated = false;
+    let tenancyTransitioned = false;
 
     try {
       await session.withTransaction(async () => {
@@ -502,12 +560,7 @@ exports.signAgreement = asyncHandler(
           agreement.executedAt = new Date();
           becameExecuted = true;
 
-          /*
-          |--------------------------------------------------------------------
-          | New lifecycle: create tenancy only after both parties accepted
-          |--------------------------------------------------------------------
-          */
-          if (!agreement.tenancy && agreement.rentalTerms) {
+          if (agreement.rentalTerms) {
             const terms = await RentalTerms.findOne({
               _id: agreement.rentalTerms,
               status: "accepted",
@@ -520,39 +573,31 @@ exports.signAgreement = asyncHandler(
               );
             }
 
-            let tenancy = await Tenancy.findOne({
+            const tenancy = await Tenancy.findOne({
+              _id: agreement.tenancy,
               application: terms.application,
             }).session(session);
 
             if (!tenancy) {
+              throw new AppError(
+                "Rental record could not be found",
+                409
+              );
+            }
+
+            if (tenancy.status === "pending_agreement") {
               const startsNow =
                 new Date(terms.startDate).getTime() <= Date.now();
 
-              const created = await Tenancy.create(
-                [
-                  {
-                    application: terms.application,
-                    property: terms.property,
-                    owner: terms.owner,
-                    renter: terms.renter,
-                    startDate: terms.startDate,
-                    durationMonths: terms.durationMonths,
-                    agreedMonthlyRent: terms.monthlyRent,
-                    securityDeposit: terms.securityDeposit,
-                    occupants: terms.occupants,
-                    status: startsNow
-                      ? "active"
-                      : "upcoming",
-                    activatedAt: startsNow
-                      ? new Date()
-                      : null,
-                  },
-                ],
-                { session }
-              );
+              tenancy.status = startsNow
+                ? "active"
+                : "upcoming";
+              tenancy.activatedAt = startsNow
+                ? new Date()
+                : null;
 
-              tenancy = created[0];
-              tenancyCreated = true;
+              await tenancy.save({ session });
+              tenancyTransitioned = true;
 
               if (startsNow) {
                 const property = await Property.findById(
@@ -568,8 +613,6 @@ exports.signAgreement = asyncHandler(
                 }
               }
             }
-
-            agreement.tenancy = tenancy._id;
           }
         }
 
@@ -596,7 +639,7 @@ exports.signAgreement = asyncHandler(
       resourceId: agreement._id,
     });
 
-    if (becameExecuted && tenancyCreated) {
+    if (becameExecuted && tenancyTransitioned) {
       await safeCreateNotification({
         user: agreement.renter._id,
         type: "tenancy",
