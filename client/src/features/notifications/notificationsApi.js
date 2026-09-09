@@ -12,6 +12,10 @@ export const notificationsApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'Notification', id: 'COUNT' }],
     }),
+    markNotificationTypesRead: builder.mutation({
+      query: (types) => ({ url: '/notifications/read-types', method: 'PATCH', body: { types } }),
+      invalidatesTags: [{ type: 'Notification', id: 'LIST' }, { type: 'Notification', id: 'COUNT' }],
+    }),
     markNotificationRead: builder.mutation({
       query: (id) => ({ url: `/notifications/${id}/read`, method: 'PATCH' }),
       invalidatesTags: [{ type: 'Notification', id: 'LIST' }, { type: 'Notification', id: 'COUNT' }],
@@ -30,6 +34,7 @@ export const notificationsApi = baseApi.injectEndpoints({
 export const {
   useGetNotificationsQuery,
   useGetUnreadCountQuery,
+  useMarkNotificationTypesReadMutation,
   useMarkNotificationReadMutation,
   useMarkAllNotificationsReadMutation,
   useDeleteNotificationMutation,
