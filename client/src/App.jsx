@@ -25,19 +25,19 @@ import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
 import {
-  MessagesPage,
   OwnerPropertiesPage,
   ProfilePage,
   ReportsPage,
   ReviewsPage,
 } from './pages/workspace/AccountPages'
+import ApplicationsPage from './pages/workspace/ApplicationsPage'
+import DashboardOverviewPage from './pages/workspace/DashboardOverviewPage'
+import MessagesPage from './pages/workspace/MessagesPage'
 import NotificationsPage from './pages/workspace/NotificationsPage'
 import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
 import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
 import {
-  ApplicationsPage,
-  DashboardOverviewPage,
   MaintenancePage,
   RentPage,
   TenanciesPage,
@@ -63,8 +63,8 @@ function App() {
         <Route path="/living-score" element={<LivingScorePage />} />
         <Route path="/about" element={<InfoPage type="about" />} />
         <Route path="/help" element={<InfoPage type="help" />} />
-        <Route path="/favorites" element={protectedElement(<FavoritesPage />)} />
-        <Route path="/matches" element={protectedElement(<SmartMatchesPage />)} />
+        <Route path="/favorites" element={protectedElement(<Navigate to="/dashboard/favorites" replace />)} />
+        <Route path="/matches" element={protectedElement(<Navigate to="/dashboard/matches" replace />)} />
       </Route>
 
       <Route path="/login" element={<LoginPage />} />
@@ -72,6 +72,8 @@ function App() {
 
       <Route path="/dashboard" element={protectedElement(<DashboardLayout mode="renter" />)}>
         <Route index element={<DashboardOverviewPage />} />
+        <Route path="favorites" element={<FavoritesPage />} />
+        <Route path="matches" element={<SmartMatchesPage />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="viewings" element={<ViewingsPage />} />
         <Route path="tenancies" element={<TenanciesPage />} />
