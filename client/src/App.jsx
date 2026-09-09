@@ -26,12 +26,12 @@ import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
 import {
   MessagesPage,
-  NotificationsPage,
   OwnerPropertiesPage,
   ProfilePage,
   ReportsPage,
   ReviewsPage,
 } from './pages/workspace/AccountPages'
+import NotificationsPage from './pages/workspace/NotificationsPage'
 import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
 import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
