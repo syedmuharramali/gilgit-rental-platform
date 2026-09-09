@@ -3,6 +3,7 @@ const express = require("express");
 const {
   getMyNotifications,
   getUnreadCount,
+  markNotificationTypesRead,
   markNotificationRead,
   markAllNotificationsRead,
   deleteNotification,
@@ -28,6 +29,11 @@ router.get(
 router.get(
   "/unread-count",
   getUnreadCount
+);
+
+router.patch(
+  "/read-types",
+  markNotificationTypesRead
 );
 
 router.patch(
