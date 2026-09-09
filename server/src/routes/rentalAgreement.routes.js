@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   createAgreement,
+  createAgreementFromTerms,
   getMyAgreements,
   getAgreementById,
   signAgreement,
@@ -24,7 +25,6 @@ router.use(protect);
 | Get my agreements
 |--------------------------------------------------------------------------
 */
-
 router.get(
   "/",
   getMyAgreements
@@ -32,10 +32,19 @@ router.get(
 
 /*
 |--------------------------------------------------------------------------
-| Create agreement from tenancy
+| New lifecycle: create agreement from accepted rental terms
 |--------------------------------------------------------------------------
 */
+router.post(
+  "/rental-terms/:termsId",
+  createAgreementFromTerms
+);
 
+/*
+|--------------------------------------------------------------------------
+| Legacy lifecycle: create agreement from active tenancy
+|--------------------------------------------------------------------------
+*/
 router.post(
   "/tenancy/:tenancyId",
   createAgreement
@@ -43,10 +52,9 @@ router.post(
 
 /*
 |--------------------------------------------------------------------------
-| Sign agreement
+| Sign / accept agreement
 |--------------------------------------------------------------------------
 */
-
 router.patch(
   "/:id/sign",
   signAgreement
@@ -57,7 +65,6 @@ router.patch(
 | Get single agreement
 |--------------------------------------------------------------------------
 */
-
 router.get(
   "/:id",
   getAgreementById
