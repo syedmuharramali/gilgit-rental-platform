@@ -32,8 +32,23 @@ const rentalAgreementSchema =
           mongoose.Schema.Types
             .ObjectId,
         ref: "Tenancy",
-        required: true,
-        unique: true,
+        default: null,
+      },
+
+      rentalTerms: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+        ref: "RentalTerms",
+        default: null,
+      },
+
+      application: {
+        type:
+          mongoose.Schema.Types
+            .ObjectId,
+        ref: "Application",
+        default: null,
       },
 
       property: {
@@ -82,6 +97,13 @@ const rentalAgreementSchema =
         min: 0,
       },
 
+      occupants: {
+        type: Number,
+        default: 1,
+        min: 1,
+        max: 20,
+      },
+
       clauses: [
         {
           type: String,
@@ -127,6 +149,26 @@ const rentalAgreementSchema =
       timestamps: true,
     }
   );
+
+rentalAgreementSchema.index(
+  { tenancy: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      tenancy: { $type: "objectId" },
+    },
+  }
+);
+
+rentalAgreementSchema.index(
+  { rentalTerms: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      rentalTerms: { $type: "objectId" },
+    },
+  }
+);
 
 rentalAgreementSchema.index({
   owner: 1,
