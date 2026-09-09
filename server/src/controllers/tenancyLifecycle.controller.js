@@ -30,12 +30,41 @@ const populateOwnerSide = (query) =>
       "name email phone avatar"
     );
 
+const getGilgitDateCutoff = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Karachi",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value])
+  );
+
+  return new Date(
+    Date.UTC(
+      Number(values.year),
+      Number(values.month) - 1,
+      Number(values.day),
+      23,
+      59,
+      59,
+      999
+    )
+  );
+};
+
 const activateDueTenancies = async (filter = {}) => {
   const now = new Date();
+  const dateCutoff = getGilgitDateCutoff();
+
   const due = await Tenancy.find({
     ...filter,
     status: "upcoming",
-    startDate: { $lte: now },
+    startDate: { $lte: dateCutoff },
   })
     .select("_id property owner renter")
     .lean();
@@ -50,7 +79,7 @@ const activateDueTenancies = async (filter = {}) => {
         const tenancy = await Tenancy.findOne({
           _id: dueTenancy._id,
           status: "upcoming",
-          startDate: { $lte: now },
+          startDate: { $lte: dateCutoff },
         }).session(session);
 
         if (!tenancy) return;
