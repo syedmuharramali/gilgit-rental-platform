@@ -12,6 +12,18 @@ export const agreementsApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data.agreement,
       providesTags: (_result, _error, id) => [{ type: 'Agreement', id }],
     }),
+    createAgreementFromTerms: builder.mutation({
+      query: ({ termsId, clauses }) => ({
+        url: `/agreements/rental-terms/${termsId}`,
+        method: 'POST',
+        body: clauses ? { clauses } : {},
+      }),
+      invalidatesTags: [
+        { type: 'Agreement', id: 'LIST' },
+        { type: 'Tenancy', id: 'MINE' },
+        { type: 'Tenancy', id: 'OWNED' },
+      ],
+    }),
     createAgreement: builder.mutation({
       query: ({ tenancyId, clauses }) => ({
         url: `/agreements/tenancy/${tenancyId}`,
@@ -29,6 +41,10 @@ export const agreementsApi = baseApi.injectEndpoints({
       invalidatesTags: (_result, _error, { id }) => [
         { type: 'Agreement', id },
         { type: 'Agreement', id: 'LIST' },
+        { type: 'Tenancy', id: 'MINE' },
+        { type: 'Tenancy', id: 'OWNED' },
+        { type: 'Property', id: 'LIST' },
+        { type: 'Property', id: 'MINE' },
       ],
     }),
   }),
@@ -37,6 +53,7 @@ export const agreementsApi = baseApi.injectEndpoints({
 export const {
   useGetAgreementsQuery,
   useGetAgreementQuery,
+  useCreateAgreementFromTermsMutation,
   useCreateAgreementMutation,
   useSignAgreementMutation,
 } = agreementsApi
