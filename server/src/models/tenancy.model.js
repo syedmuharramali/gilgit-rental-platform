@@ -56,13 +56,27 @@ const tenancySchema =
         min: 0,
       },
 
+      occupants: {
+        type: Number,
+        default: 1,
+        min: 1,
+        max: 20,
+      },
+
       status: {
         type: String,
         enum: [
+          "pending_agreement",
+          "upcoming",
           "active",
           "ended",
         ],
-        default: "active",
+        default: "pending_agreement",
+      },
+
+      activatedAt: {
+        type: Date,
+        default: null,
       },
 
       endedAt: {
