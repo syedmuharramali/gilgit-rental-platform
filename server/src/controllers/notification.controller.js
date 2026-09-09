@@ -125,6 +125,78 @@ exports.getUnreadCount = asyncHandler(
 
 /*
 |--------------------------------------------------------------------------
+| Mark selected notification categories read
+| PATCH /api/notifications/read-types
+|--------------------------------------------------------------------------
+*/
+
+exports.markNotificationTypesRead = asyncHandler(
+  async (req, res, next) => {
+    const types = Array.isArray(req.body?.types)
+      ? [...new Set(
+          req.body.types
+            .filter(
+              (type) =>
+                typeof type === "string" &&
+                type.trim()
+            )
+            .map((type) => type.trim())
+        )]
+      : [];
+
+    if (types.length === 0) {
+      return next(
+        new AppError(
+          "At least one notification type is required",
+          400
+        )
+      );
+    }
+
+    if (types.length > 20) {
+      return next(
+        new AppError(
+          "Too many notification types",
+          400
+        )
+      );
+    }
+
+    const now = new Date();
+
+    const result =
+      await Notification.updateMany(
+        {
+          user: req.user._id,
+          isRead: false,
+          type: {
+            $in: types,
+          },
+        },
+        {
+          $set: {
+            isRead: true,
+            readAt: now,
+          },
+        }
+      );
+
+    res.status(200).json({
+      success: true,
+
+      message:
+        "Notification categories marked as read",
+
+      data: {
+        updatedNotifications:
+          result.modifiedCount,
+      },
+    });
+  }
+);
+
+/*
+|--------------------------------------------------------------------------
 | Mark one notification read
 | PATCH /api/notifications/:id/read
 |--------------------------------------------------------------------------
