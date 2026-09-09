@@ -151,7 +151,7 @@ function RentalAgreementsPage() {
 
           return (
             <Panel key={agreement._id}>
-              <div className="grid gap-5 lg:grid-cols-[1fr_auto]">
+              <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-start">
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge value={agreement.status} />
@@ -188,7 +188,7 @@ function RentalAgreementsPage() {
                 </div>
 
                 {!mySignature?.signed && agreement.status !== 'cancelled' && (
-                  <PrimaryButton onClick={() => { setActiveAgreement(agreement); setLegalName(user?.name || '') }}>Review & accept</PrimaryButton>
+                  <PrimaryButton className="self-start whitespace-nowrap" onClick={() => { setActiveAgreement(agreement); setLegalName(user?.name || '') }}>Review & accept</PrimaryButton>
                 )}
               </div>
             </Panel>
