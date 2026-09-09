@@ -3,9 +3,14 @@ const express =
 
 const {
   createTenancy,
-  endTenancy,
 } = require(
   "../controllers/tenancy.controller"
+);
+
+const {
+  endTenancy,
+} = require(
+  "../controllers/tenancyEnd.controller"
 );
 
 const {
@@ -27,12 +32,6 @@ const router =
 
 router.use(protect);
 
-/*
-|--------------------------------------------------------------------------
-| Renter / owner dashboards
-|--------------------------------------------------------------------------
-*/
-
 router.get(
   "/mine",
   getMyTenancies
@@ -43,33 +42,15 @@ router.get(
   getOwnedTenancies
 );
 
-/*
-|--------------------------------------------------------------------------
-| Create tenancy
-|--------------------------------------------------------------------------
-*/
-
 router.post(
   "/from-application/:applicationId",
   createTenancy
 );
 
-/*
-|--------------------------------------------------------------------------
-| End tenancy
-|--------------------------------------------------------------------------
-*/
-
 router.patch(
   "/:id/end",
   endTenancy
 );
-
-/*
-|--------------------------------------------------------------------------
-| Single tenancy
-|--------------------------------------------------------------------------
-*/
 
 router.get(
   "/:id",
