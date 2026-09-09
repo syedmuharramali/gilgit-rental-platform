@@ -25,7 +25,6 @@ import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
 import {
-  AgreementsPage,
   MessagesPage,
   NotificationsPage,
   OwnerPropertiesPage,
@@ -33,6 +32,7 @@ import {
   ReportsPage,
   ReviewsPage,
 } from './pages/workspace/AccountPages'
+import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
 import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
 import {
@@ -77,7 +77,7 @@ function App() {
         <Route path="tenancies" element={<TenanciesPage />} />
         <Route path="rent" element={<RentPage />} />
         <Route path="messages" element={<MessagesPage />} />
-        <Route path="agreements" element={<AgreementsPage />} />
+        <Route path="agreements" element={<RentalAgreementsPage />} />
         <Route path="condition-reports" element={<ConditionReportsPage />} />
         <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="reviews" element={<ReviewsPage />} />
@@ -98,7 +98,7 @@ function App() {
         <Route path="tenancies" element={<TenanciesPage owner />} />
         <Route path="rent" element={<RentPage owner />} />
         <Route path="messages" element={<MessagesPage />} />
-        <Route path="agreements" element={<AgreementsPage />} />
+        <Route path="agreements" element={<RentalAgreementsPage />} />
         <Route path="condition-reports" element={<ConditionReportsPage owner />} />
         <Route path="maintenance" element={<MaintenancePage owner />} />
         <Route path="reviews" element={<ReviewsPage owner />} />
