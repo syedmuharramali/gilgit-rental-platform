@@ -175,13 +175,7 @@ function RentalAgreementsPage() {
                     <span className="rounded-full border border-white/8 bg-white/[0.04] px-3 py-1.5 font-bold text-slate-400">Renter: {agreement.renterSignature?.signed ? 'accepted' : 'awaiting'}</span>
                   </div>
 
-                  {agreement.status === 'executed' && (
-                    <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-4 text-sm leading-6 text-cyan-100/85">
-                      {agreement.tenancy?.status === 'upcoming'
-                        ? `Both sides accepted the agreement. The rental is scheduled to start on ${shortDate(agreement.startDate)}.`
-                        : 'Both sides accepted the agreement. The rental relationship is now active.'}
-                    </div>
-                  )}
+                  {agreement.status === 'executed' && <div className="mt-4 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-4 text-sm leading-6 text-cyan-100/85">Both sides accepted the agreement. Your rental agreement is complete.</div>}
 
                   {!mySignature?.signed && otherSignature?.signed && agreement.status !== 'cancelled' && (
                     <p className="mt-3 text-xs font-bold text-violet-200">The other party has already accepted. Your acceptance will finalize the agreement.</p>
@@ -201,7 +195,7 @@ function RentalAgreementsPage() {
         <div className="space-y-4">
           <div className="rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.045] p-4">
             <p className="text-sm font-black text-cyan-100">Confirm the agreement you reviewed</p>
-            <p className="mt-1 text-xs leading-5 text-slate-400">This records your explicit electronic acceptance. It is not a cryptographic digital signature. Once both parties accept, the system creates the upcoming or active rental relationship.</p>
+            <p className="mt-1 text-xs leading-5 text-slate-400">This records your explicit electronic acceptance. It is not a cryptographic digital signature. Once both parties accept, the rental agreement is complete.</p>
           </div>
           {activeAgreement && (
             <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:grid-cols-4">

@@ -35,12 +35,8 @@ import DashboardOverviewPage from './pages/workspace/DashboardOverviewPage'
 import MessagesPage from './pages/workspace/MessagesPage'
 import NotificationsPage from './pages/workspace/NotificationsPage'
 import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
-import TenanciesPage from './pages/workspace/TenanciesPage'
-import ConditionReportsPage from './pages/workspace/ConditionReportsPage'
 import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
 import {
-  MaintenancePage,
-  RentPage,
   ViewingsPage,
 } from './pages/workspace/LifecyclePages'
 
@@ -76,12 +72,8 @@ function App() {
         <Route path="matches" element={<SmartMatchesPage />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="viewings" element={<ViewingsPage />} />
-        <Route path="tenancies" element={<TenanciesPage />} />
-        <Route path="rent" element={<RentPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="agreements" element={<RentalAgreementsPage />} />
-        <Route path="condition-reports" element={<ConditionReportsPage />} />
-        <Route path="maintenance" element={<MaintenancePage />} />
         <Route path="reviews" element={<ReviewsPage />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
@@ -97,12 +89,8 @@ function App() {
         <Route path="media" element={<PropertyMediaPage />} />
         <Route path="applications" element={<ApplicationsPage owner />} />
         <Route path="viewings" element={<ViewingsPage owner />} />
-        <Route path="tenancies" element={<TenanciesPage owner />} />
-        <Route path="rent" element={<RentPage owner />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="agreements" element={<RentalAgreementsPage />} />
-        <Route path="condition-reports" element={<ConditionReportsPage owner />} />
-        <Route path="maintenance" element={<MaintenancePage owner />} />
         <Route path="reviews" element={<ReviewsPage owner />} />
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />

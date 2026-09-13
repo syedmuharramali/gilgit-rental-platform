@@ -41,7 +41,7 @@ const journey = [
   { icon: Search, step: '01', title: 'Discover', text: 'Search by area, budget, amenities and practical living conditions.' },
   { icon: CalendarDays, step: '02', title: 'Visit', text: 'Request a viewing and keep every appointment in one place.' },
   { icon: BadgeCheck, step: '03', title: 'Apply', text: 'Send your rental application and follow its status clearly.' },
-  { icon: MessageCircle, step: '04', title: 'Move in', text: 'Manage tenancy, agreements, rent and maintenance after approval.' },
+  { icon: MessageCircle, step: '04', title: 'Agree', text: 'Confirm the final rental agreement clearly with the owner.' },
 ]
 
 function HomePage() {
@@ -73,7 +73,7 @@ function HomePage() {
           <motion.div initial={{ opacity: 0, y: 26 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7 }} className="relative z-10 max-w-3xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3.5 py-2 text-[11px] font-black uppercase tracking-[.18em] text-cyan-200 backdrop-blur-xl"><Sparkles className="h-3.5 w-3.5" /> Rental discovery, redesigned for Gilgit</div>
             <h1 className="mt-7 text-[clamp(3.6rem,7.5vw,7.6rem)] font-black leading-[.84] tracking-[-0.075em] text-white">Find a home.<br /><span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent">Know what matters.</span></h1>
-            <p className="mt-7 max-w-2xl text-base leading-7 text-white/58 sm:text-lg sm:leading-8">Search verified rentals, compare winter readiness and local living conditions, then move from viewing to tenancy without jumping between disconnected tools.</p>
+            <p className="mt-7 max-w-2xl text-base leading-7 text-white/58 sm:text-lg sm:leading-8">Search verified rentals, compare winter readiness and local living conditions, then move from viewing to a clear rental agreement without jumping between disconnected tools.</p>
 
             <form onSubmit={onSearch} className="mt-8 max-w-3xl rounded-[28px] border border-white/10 bg-white/[0.075] p-2 shadow-[0_30px_90px_rgba(0,0,0,.28)] backdrop-blur-2xl sm:flex sm:items-center">
               <div className="flex min-w-0 flex-1 items-center gap-3 px-4"><Search className="h-5 w-5 shrink-0 text-cyan-300" /><input value={search} onChange={(event) => setSearch(event.target.value)} aria-label="Search rentals" className="h-14 min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/30" placeholder="Search Jutial, Konodas, apartment, hostel..." /></div>

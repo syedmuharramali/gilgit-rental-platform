@@ -12,39 +12,10 @@ export const tenanciesApi = baseApi.injectEndpoints({
       transformResponse: (response) => response.data,
       providesTags: [{ type: 'Tenancy', id: 'OWNED' }],
     }),
-    getTenancy: builder.query({
-      query: (id) => `/tenancies/${id}`,
-      transformResponse: (response) => response.data.tenancy,
-      providesTags: (_result, _error, id) => [{ type: 'Tenancy', id }],
-    }),
-    createTenancy: builder.mutation({
-      query: ({ applicationId, ...body }) => ({
-        url: `/tenancies/from-application/${applicationId}`,
-        method: 'POST',
-        body,
-      }),
-      invalidatesTags: [
-        { type: 'Tenancy', id: 'OWNED' },
-        { type: 'Tenancy', id: 'MINE' },
-        { type: 'Application', id: 'RECEIVED' },
-        { type: 'Property', id: 'LIST' },
-      ],
-    }),
-    endTenancy: builder.mutation({
-      query: ({ id, reason }) => ({ url: `/tenancies/${id}/end`, method: 'PATCH', body: { reason } }),
-      invalidatesTags: [
-        { type: 'Tenancy', id: 'OWNED' },
-        { type: 'Tenancy', id: 'MINE' },
-        { type: 'Property', id: 'LIST' },
-      ],
-    }),
   }),
 })
 
 export const {
   useGetMyTenanciesQuery,
   useGetOwnedTenanciesQuery,
-  useGetTenancyQuery,
-  useCreateTenancyMutation,
-  useEndTenancyMutation,
 } = tenanciesApi

@@ -141,11 +141,7 @@ function ApplicationsPage({ owner = false }) {
       ? 'Terms accepted by the renter. Create the rental agreement when you are ready.'
       : 'Terms accepted. The owner is preparing the rental agreement.'
 
-    if (agreement.status === 'executed') {
-      if (agreement.tenancy?.status === 'upcoming') return `Agreement complete. The rental is scheduled to start on ${shortDate(agreement.startDate)}.`
-      if (agreement.tenancy?.status === 'active') return 'Agreement complete. The rental is now active.'
-      return 'Agreement complete. Both parties have accepted the rental.'
-    }
+    if (agreement.status === 'executed') return 'Agreement complete. Both parties have accepted the rental agreement.'
 
     const mySignature = owner ? agreement.ownerSignature : agreement.renterSignature
     const otherSignature = owner ? agreement.renterSignature : agreement.ownerSignature
@@ -157,21 +153,20 @@ function ApplicationsPage({ owner = false }) {
   if (query.isLoading || termsLoading || agreementsLoading) return <LoadingState />
   const items = query.data?.applications || []
   const agreementsPath = owner ? '/owner/agreements' : '/dashboard/agreements'
-  const tenancyPath = owner ? '/owner/tenancies' : '/dashboard/tenancies'
 
   return (
     <>
       <PageHeader
         eyebrow={owner ? 'Owner inbox' : 'Your applications'}
         title="Rental applications"
-        text={owner ? 'Review renter requests and follow accepted applications all the way through terms, agreement and rental activation.' : 'Track each application from owner decision through final terms, agreement and the start of your rental.'}
+        text={owner ? 'Review renter requests and follow accepted applications through final terms and a completed agreement.' : 'Track each application from the owner decision through final terms and a completed agreement.'}
       />
 
       <div className="space-y-4">
         {items.length ? items.map((item, index) => {
           const terms = termsByApplication.get(String(item._id))
           const agreement = terms ? agreementsByTerms.get(String(terms._id)) : null
-          const rentalStarted = agreement?.status === 'executed' && ['upcoming', 'active'].includes(agreement.tenancy?.status)
+          const agreementComplete = agreement?.status === 'executed'
 
           return (
             <motion.div key={item._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}>
@@ -217,8 +212,7 @@ function ApplicationsPage({ owner = false }) {
                     {owner && item.status === 'accepted' && (!terms || ['proposed', 'change_requested'].includes(terms.status)) && <PrimaryButton onClick={() => openTerms(item, terms)}>{terms ? 'Revise rental terms' : 'Confirm rental terms'}</PrimaryButton>}
                     {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
                     {!owner && item.status === 'accepted' && terms?.status === 'proposed' && <><PrimaryButton disabled={acceptTermsState.isLoading} onClick={() => acceptTerms(terms)}>Accept terms</PrimaryButton><SecondaryButton onClick={() => { setChangeTerms(terms); setChangeMessage('') }}>Request changes</SecondaryButton></>}
-                    {item.status === 'accepted' && terms?.status === 'accepted' && !rentalStarted && <Link to={agreementsPath} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/[0.12]"><FileCheck2 className="h-4 w-4" /> {agreement ? 'Open agreement' : owner ? 'Create agreement' : 'Agreement status'}</Link>}
-                    {rentalStarted && <Link to={tenancyPath} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/[0.12]">Open rental</Link>}
+                    {item.status === 'accepted' && terms?.status === 'accepted' && <Link to={agreementsPath} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] px-4 text-sm font-black text-cyan-100 transition hover:bg-cyan-300/[0.12]"><FileCheck2 className="h-4 w-4" /> {agreementComplete ? 'Agreement complete' : agreement ? 'Open agreement' : owner ? 'Create agreement' : 'Agreement status'}</Link>}
                   </div>
                 </div>
               </Panel>

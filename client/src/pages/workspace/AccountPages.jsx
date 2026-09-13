@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Bell, FileCheck2, Plus, Send, ShieldCheck, Star, Trash2 } from 'lucide-react'
+import { Bell, FileCheck2, Plus, Send, ShieldCheck, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
@@ -11,12 +11,6 @@ import {
   useSendMessageMutation,
 } from '../../features/messages/messagesApi'
 import { useGetAgreementsQuery, useSignAgreementMutation } from '../../features/agreements/agreementsApi'
-import {
-  useConfirmConditionReportMutation,
-  useCreateConditionReportMutation,
-  useGetConditionReportsQuery,
-  useUploadConditionEvidenceMutation,
-} from '../../features/conditionReports/conditionReportsApi'
 import { useGetMyTenanciesQuery, useGetOwnedTenanciesQuery } from '../../features/tenancies/tenanciesApi'
 import { useCreateReviewMutation, useGetMyReviewsQuery, useGetReceivedReviewsQuery } from '../../features/reviews/reviewsApi'
 import {
@@ -160,46 +154,6 @@ export function AgreementsPage() {
         }) : <EmptyState title="No agreements yet" />}
       </div>
       <Modal open={Boolean(active)} onClose={() => setActive(null)} title="Accept rental agreement"><p className="mb-4 text-sm leading-6 text-slate-400">By continuing you confirm that you reviewed the displayed terms and explicitly accept this rental agreement.</p><TextInput value={legalName} onChange={(event) => setLegalName(event.target.value)} placeholder="Your legal name" /><PrimaryButton className="mt-4 w-full" onClick={submit}>I accept this agreement</PrimaryButton></Modal>
-    </>
-  )
-}
-
-export function ConditionReportsPage({ owner = false }) {
-  const location = useLocation()
-  const params = new URLSearchParams(location.search)
-  const requestedTenancy = params.get('tenancy')
-  const myTenancies = useGetMyTenanciesQuery(undefined, { skip: owner })
-  const ownedTenancies = useGetOwnedTenanciesQuery(undefined, { skip: !owner })
-  const tenancies = owner ? ownedTenancies.data?.tenancies || [] : myTenancies.data?.tenancies || []
-  const [tenancyId, setTenancyId] = useState(requestedTenancy || '')
-  const selected = tenancyId || requestedTenancy || tenancies[0]?._id
-  const { data, isLoading, refetch } = useGetConditionReportsQuery(selected, { skip: !selected })
-  const [create] = useCreateConditionReportMutation()
-  const [confirm] = useConfirmConditionReportMutation()
-  const [upload] = useUploadConditionEvidenceMutation()
-  const [type, setType] = useState('move_in')
-  const [items, setItems] = useState([{ area: 'Living area', condition: 'good', notes: '' }])
-  const [overallNotes, setOverallNotes] = useState('')
-
-  const addItem = () => setItems((current) => [...current, { area: '', condition: 'good', notes: '' }])
-  const updateItem = (index, key, value) => setItems((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, [key]: value } : item))
-  const removeItem = (index) => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))
-
-  const submit = async () => {
-    try {
-      await create({ tenancyId: selected, reportType: type, items: items.filter((item) => item.area.trim()), overallNotes }).unwrap()
-      toast.success('Condition report created')
-      refetch()
-    } catch (error) { toast.error(errorMessage(error)) }
-  }
-
-  return (
-    <>
-      <PageHeader eyebrow="Property condition" title="Condition reports" text="Create move-in and move-out records, attach private evidence and confirm the shared record." action={tenancies.length ? <Select value={selected || ''} onChange={(event) => setTenancyId(event.target.value)}>{tenancies.map((tenancy) => <option key={tenancy._id} value={tenancy._id}>{tenancy.property?.title}</option>)}</Select> : null} />
-      {!selected ? <EmptyState title="No tenancy available" /> : <div className="grid gap-6 xl:grid-cols-[.8fr_1.2fr]">
-        <Panel><h2 className="font-black text-white">Create report</h2><div className="mt-4 space-y-3"><Select value={type} onChange={(event) => setType(event.target.value)}><option value="move_in">Move in</option><option value="move_out">Move out</option></Select>{items.map((item, index) => <div key={index} className={`${glass} p-3`}><div className="grid gap-2 sm:grid-cols-2"><TextInput value={item.area} onChange={(event) => updateItem(index, 'area', event.target.value)} placeholder="Area / room" /><Select value={item.condition} onChange={(event) => updateItem(index, 'condition', event.target.value)}>{['excellent','good','fair','poor','damaged'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></div><TextArea className="mt-2 min-h-20" value={item.notes} onChange={(event) => updateItem(index, 'notes', event.target.value)} placeholder="Notes" />{items.length > 1 && <button onClick={() => removeItem(index)} className="mt-2 text-xs font-black text-rose-300">Remove item</button>}</div>)}<SecondaryButton onClick={addItem}><Plus className="h-4 w-4" /> Add area</SecondaryButton><TextArea value={overallNotes} onChange={(event) => setOverallNotes(event.target.value)} placeholder="Overall notes" /><PrimaryButton className="w-full" onClick={submit}>Create condition report</PrimaryButton></div></Panel>
-        <div className="space-y-4">{isLoading ? <LoadingState /> : (data?.reports || []).length ? data.reports.map((report) => <Panel key={report._id}><div className="flex items-start justify-between gap-4"><div><StatusBadge value={report.status} /><h3 className="mt-2 font-black text-white">{pretty(report.reportType)} report</h3></div>{report.status !== 'confirmed' && <SecondaryButton onClick={async () => { try { await confirm(report._id).unwrap(); toast.success('Report confirmed'); refetch() } catch (error) { toast.error(errorMessage(error)) } }}>Confirm my side</SecondaryButton>}</div><div className="mt-4 space-y-2">{report.items?.map((item) => <div key={item._id || item.area} className={`${glass} p-3 text-sm`}><strong className="text-white">{item.area}</strong><span className="ml-2 text-slate-400">{pretty(item.condition)}</span>{item.notes && <p className="mt-1 text-slate-400">{item.notes}</p>}</div>)}</div><div className="mt-4 flex flex-wrap items-center gap-3 text-xs font-bold text-slate-500"><span>Owner {report.ownerConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>Renter {report.renterConfirmation?.confirmed ? '✓ confirmed' : 'awaiting'}</span><span>{report.evidence?.length || 0} evidence file(s)</span></div>{report.status !== 'confirmed' && !report.ownerConfirmation?.confirmed && !report.renterConfirmation?.confirmed && <label className="mt-4 inline-flex cursor-pointer items-center gap-2 text-xs font-black text-cyan-300">Add evidence<input type="file" accept="image/png,image/jpeg" multiple className="hidden" onChange={async (event) => { const files = [...event.target.files]; if (!files.length) return; try { await upload({ id: report._id, files }).unwrap(); toast.success('Evidence uploaded'); refetch() } catch (error) { toast.error(errorMessage(error)) } }} /></label>}</Panel>) : <EmptyState title="No condition reports yet" />}</div>
-      </div>}
     </>
   )
 }

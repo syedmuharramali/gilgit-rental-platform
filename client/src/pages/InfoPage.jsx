@@ -12,13 +12,13 @@ const content = {
   about: {
     eyebrow: 'How it works',
     title: 'One connected rental journey.',
-    text: 'Discover verified listings, apply, schedule viewings, move into tenancy, manage agreements and keep important rental actions connected instead of scattered across chats and paper records.',
+    text: 'Discover verified listings, apply, schedule viewings, agree on terms and complete a rental agreement without scattering important details across chats and paper records.',
     icon: ShieldCheck,
   },
   help: {
     eyebrow: 'Help centre',
     title: 'Know what to do next.',
-    text: 'The dashboard keeps renter and owner actions organized around the rental lifecycle, with clear status, actions and recovery states at each step.',
+    text: 'The dashboard keeps renter and owner actions organized around simple next steps, from finding a home through completing an agreement.',
     icon: CircleHelp,
   },
 }

@@ -14,8 +14,6 @@ import {
   Sparkles,
   Star,
   TriangleAlert,
-  Wrench,
-  WalletCards,
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
@@ -47,14 +45,8 @@ const renterGroups = [
     ],
   },
   {
-    label: 'My rental',
-    links: [
-      ['/dashboard/tenancies', 'Tenancy', Building2],
-      ['/dashboard/agreements', 'Agreements', FileCheck2],
-      ['/dashboard/rent', 'Rent ledger', WalletCards],
-      ['/dashboard/condition-reports', 'Condition reports', ClipboardList],
-      ['/dashboard/maintenance', 'Maintenance', Wrench],
-    ],
+    label: 'Agreement',
+    links: [['/dashboard/agreements', 'Agreements', FileCheck2]],
   },
   {
     label: 'Account',
@@ -85,14 +77,8 @@ const ownerGroups = [
     ],
   },
   {
-    label: 'Active rentals',
-    links: [
-      ['/owner/tenancies', 'Tenancies', Building2],
-      ['/owner/agreements', 'Agreements', FileCheck2],
-      ['/owner/rent', 'Rent ledger', WalletCards],
-      ['/owner/condition-reports', 'Condition reports', ClipboardList],
-      ['/owner/maintenance', 'Maintenance', Wrench],
-    ],
+    label: 'Agreement',
+    links: [['/owner/agreements', 'Agreements', FileCheck2]],
   },
   {
     label: 'Account',
@@ -108,13 +94,8 @@ const ownerGroups = [
 const badgeTypesByLabel = {
   Applications: ['application', 'application_accepted', 'application_rejected', 'application_withdrawn'],
   Viewings: ['viewing', 'viewing_confirmed', 'viewing_rejected', 'viewing_cancelled'],
-  Tenancy: ['tenancy', 'tenancy_ended'],
-  Tenancies: ['tenancy', 'tenancy_ended'],
-  'Rent ledger': ['rent'],
   Messages: ['message'],
   Agreements: ['agreement'],
-  'Condition reports': ['condition_report'],
-  Maintenance: ['maintenance'],
   Reviews: ['review'],
   'Safety reports': ['report'],
 }
