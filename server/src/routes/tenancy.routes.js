@@ -1,79 +1,16 @@
-const express =
-  require("express");
-
-const {
-  createTenancy,
-  endTenancy,
-} = require(
-  "../controllers/tenancy.controller"
-);
-
+const express = require("express");
 const {
   getMyTenancies,
   getOwnedTenancies,
-  getTenancyById,
-} = require(
-  "../controllers/tenancyLifecycle.controller"
-);
+} = require("../controllers/tenancyLifecycle.controller");
+const { protect } = require("../middleware/auth.middleware");
 
-const {
-  protect,
-} = require(
-  "../middleware/auth.middleware"
-);
-
-const router =
-  express.Router();
+const router = express.Router();
 
 router.use(protect);
 
-/*
-|--------------------------------------------------------------------------
-| Renter / owner dashboards
-|--------------------------------------------------------------------------
-*/
-
-router.get(
-  "/mine",
-  getMyTenancies
-);
-
-router.get(
-  "/owned",
-  getOwnedTenancies
-);
-
-/*
-|--------------------------------------------------------------------------
-| Create tenancy
-|--------------------------------------------------------------------------
-*/
-
-router.post(
-  "/from-application/:applicationId",
-  createTenancy
-);
-
-/*
-|--------------------------------------------------------------------------
-| End tenancy
-|--------------------------------------------------------------------------
-*/
-
-router.patch(
-  "/:id/end",
-  endTenancy
-);
-
-/*
-|--------------------------------------------------------------------------
-| Single tenancy
-|--------------------------------------------------------------------------
-*/
-
-router.get(
-  "/:id",
-  getTenancyById
-);
+// Kept only for property reviews attached to historic, completed rentals.
+router.get("/mine", getMyTenancies);
+router.get("/owned", getOwnedTenancies);
 
 module.exports = router;

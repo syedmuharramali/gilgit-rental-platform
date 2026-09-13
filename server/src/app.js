@@ -89,11 +89,6 @@ const tenancyRoutes =
     "./routes/tenancy.routes"
   );
 
-const rentRecordRoutes =
-  require(
-    "./routes/rentRecord.routes"
-  );
-
 const favoriteRoutes =
   require(
     "./routes/favorite.routes"
@@ -122,16 +117,6 @@ const notificationRoutes =
 const rentalAgreementRoutes =
   require(
     "./routes/rentalAgreement.routes"
-  );
-
-const conditionReportRoutes =
-  require(
-    "./routes/conditionReport.routes"
-  );
-
-const maintenanceRequestRoutes =
-  require(
-    "./routes/maintenanceRequest.routes"
   );
 
 const scoringRoutes =
@@ -383,11 +368,6 @@ app.use(
 );
 
 app.use(
-  "/api/rent-ledger",
-  rentRecordRoutes
-);
-
-app.use(
   "/api/favorites",
   favoriteRoutes
 );
@@ -415,16 +395,6 @@ app.use(
 app.use(
   "/api/agreements",
   rentalAgreementRoutes
-);
-
-app.use(
-  "/api/condition-reports",
-  conditionReportRoutes
-);
-
-app.use(
-  "/api/maintenance",
-  maintenanceRequestRoutes
 );
 
 app.use(

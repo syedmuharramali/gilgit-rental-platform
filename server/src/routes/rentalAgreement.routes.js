@@ -1,7 +1,6 @@
 const express = require("express");
 
 const {
-  createAgreement,
   createAgreementFromTerms,
   getMyAgreements,
   getAgreementById,
@@ -38,16 +37,6 @@ router.get(
 router.post(
   "/rental-terms/:termsId",
   createAgreementFromTerms
-);
-
-/*
-|--------------------------------------------------------------------------
-| Legacy lifecycle: create agreement from active tenancy
-|--------------------------------------------------------------------------
-*/
-router.post(
-  "/tenancy/:tenancyId",
-  createAgreement
 );
 
 /*

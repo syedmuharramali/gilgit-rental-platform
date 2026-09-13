@@ -27,16 +27,7 @@ const notificationSchema =
           "viewing_rejected",
           "viewing_cancelled",
 
-          "tenancy",
-          "tenancy_ended",
-
-          "rent",
-
           "agreement",
-
-          "condition_report",
-
-          "maintenance",
 
           "review",
 
@@ -69,12 +60,8 @@ const notificationSchema =
           "conversation",
           "application",
           "viewing",
-          "tenancy",
-          "rent_record",
           "property",
           "agreement",
-          "condition_report",
-          "maintenance_request",
           "report",
           "review",
           "system",

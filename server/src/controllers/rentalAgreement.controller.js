@@ -117,9 +117,8 @@ const populateAgreement = async (agreement) => {
 | POST /api/agreements/rental-terms/:termsId
 |--------------------------------------------------------------------------
 |
-| A pending-agreement tenancy record is created internally so legacy indexes
-| remain safe, but it is not an active rental relationship. The tenancy only
-| becomes upcoming/active after both parties accept the agreement.
+| A pending-agreement tenancy record is created internally to preserve data
+| integrity and property availability. It is not exposed as a user workflow.
 |--------------------------------------------------------------------------
 */
 exports.createAgreementFromTerms = asyncHandler(
@@ -231,94 +230,6 @@ exports.createAgreementFromTerms = asyncHandler(
     } finally {
       await session.endSession();
     }
-
-    await populateAgreement(agreement);
-
-    await safeCreateNotification({
-      user: agreement.renter._id,
-      type: "agreement",
-      title: "Rental Agreement Ready",
-      message:
-        `A rental agreement for ${agreement.property.title} is ready for your review and acceptance.`,
-      resourceType: "agreement",
-      resourceId: agreement._id,
-    });
-
-    res.status(201).json({
-      success: true,
-      message: "Rental agreement created successfully",
-      data: { agreement },
-    });
-  }
-);
-
-/*
-|--------------------------------------------------------------------------
-| Legacy: create agreement from an existing active tenancy
-| POST /api/agreements/tenancy/:tenancyId
-|--------------------------------------------------------------------------
-|
-| Kept for existing test records created before the agreement-first flow.
-| New rental journeys should use createAgreementFromTerms.
-|--------------------------------------------------------------------------
-*/
-exports.createAgreement = asyncHandler(
-  async (req, res, next) => {
-    const { tenancyId } = req.params;
-
-    if (!mongoose.isValidObjectId(tenancyId)) {
-      return next(
-        new AppError(
-          "Invalid tenancy ID",
-          400
-        )
-      );
-    }
-
-    const tenancy = await Tenancy.findOne({
-      _id: tenancyId,
-      owner: req.user._id,
-      status: "active",
-    });
-
-    if (!tenancy) {
-      return next(
-        new AppError(
-          "Active tenancy not found or you are not its owner",
-          404
-        )
-      );
-    }
-
-    const existing = await RentalAgreement.findOne({
-      tenancy: tenancy._id,
-    });
-
-    if (existing) {
-      return next(
-        new AppError(
-          "An agreement already exists for this tenancy",
-          409
-        )
-      );
-    }
-
-    const clauses = cleanClauses(req.body.clauses);
-
-    const agreement = await RentalAgreement.create({
-      tenancy: tenancy._id,
-      application: tenancy.application,
-      property: tenancy.property,
-      owner: tenancy.owner,
-      renter: tenancy.renter,
-      startDate: tenancy.startDate,
-      durationMonths: tenancy.durationMonths,
-      monthlyRent: tenancy.agreedMonthlyRent,
-      securityDeposit: tenancy.securityDeposit,
-      occupants: tenancy.occupants || 1,
-      clauses,
-      createdBy: req.user._id,
-    });
 
     await populateAgreement(agreement);
 
@@ -500,7 +411,6 @@ exports.signAgreement = asyncHandler(
     let agreement;
     let otherParty;
     let becameExecuted = false;
-    let tenancyTransitioned = false;
 
     try {
       await session.withTransaction(async () => {
@@ -597,8 +507,6 @@ exports.signAgreement = asyncHandler(
                 : null;
 
               await tenancy.save({ session });
-              tenancyTransitioned = true;
-
               if (startsNow) {
                 const property = await Property.findById(
                   terms.property
@@ -631,30 +539,11 @@ exports.signAgreement = asyncHandler(
         ? "Rental Agreement Confirmed"
         : "Rental Agreement Accepted",
       message: becameExecuted
-        ? agreement.tenancy?.status === "upcoming"
-          ? `The rental agreement is confirmed. The rental for ${agreement.property.title} is scheduled to begin on the agreed start date.`
-          : `The rental agreement is confirmed and the rental for ${agreement.property.title} is now active.`
+        ? `Both parties accepted the rental agreement for ${agreement.property.title}.`
         : `${req.user.name} accepted the rental agreement.`,
       resourceType: "agreement",
       resourceId: agreement._id,
     });
-
-    if (becameExecuted && tenancyTransitioned) {
-      await safeCreateNotification({
-        user: agreement.renter._id,
-        type: "tenancy",
-        title:
-          agreement.tenancy?.status === "upcoming"
-            ? "Rental Scheduled"
-            : "Tenancy Started",
-        message:
-          agreement.tenancy?.status === "upcoming"
-            ? `Your rental for ${agreement.property.title} is scheduled to start on the agreed date.`
-            : `Your tenancy for ${agreement.property.title} is now active.`,
-        resourceType: "tenancy",
-        resourceId: agreement.tenancy._id,
-      });
-    }
 
     res.status(200).json({
       success: true,

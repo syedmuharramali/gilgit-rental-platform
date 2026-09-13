@@ -195,29 +195,3 @@ exports.uploadPropertyImages =
       1
     )
   );
-
-/*
-|--------------------------------------------------------------------------
-| Condition report evidence upload
-|--------------------------------------------------------------------------
-*/
-
-const conditionEvidenceUpload = multer({
-  storage,
-
-  limits: {
-    fileSize: 5 * 1024 * 1024,
-    files: 6,
-  },
-
-  fileFilter: propertyImageFilter,
-});
-
-exports.uploadConditionEvidence =
-  instrumentMultipart(
-    "condition-evidence",
-    conditionEvidenceUpload.array(
-      "images",
-      6
-    )
-  );
