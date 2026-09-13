@@ -11,7 +11,7 @@ function PublicFooter() {
               <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 via-blue-400 to-violet-500 text-[#07101e]"><Sparkles className="h-5 w-5" /></div>
               <div><p className="font-black tracking-[-0.03em]">Gilgit Rental</p><p className="text-[10px] font-bold uppercase tracking-[.18em] text-white/30">Stay smarter</p></div>
             </div>
-            <p className="mt-5 text-sm leading-7 text-white/40">A local-first rental platform for discovering verified homes, comparing practical living conditions and managing the full rental journey in one place.</p>
+            <p className="mt-5 text-sm leading-7 text-white/40">A local-first rental platform for discovering verified homes, comparing practical living conditions and reaching a clear rental agreement in one place.</p>
             <div className="mt-5 flex flex-wrap gap-2 text-[10px] font-black uppercase tracking-[.1em] text-white/50"><span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2"><ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> Verified owners</span><span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] px-3 py-2"><Heart className="h-3.5 w-3.5 text-violet-300" /> Connected journey</span></div>
           </div>
 
