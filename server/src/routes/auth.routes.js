@@ -7,6 +7,7 @@ const {
   login,
   googleLogin,
   getMe,
+  updateMe,
 } = require("../controllers/auth.controller");
 
 const { protect } = require("../middleware/auth.middleware");
@@ -139,5 +140,25 @@ router.post(
 */
 
 router.get("/me", protect, getMe);
+
+router.patch(
+  "/me",
+  protect,
+  [
+    body("name")
+      .optional()
+      .trim()
+      .isLength({ min: 2, max: 80 })
+      .withMessage("Name must be between 2 and 80 characters"),
+
+    body("phone")
+      .optional({ nullable: true, checkFalsy: true })
+      .trim()
+      .matches(/^[0-9+()\-\s]{7,30}$/)
+      .withMessage("Enter a valid phone number"),
+  ],
+  validateRequest,
+  updateMe
+);
 
 module.exports = router;

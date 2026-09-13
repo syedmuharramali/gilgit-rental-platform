@@ -11,10 +11,13 @@ const formatAuthUser = (user) => ({
   id: user._id,
   name: user.name,
   email: user.email,
+  phone: user.phone,
   role: user.role,
   emailVerified: user.emailVerified,
+  phoneVerified: user.phoneVerified,
   accountStatus: user.accountStatus,
   avatar: user.avatar,
+  createdAt: user.createdAt,
 });
 
 /*
@@ -263,6 +266,40 @@ exports.getMe = asyncHandler(async (req, res) => {
         accountStatus: req.user.accountStatus,
         createdAt: req.user.createdAt,
       },
+    },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Update current user profile
+| PATCH /api/auth/me
+|--------------------------------------------------------------------------
+*/
+
+exports.updateMe = asyncHandler(async (req, res) => {
+  const { name, phone } = req.body;
+
+  if (name !== undefined) {
+    req.user.name = name.trim();
+  }
+
+  if (phone !== undefined) {
+    const nextPhone = phone?.trim() || null;
+
+    if (nextPhone !== req.user.phone) {
+      req.user.phone = nextPhone;
+      req.user.phoneVerified = false;
+    }
+  }
+
+  await req.user.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Profile updated successfully",
+    data: {
+      user: formatAuthUser(req.user),
     },
   });
 });

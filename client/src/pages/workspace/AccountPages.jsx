@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Bell, FileCheck2, Plus, Send, ShieldCheck, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
 import { Link, useLocation } from 'react-router-dom'
-import { useSelector } from 'react-redux'
+import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import {
   useGetConversationMessagesQuery,
@@ -26,6 +26,7 @@ import {
   useGetMyPropertiesQuery,
   useSubmitPropertyMutation,
 } from '../../features/properties/propertiesApi'
+import { updateProfile } from '../../features/auth/authSlice'
 import {
   EmptyState,
   LoadingState,
@@ -201,20 +202,44 @@ export function NotificationsPage() {
 }
 
 export function ProfilePage() {
+  const dispatch = useDispatch()
   const user = useSelector((state) => state.auth.user)
   const { data: verification } = useGetMyVerificationQuery()
+  const [editing, setEditing] = useState(false)
+  const [form, setForm] = useState({ name: user?.name || '', phone: user?.phone || '' })
+
+  const beginEditing = () => {
+    setForm({ name: user?.name || '', phone: user?.phone || '' })
+    setEditing(true)
+  }
+
+  const saveProfile = async (event) => {
+    event.preventDefault()
+    const result = await dispatch(updateProfile({ name: form.name, phone: form.phone || null }))
+
+    if (updateProfile.fulfilled.match(result)) {
+      toast.success('Profile updated')
+      setEditing(false)
+    } else {
+      toast.error(result.payload || 'Unable to update profile')
+    }
+  }
+
+  const cancelEditing = () => {
+    setForm({ name: user?.name || '', phone: user?.phone || '' })
+    setEditing(false)
+  }
+
   return (
     <>
-      <PageHeader eyebrow="Account" title="Your profile" text="Your authenticated identity and verification state used across the rental platform." />
+      <PageHeader eyebrow="Account" title="Your profile" text="Keep your contact details current while your email, role and verification status stay protected." action={!editing ? <SecondaryButton onClick={beginEditing}>Edit profile</SecondaryButton> : null} />
       <div className="grid gap-6 lg:grid-cols-[.7fr_1.3fr]">
         <Panel>
           <div className="flex items-center gap-4">{user?.avatar?.url ? <img src={user.avatar.url} alt="" className="h-20 w-20 rounded-[24px] object-cover ring-1 ring-white/10" /> : <div className="grid h-20 w-20 place-items-center rounded-[24px] bg-gradient-to-br from-cyan-300/20 to-violet-500/20 text-2xl font-black text-cyan-100 ring-1 ring-white/10">{user?.name?.[0]}</div>}<div><h2 className="text-xl font-black text-white">{user?.name}</h2><p className="text-sm text-slate-400">{user?.email}</p></div></div>
           <div className="mt-6 flex flex-wrap gap-2"><StatusBadge value={user?.emailVerified ? 'verified' : 'pending'} /><StatusBadge value={user?.accountStatus || 'active'} /></div>
         </Panel>
         <Panel>
-          <h2 className="font-black text-white">Account details</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">{[['Email',user?.email],['Phone',user?.phone || 'Not provided'],['Role',pretty(user?.role)],['Owner verification',verification?.ownerVerified ? 'Verified owner' : pretty(verification?.verification?.status || 'Not submitted')],['Account created',shortDate(user?.createdAt)],['Phone status',user?.phoneVerified ? 'Verified' : 'Not verified']].map(([label,value]) => <div key={label} className={`${glass} p-4`}><p className="text-xs font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}</div>
-          <p className="mt-5 text-xs leading-5 text-slate-500">Profile editing is not exposed by the current backend API, so this screen intentionally presents verified account data without fake edit controls.</p>
+          {editing ? <form onSubmit={saveProfile}><h2 className="font-black text-white">Edit profile</h2><p className="mt-2 text-sm leading-6 text-slate-400">You can change your display name and contact number. Changing your phone number clears its verification status until it is verified again.</p><div className="mt-5 grid gap-4 sm:grid-cols-2"><label className="block"><span className="mb-2 block text-xs font-black text-slate-300">Full name</span><TextInput value={form.name} minLength={2} maxLength={80} required onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label className="block"><span className="mb-2 block text-xs font-black text-slate-300">Phone number <span className="font-medium text-slate-500">(optional)</span></span><TextInput value={form.phone} maxLength={30} inputMode="tel" placeholder="+92 300 1234567" onChange={(event) => setForm({ ...form, phone: event.target.value })} /></label></div><div className="mt-5 flex flex-wrap gap-3"><PrimaryButton type="submit">Save changes</PrimaryButton><SecondaryButton onClick={cancelEditing}>Cancel</SecondaryButton></div></form> : <><h2 className="font-black text-white">Account details</h2><div className="mt-5 grid gap-4 sm:grid-cols-2">{[['Email',user?.email],['Phone',user?.phone || 'Not provided'],['Role',pretty(user?.role)],['Owner verification',verification?.ownerVerified ? 'Verified owner' : pretty(verification?.verification?.status || 'Not submitted')],['Account created',shortDate(user?.createdAt)],['Phone status',user?.phoneVerified ? 'Verified' : 'Not verified']].map(([label,value]) => <div key={label} className={`${glass} p-4`}><p className="text-xs font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}</div><p className="mt-5 text-xs leading-5 text-slate-500">Email, role and account verification details are protected. Use Edit profile to update your name or phone number.</p></>}
         </Panel>
       </div>
     </>

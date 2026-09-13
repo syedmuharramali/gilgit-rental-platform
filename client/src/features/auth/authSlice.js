@@ -87,6 +87,20 @@ export const hydrateCurrentUser = createAsyncThunk(
   },
 )
 
+export const updateProfile = createAsyncThunk(
+  'auth/updateProfile',
+  async (payload, { rejectWithValue }) => {
+    try {
+      const { data } = await api.patch('/auth/me', payload)
+      const user = data.data.user
+      localStorage.setItem(USER_KEY, JSON.stringify(user))
+      return user
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Unable to update profile'))
+    }
+  },
+)
+
 const initialState = {
   token: localStorage.getItem(TOKEN_KEY),
   user: readStoredUser(),
@@ -153,6 +167,9 @@ const authSlice = createSlice({
         state.token = null
         state.user = null
         state.sessionChecked = true
+      })
+      .addCase(updateProfile.fulfilled, (state, action) => {
+        state.user = action.payload
       })
   },
 })
