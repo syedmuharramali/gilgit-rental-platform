@@ -267,6 +267,30 @@ app.use(
   cookieParser()
 );
 
+/*
+|--------------------------------------------------------------------------
+| Express 5 request body default
+|--------------------------------------------------------------------------
+|
+| Express 5 leaves req.body undefined when a request has no parsable body.
+| Controllers read optional fields such as req.body.reason, so default it to
+| an empty object instead of crashing with a 500 error.
+|--------------------------------------------------------------------------
+*/
+
+app.use(
+  (req, res, next) => {
+    if (
+      req.body === undefined ||
+      req.body === null
+    ) {
+      req.body = {};
+    }
+
+    next();
+  }
+);
+
 if (
   process.env.NODE_ENV ===
     "development"
