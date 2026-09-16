@@ -37,6 +37,30 @@ const {
 
 /*
 |--------------------------------------------------------------------------
+| Optional rent amount
+|--------------------------------------------------------------------------
+|
+| The preference form sends null (or "") when a rent limit is left blank.
+| Number(null) is 0, which previously turned "no maximum" into a maximum of
+| PKR 0 and gave every listing a zero rent score.
+|--------------------------------------------------------------------------
+*/
+
+const parseOptionalAmount = (value) => {
+  if (
+    value === undefined ||
+    value === null ||
+    (typeof value === "string" &&
+      value.trim() === "")
+  ) {
+    return null;
+  }
+
+  return Number(value);
+};
+
+/*
+|--------------------------------------------------------------------------
 | Save / update preferences
 |--------------------------------------------------------------------------
 */
@@ -45,20 +69,14 @@ exports.savePreferences =
   asyncHandler(
     async (req, res, next) => {
       const minRent =
-        req.body.minRent !==
-        undefined
-          ? Number(
-              req.body.minRent
-            )
-          : null;
+        parseOptionalAmount(
+          req.body.minRent
+        );
 
       const maxRent =
-        req.body.maxRent !==
-        undefined
-          ? Number(
-              req.body.maxRent
-            )
-          : null;
+        parseOptionalAmount(
+          req.body.maxRent
+        );
 
       if (
         minRent !== null &&
@@ -314,7 +332,7 @@ exports.savePreferences =
               false,
           },
           {
-            new: true,
+            returnDocument: "after",
             upsert: true,
             runValidators: true,
           }
