@@ -89,8 +89,15 @@ exports.createApplication =
             req.user._id,
         });
 
+      /*
+      | A withdrawn application can be submitted again. The unique
+      | (property, applicant) index means the same record is reused below.
+      */
+
       if (
-        existingApplication
+        existingApplication &&
+        existingApplication.status !==
+          "withdrawn"
       ) {
         return next(
           new AppError(
@@ -380,31 +387,50 @@ exports.createApplication =
         );
       }
 
-      const application =
-        await Application.create({
-          property:
-            property._id,
+      const applicationValues = {
+        property:
+          property._id,
 
-          applicant:
-            req.user._id,
+        applicant:
+          req.user._id,
 
-          owner:
-            property.owner,
+        owner:
+          property.owner,
 
-          applicationType,
+        applicationType,
 
-          roommates,
+        roommates,
 
-          message:
-            req.body.message ||
-            "",
+        message:
+          req.body.message ||
+          "",
 
-          preferredMoveInDate,
+        preferredMoveInDate,
 
-          expectedStayMonths,
+        expectedStayMonths,
 
-          occupants,
+        occupants,
+      };
+
+      let application;
+
+      if (existingApplication) {
+        existingApplication.set({
+          ...applicationValues,
+          status: "pending",
+          reviewedAt: null,
+          rejectionReason: null,
+          withdrawnAt: null,
         });
+
+        application =
+          await existingApplication.save();
+      } else {
+        application =
+          await Application.create(
+            applicationValues
+          );
+      }
 
       await application.populate([
         {
