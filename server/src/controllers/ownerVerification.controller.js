@@ -76,6 +76,30 @@ exports.submitVerification = asyncHandler(
       );
     }
 
+    /*
+    | An admin can reject without allowing resubmission. Respect that
+    | decision instead of accepting a new request anyway.
+    */
+
+    const latestVerification =
+      await OwnerVerification.findOne({
+        user: req.user._id,
+      })
+        .sort({ createdAt: -1 })
+        .select("status");
+
+    if (
+      latestVerification?.status ===
+      "rejected"
+    ) {
+      return next(
+        new AppError(
+          "Your verification was rejected and cannot be resubmitted. Please contact support.",
+          403
+        )
+      );
+    }
+
     const previousAttempts =
       await OwnerVerification.countDocuments({
         user: req.user._id,
