@@ -56,7 +56,7 @@ router.post(
       .withMessage("Email is required")
       .isEmail()
       .withMessage("Enter a valid email address")
-      .normalizeEmail(),
+      .toLowerCase(),
 
     body("password")
       .isLength({
@@ -92,7 +92,7 @@ router.post(
       .trim()
       .isEmail()
       .withMessage("Enter a valid email address")
-      .normalizeEmail(),
+      .toLowerCase(),
 
     body("password")
       .notEmpty()

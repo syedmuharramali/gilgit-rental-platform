@@ -3,6 +3,10 @@ const AppError = require("../utils/AppError.js");
 const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 const {
+  normalizeEmail,
+  getEmailLookupCandidates,
+} = require("../utils/email");
+const {
   verifyGoogleCredential,
   isGoogleAuthoritativeEmail,
 } = require("../services/googleAuth.service");
@@ -22,6 +26,32 @@ const formatAuthUser = (user) => ({
 
 /*
 |--------------------------------------------------------------------------
+| Find a user by email (exact match first, then legacy Gmail form)
+|--------------------------------------------------------------------------
+*/
+
+const findUserByEmail = async (email, select) => {
+  const candidates = getEmailLookupCandidates(email);
+
+  let query = User.find({
+    email: { $in: candidates },
+  });
+
+  if (select) {
+    query = query.select(select);
+  }
+
+  const users = await query;
+
+  return (
+    users.find((user) => user.email === candidates[0]) ||
+    users[0] ||
+    null
+  );
+};
+
+/*
+|--------------------------------------------------------------------------
 | Register
 | POST /api/auth/register
 |--------------------------------------------------------------------------
@@ -30,11 +60,9 @@ const formatAuthUser = (user) => ({
 exports.register = asyncHandler(async (req, res, next) => {
   const { name, email, password } = req.body;
 
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
-  const existingUser = await User.findOne({
-    email: normalizedEmail,
-  });
+  const existingUser = await findUserByEmail(normalizedEmail);
 
   if (existingUser) {
     return next(
@@ -72,11 +100,9 @@ exports.register = asyncHandler(async (req, res, next) => {
 exports.login = asyncHandler(async (req, res, next) => {
   const { email, password } = req.body;
 
-  const normalizedEmail = email.toLowerCase().trim();
+  const normalizedEmail = normalizeEmail(email);
 
-  const user = await User.findOne({
-    email: normalizedEmail,
-  }).select("+password");
+  const user = await findUserByEmail(normalizedEmail, "+password");
 
   if (!user) {
     return next(new AppError("Invalid email or password", 401));
@@ -147,9 +173,7 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
   });
 
   if (!user) {
-    const existingEmailUser = await User.findOne({
-      email: googleProfile.email,
-    });
+    const existingEmailUser = await findUserByEmail(googleProfile.email);
 
     if (existingEmailUser) {
       if (
