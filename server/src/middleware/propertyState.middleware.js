@@ -6,6 +6,10 @@ const Property = require(
   "../models/property.model"
 );
 
+const Application = require(
+  "../models/application.model"
+);
+
 const AppError = require(
   "../utils/AppError"
 );
@@ -42,7 +46,7 @@ exports.requireMutableOwnedProperty =
             $ne: true,
           },
         }).select(
-          "listingStatus"
+          "listingStatus reservationStatus"
         );
 
       if (!property) {
@@ -61,6 +65,35 @@ exports.requireMutableOwnedProperty =
         return next(
           new AppError(
             "This property cannot be modified while it has an active tenancy",
+            409
+          )
+        );
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Reserved listings are locked too
+      |--------------------------------------------------------------------------
+      |
+      | Editing a listing sends it back to draft. After an application has been
+      | accepted that would break the rental terms and agreement steps (they
+      | require a published listing), and it would let the owner change the
+      | rent the renter applied for.
+      |--------------------------------------------------------------------------
+      */
+
+      const hasAcceptedApplication =
+        property.reservationStatus ===
+          "reserved" ||
+        (await Application.exists({
+          property: property._id,
+          status: "accepted",
+        }));
+
+      if (hasAcceptedApplication) {
+        return next(
+          new AppError(
+            "This property cannot be modified after an application has been accepted",
             409
           )
         );
