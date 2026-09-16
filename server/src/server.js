@@ -15,6 +15,12 @@ const app =
 const connectDB =
   require("./config/db");
 
+const {
+  startTenancyActivationSchedule,
+} = require(
+  "./services/tenancyActivation.service"
+);
+
 const PORT =
   Number(
     process.env.PORT
@@ -103,6 +109,8 @@ const startServer =
   async () => {
     try {
       await connectDB();
+
+      startTenancyActivationSchedule();
 
       server =
         app.listen(

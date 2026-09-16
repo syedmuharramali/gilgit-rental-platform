@@ -30,6 +30,13 @@ const {
   "../services/notification.service"
 );
 
+const {
+  activateDueTenancies,
+  hasRentalStarted,
+} = require(
+  "../services/tenancyActivation.service"
+);
+
 const DEFAULT_CLAUSES = [
   "The renter shall pay the agreed monthly rent on time.",
   "The property shall be used only for residential purposes.",
@@ -259,6 +266,13 @@ exports.createAgreementFromTerms = asyncHandler(
 */
 exports.getMyAgreements = asyncHandler(
   async (req, res) => {
+    await activateDueTenancies({
+      $or: [
+        { owner: req.user._id },
+        { renter: req.user._id },
+      ],
+    });
+
     const agreements = await RentalAgreement.find({
       $or: [
         { owner: req.user._id },
@@ -312,6 +326,13 @@ exports.getAgreementById = asyncHandler(
         )
       );
     }
+
+    await activateDueTenancies({
+      $or: [
+        { owner: req.user._id },
+        { renter: req.user._id },
+      ],
+    });
 
     const agreement = await RentalAgreement.findById(
       req.params.id
@@ -496,8 +517,9 @@ exports.signAgreement = asyncHandler(
             }
 
             if (tenancy.status === "pending_agreement") {
-              const startsNow =
-                new Date(terms.startDate).getTime() <= Date.now();
+              const startsNow = hasRentalStarted(
+                terms.startDate
+              );
 
               tenancy.status = startsNow
                 ? "active"
