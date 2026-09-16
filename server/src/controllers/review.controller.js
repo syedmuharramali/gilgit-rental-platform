@@ -25,6 +25,12 @@ const {
   "../services/notification.service"
 );
 
+const {
+  activateDueTenancies,
+} = require(
+  "../services/tenancyActivation.service"
+);
+
 /*
 |--------------------------------------------------------------------------
 | Create review
@@ -103,6 +109,10 @@ exports.createReview = asyncHandler(
       }
     }
 
+    await activateDueTenancies({
+      _id: tenancyId,
+    });
+
     const tenancy =
       await Tenancy.findById(
         tenancyId
@@ -139,17 +149,24 @@ exports.createReview = asyncHandler(
 
     /*
     |--------------------------------------------------------------------------
-    | Reviews only after tenancy completion
+    | Reviews only after the rental has started
+    |--------------------------------------------------------------------------
+    |
+    | The platform no longer tracks move-out, so rentals stay "active" after
+    | the agreement. Allow reviews once the rental has started ("ended" is
+    | kept for older records).
     |--------------------------------------------------------------------------
     */
 
     if (
-      tenancy.status !==
-      "ended"
+      ![
+        "active",
+        "ended",
+      ].includes(tenancy.status)
     ) {
       return next(
         new AppError(
-          "Reviews can only be submitted after the tenancy has ended",
+          "Reviews can be submitted once the rental has started",
           400
         )
       );
