@@ -38,8 +38,15 @@ const getNotificationDestination = (notification, ownerMode) => {
       return { pathname: `${base}/applications`, label: 'Open applications' }
     case 'viewing':
       return { pathname: `${base}/viewings`, label: 'Open viewings' }
-    case 'tenancy': // older notifications
+    case 'tenancy':
+      return { pathname: `${base}/agreements`, label: 'Open agreement' }
+    case 'rent_record':
+      return { pathname: `${base}/agreements`, label: 'Open agreement' }
     case 'agreement':
+      return { pathname: `${base}/agreements`, label: 'Open agreement' }
+    case 'condition_report':
+      return { pathname: `${base}/agreements`, label: 'Open agreement' }
+    case 'maintenance_request':
       return { pathname: `${base}/agreements`, label: 'Open agreement' }
     case 'report':
       return { pathname: `${base}/reports`, label: 'Open safety reports' }

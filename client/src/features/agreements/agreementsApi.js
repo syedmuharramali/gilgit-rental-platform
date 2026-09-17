@@ -24,6 +24,14 @@ export const agreementsApi = baseApi.injectEndpoints({
         { type: 'Tenancy', id: 'OWNED' },
       ],
     }),
+    createAgreement: builder.mutation({
+      query: ({ tenancyId, clauses }) => ({
+        url: `/agreements/tenancy/${tenancyId}`,
+        method: 'POST',
+        body: clauses ? { clauses } : {},
+      }),
+      invalidatesTags: [{ type: 'Agreement', id: 'LIST' }],
+    }),
     signAgreement: builder.mutation({
       query: ({ id, legalName }) => ({
         url: `/agreements/${id}/sign`,
@@ -46,5 +54,6 @@ export const {
   useGetAgreementsQuery,
   useGetAgreementQuery,
   useCreateAgreementFromTermsMutation,
+  useCreateAgreementMutation,
   useSignAgreementMutation,
 } = agreementsApi
