@@ -13,7 +13,7 @@ Production-oriented React client for the Gilgit Rental Platform. The web app cov
 - MapLibre / react-map-gl
 - Sonner notifications
 - Lucide icons
-- React Dropzone for listing and verification uploads
+- React Dropzone for listing and evidence uploads
 - Vitest for automated tests
 - Oxlint for static analysis
 
@@ -48,7 +48,7 @@ npm run check
 - Property details with media, amenities and location map
 - Gilgit Living Score
 - Smart Matching based on transparent stored preferences
-- Public property reviews from renters
+- Public completed-tenancy property reviews
 
 ### Authentication
 
@@ -63,10 +63,13 @@ npm run check
 - Favorites
 - Rental applications, including group applications
 - Viewing requests
+- Tenancy overview
+- Rent ledger
 - Property-linked messaging
-- Rental terms review and change requests
 - Rental agreement electronic acceptance
-- Reviews once a rental has started
+- Move-in / move-out condition reports with private evidence
+- Maintenance requests
+- Reviews
 - Notifications
 - Safety reports
 - Account/verification status
@@ -78,8 +81,11 @@ npm run check
 - Listing image upload, cover selection, reordering and deletion
 - Submission to administrator review
 - Applications and viewing management
-- Rental terms proposal
-- Agreement creation and acceptance
+- Tenancy creation and completion
+- Rent schedule generation and manual payment recording
+- Agreement creation
+- Condition reports and evidence
+- Maintenance management
 - Messaging, notifications, reviews and reports
 
 ### Administrator workspace
@@ -91,6 +97,6 @@ npm run check
 
 ## Security notes
 
-Private CNIC/selfie documents are never exposed as permanent public URLs. The frontend retrieves them through authenticated backend endpoints and uses temporary browser object URLs only for the active preview.
+Private CNIC/selfie and condition-report evidence are never exposed as permanent public URLs. The frontend retrieves them through authenticated backend endpoints and uses temporary browser object URLs only for the active preview.
 
-The frontend intentionally does not display fake controls for backend capabilities that do not exist.
+The frontend intentionally does not display fake controls for backend capabilities that do not exist. For example, profile editing is read-only until the backend exposes an account-update endpoint.

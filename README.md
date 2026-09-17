@@ -2,45 +2,48 @@
 
 A production-oriented MERN stack rental platform designed for Gilgit, Pakistan.
 
-The platform connects renters with verified property owners for hostels, rooms, apartments, and houses. It is designed for non-technical local users and focuses on one clear journey: finding a place and reaching a signed rental agreement.
+The platform connects renters with verified property owners for hostels, rooms, apartments, and houses and supports the rental lifecycle from property discovery through tenancy management.
 
 ## Core Features
 
 - Email/password authentication with JWT
-- Google Sign-In using Google Identity Services ID tokens
+- Google Sign-In backend using Google Identity Services ID tokens
 - Role-based authorization (`user` and `admin`)
-- Owner identity verification (CNIC + selfie, reviewed by an admin)
+- Owner identity verification
 - Property submission and admin moderation
-- Property listings with search, filters, and sorting
+- Property listings and advanced search
 - Smart property matching using transparent weighted rules
-- Gilgit Living Score (heating, hot water, backup power, water, road and winter access)
-- Saved properties (favorites)
+- Gilgit Living Score
+- Favorites
 - Individual and group rental applications
-- Property viewing requests
-- In-app messaging between renters and owners
-- Rental terms proposal, change requests, and acceptance
-- Digital rental agreements accepted electronically by both parties
-- Reviews and ratings once a rental has started
-- In-app notifications for every step of the journey
-- Property/user reporting with admin moderation
+- Property viewing scheduling
+- In-app messaging through REST APIs
+- Digital rental agreements
+- Electronic agreement acceptance by both parties
+- Tenancy management
+- Rent ledger and manual payment recording
+- Move-in and move-out condition reports with evidence
+- Maintenance requests and status tracking
+- Reviews and ratings
+- In-app notifications for rental lifecycle events
+- Property/user reporting and admin moderation workflows
 
 ## Tech Stack
 
 ### Frontend
 
-- React 19 + Vite
-- Tailwind CSS
-- Redux Toolkit / RTK Query
+- React
+- Vite
 
 ### Backend
 
 - Node.js
-- Express.js 5
+- Express.js
 
 ### Database
 
-- MongoDB (Atlas replica set — agreement steps use transactions)
-- Mongoose 9
+- MongoDB
+- Mongoose
 
 ### Authentication
 
@@ -49,15 +52,7 @@ The platform connects renters with verified property owners for hostels, rooms, 
 
 ### File Storage
 
-- Appwrite Storage (public listing images, private identity documents)
-
-## Rental Journey
-
-`register/login -> browse -> property details -> save -> smart matches -> message owner -> request viewing -> apply -> owner accepts -> rental terms agreed -> rental agreement accepted by both -> done`
-
-After both parties accept the agreement, the rental is **upcoming** until its start date and then **active**. Once active, the property is marked as rented and removed from public listings. Upcoming rentals are activated automatically (hourly, and whenever either party opens their rentals or agreements).
-
-Payments, rent ledgers, maintenance requests, condition reports, and move-out workflows are intentionally out of scope.
+- Appwrite Storage
 
 ## Backend Architecture
 
@@ -68,11 +63,19 @@ Important backend safeguards include:
 - verified-owner requirement before creating rental listings
 - admin review before a property becomes publicly published
 - one accepted rental application per property
-- listings are locked (no edits, image changes, or deletion) once an application is accepted or the property is rented
-- private identity documents are only served to admins through authenticated endpoints
+- rental-property mutation protection while an active tenancy exists
+- secure private evidence access for condition reports
 - CORS allowlisting and API rate limiting
 - environment validation before application startup
 - graceful server shutdown
+
+## Rental Lifecycle
+
+A typical rental flow is:
+
+`property -> application -> viewing -> accepted application -> tenancy -> rent ledger -> agreement -> condition reports -> maintenance/reviews`
+
+Payment gateway integration is not currently part of the project. Rent payments are recorded manually in the rent ledger.
 
 ## Google Sign-In Backend
 
@@ -98,45 +101,23 @@ Required environment variable:
 GOOGLE_CLIENT_ID=<google-oauth-web-client-id>
 ```
 
-## Local Development
+## Development
 
-Requirements: Node.js 20+ and a MongoDB Atlas database (or a local replica set).
-
-Backend:
+From the `server` directory:
 
 ```bash
-cd server
-cp .env.example .env   # fill in MongoDB, JWT, Google and Appwrite values
-npm ci
-npm run seed:amenities # first run only
-npm run dev            # http://localhost:5000
-```
-
-Frontend:
-
-```bash
-cd client
-cp .env.example .env
-npm ci
-npm run dev            # http://localhost:5173
-```
-
-Useful checks:
-
-```bash
-cd client && npm run check        # lint + tests + build
-cd server && npm run diagnose:storage  # Appwrite upload diagnostics
+npm run dev
 ```
 
 Production startup:
 
 ```bash
-cd server && npm start
+npm start
 ```
 
 ## Project Status
 
-The core rental journey is implemented end to end. The frontend UI is being redesigned.
+Backend rental-lifecycle functionality is implemented and under integration/testing with the frontend.
 
 ## Academic Project
 
