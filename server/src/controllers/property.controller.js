@@ -1190,8 +1190,8 @@ exports.getPropertyById =
       */
 
       const isOwner =
-        Boolean(req.user) &&
-        property.owner?._id?.toString() ===
+        req.user &&
+        property.owner._id.toString() ===
           req.user._id.toString();
 
       const isAdmin =

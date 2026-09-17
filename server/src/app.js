@@ -291,53 +291,6 @@ app.use(
   }
 );
 
-/*
-|--------------------------------------------------------------------------
-| Single-value query strings
-|--------------------------------------------------------------------------
-|
-| ?area=a&area=b arrives as an array, and controllers call string methods
-| such as req.query.area.trim(), which crashed with a 500 error. No endpoint
-| expects repeated query keys, so keep the first value only.
-|--------------------------------------------------------------------------
-*/
-
-app.use(
-  (req, res, next) => {
-    const query = req.query;
-
-    const hasArrayValue =
-      Object.values(query).some(
-        (value) =>
-          Array.isArray(value)
-      );
-
-    if (hasArrayValue) {
-      Object.defineProperty(
-        req,
-        "query",
-        {
-          value: Object.fromEntries(
-            Object.entries(query).map(
-              ([key, value]) => [
-                key,
-                Array.isArray(value)
-                  ? value[0]
-                  : value,
-              ]
-            )
-          ),
-          writable: true,
-          configurable: true,
-          enumerable: true,
-        }
-      );
-    }
-
-    next();
-  }
-);
-
 if (
   process.env.NODE_ENV ===
     "development"
