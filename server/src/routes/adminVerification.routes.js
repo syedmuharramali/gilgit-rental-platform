@@ -66,8 +66,7 @@ router.patch(
       .isBoolean()
       .withMessage(
         "allowResubmission must be true or false"
-      )
-      .toBoolean(),
+      ),
   ],
 
   validateRequest,
