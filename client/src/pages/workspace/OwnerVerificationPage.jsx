@@ -25,7 +25,7 @@ export default function OwnerVerificationPage() {
   if (isLoading) return <LoadingState />
 
   const current = data?.verification
-  const canSubmit = !current || ['rejected', 'resubmission_required'].includes(current.status)
+  const canSubmit = !current || current.status === 'resubmission_required'
 
   const chooseFile = (key, label, file, input) => {
     if (!file) {

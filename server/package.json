@@ -1,8 +1,11 @@
 {
+  "name": "server",
+  "private": true,
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "seed:amenities": "node src/scripts/seedAmenities.js"
+    "seed:amenities": "node src/scripts/seedAmenities.js",
+    "diagnose:storage": "node src/scripts/diagnoseAppwriteStorage.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
