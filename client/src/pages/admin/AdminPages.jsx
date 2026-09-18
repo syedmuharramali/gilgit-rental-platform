@@ -5,16 +5,12 @@ import { Navigate } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import {
-  useApprovePropertyMutation,
-  useApproveVerificationMutation,
   useGetAdminDashboardQuery,
   useGetAdminPropertiesQuery,
   useGetVerificationsQuery,
-  useRejectPropertyMutation,
-  useRejectVerificationMutation,
 } from '../../features/admin/adminApi'
 import { useGetAdminReportsQuery, useUpdateAdminReportMutation } from '../../features/reports/reportsApi'
-import { EmptyState, LoadingState, PageHeader, Panel, PrimaryButton, SecondaryButton, Select, StatusBadge, TextArea, money, pretty, shortDate } from '../../components/workspace/WorkspaceUI'
+import { EmptyState, LoadingState, PageHeader, Panel, PrimaryButton, SecondaryButton, Select, StatusBadge, TextArea, pretty } from '../../components/workspace/WorkspaceUI'
 
 const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
 
@@ -69,26 +65,6 @@ export function AdminDashboardPage() {
       </Panel>
     </>
   )
-}
-
-export function AdminPropertiesPage() {
-  const [status, setStatus] = useState('pending_review')
-  const { data, isLoading } = useGetAdminPropertiesQuery({ status, limit: 100 })
-  const [approve] = useApprovePropertyMutation()
-  const [reject] = useRejectPropertyMutation()
-  const action = async (fn, payload, success) => { try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) } }
-  if (isLoading) return <LoadingState />
-  return <><PageHeader eyebrow="Moderation" title="Property review queue" text="Inspect owner submissions before they become visible to renters." action={<Select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending_review">Pending review</option><option value="published">Published</option><option value="rejected">Rejected</option></Select>} /><div className="space-y-4">{data?.properties?.length ? data.properties.map((property) => <Panel key={property._id}><div className="grid gap-5 lg:grid-cols-[140px_1fr_auto] lg:items-center">{property.images?.[0]?.url ? <img src={property.images.find((image) => image.isCover)?.url || property.images[0].url} alt="" loading="lazy" decoding="async" className="h-28 w-full rounded-2xl object-cover" /> : <div className="grid h-28 place-items-center rounded-2xl bg-white/[0.04]"><Building2 className="text-slate-600" /></div>}<div><div className="flex flex-wrap gap-2"><StatusBadge value={property.listingStatus} /><span className="text-xs font-bold text-slate-400">{pretty(property.propertyType)}</span></div><h2 className="mt-2 text-lg font-black text-white">{property.title}</h2><p className="mt-1 text-sm text-slate-400">{property.owner?.name} · {property.owner?.email} · {property.address?.area} · {money(property.monthlyRent)}</p><p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-400">{property.description}</p></div>{property.listingStatus === 'pending_review' && <div className="flex gap-2 lg:flex-col"><PrimaryButton onClick={() => action(approve, property._id, 'Property approved')}>Approve</PrimaryButton><SecondaryButton onClick={() => action(reject, { id: property._id, reason: 'Listing needs changes before publication.' }, 'Property rejected')}>Reject</SecondaryButton></div>}</div></Panel>) : <EmptyState title="Queue is empty" />}</div></>
-}
-
-export function AdminVerificationsPage() {
-  const [status, setStatus] = useState('pending')
-  const { data, isLoading } = useGetVerificationsQuery({ status, limit: 100 })
-  const [approve] = useApproveVerificationMutation()
-  const [reject] = useRejectVerificationMutation()
-  const action = async (fn, payload, success) => { try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) } }
-  if (isLoading) return <LoadingState />
-  return <><PageHeader eyebrow="Identity" title="Owner verification queue" text="Review identity submissions before users can publish rental listings." action={<Select value={status} onChange={(event) => setStatus(event.target.value)}><option value="pending">Pending</option><option value="verified">Verified</option><option value="resubmission_required">Resubmission required</option><option value="rejected">Rejected</option></Select>} /><div className="space-y-4">{data?.verifications?.length ? data.verifications.map((verification) => <Panel key={verification._id}><div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div><StatusBadge value={verification.status} /><h2 className="mt-2 font-black text-white">{verification.user?.name}</h2><p className="mt-1 text-sm text-slate-400">{verification.user?.email} · CNIC ending {verification.cnicLast4} · attempt #{verification.attemptNumber}</p><p className="mt-2 text-xs text-slate-500">Submitted {shortDate(verification.submittedAt)}</p></div>{verification.status === 'pending' && <div className="flex gap-2"><PrimaryButton onClick={() => action(approve, verification._id, 'Owner verified')}>Approve</PrimaryButton><SecondaryButton onClick={() => action(reject, { id: verification._id, reason: 'Please resubmit clearer identity images.', allowResubmission: true }, 'Resubmission requested')}>Request resubmission</SecondaryButton></div>}</div></Panel>) : <EmptyState title="No verification requests" />}</div></>
 }
 
 export function AdminReportsPage() {
