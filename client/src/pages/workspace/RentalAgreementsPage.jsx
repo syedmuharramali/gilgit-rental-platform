@@ -148,7 +148,6 @@ function RentalAgreementsPage() {
           const isOwnerParty = String(ownerId) === String(user?.id)
           const mySignature = isOwnerParty ? agreement.ownerSignature : agreement.renterSignature
           const otherSignature = isOwnerParty ? agreement.renterSignature : agreement.ownerSignature
-          const visibleTenancyStatus = agreement.tenancy?.status && agreement.tenancy.status !== 'pending_agreement'
 
           return (
             <Panel key={agreement._id}>
@@ -156,7 +155,6 @@ function RentalAgreementsPage() {
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <StatusBadge value={agreement.status} />
-                    {visibleTenancyStatus && <StatusBadge value={agreement.tenancy.status} />}
                   </div>
                   <h2 className="mt-3 text-xl font-black text-white">{agreement.property?.title || 'Rental agreement'}</h2>
                   <p className="mt-2 text-sm text-slate-400">{money(agreement.monthlyRent)}/month · {agreement.durationMonths} months · starts {shortDate(agreement.startDate)}</p>
