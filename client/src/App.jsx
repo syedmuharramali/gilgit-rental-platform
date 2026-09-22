@@ -24,6 +24,7 @@ import PropertiesPage from './pages/PropertiesPage'
 import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
 import SmartMatchesPage from './pages/SmartMatchesPage'
+import VerifyEmailPage from './pages/VerifyEmailPage'
 import {
   OwnerPropertiesPage,
   ProfilePage,
@@ -65,6 +66,7 @@ function App() {
 
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/verify-email" element={<VerifyEmailPage />} />
 
       <Route path="/dashboard" element={protectedElement(<DashboardLayout mode="renter" />)}>
         <Route index element={<DashboardOverviewPage />} />

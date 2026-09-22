@@ -67,6 +67,34 @@ const userSchema = new mongoose.Schema(
       default: false,
     },
 
+    /*
+    |--------------------------------------------------------------------------
+    | Email verification
+    |--------------------------------------------------------------------------
+    |
+    | Only the SHA-256 hash of the emailed token is stored, so a database leak
+    | cannot be used to verify somebody else's address.
+    |
+    */
+
+    emailVerificationTokenHash: {
+      type: String,
+      default: null,
+      select: false,
+    },
+
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+
+    emailVerificationSentAt: {
+      type: Date,
+      default: null,
+      select: false,
+    },
+
     phoneVerified: {
       type: Boolean,
       default: false,

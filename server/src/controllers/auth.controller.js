@@ -1,3 +1,5 @@
+const crypto = require("node:crypto");
+
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError.js");
 const asyncHandler = require("../utils/asyncHandler");
@@ -10,6 +12,56 @@ const {
   verifyGoogleCredential,
   isGoogleAuthoritativeEmail,
 } = require("../services/googleAuth.service");
+
+const {
+  sendVerificationEmail,
+} = require("../services/mail.service");
+
+/*
+|--------------------------------------------------------------------------
+| Email verification helpers
+|--------------------------------------------------------------------------
+*/
+
+const VERIFICATION_TTL_MS = 24 * 60 * 60 * 1000;
+const RESEND_COOLDOWN_MS = 60 * 1000;
+
+const hashToken = (token) =>
+  crypto.createHash("sha256").update(token).digest("hex");
+
+const buildVerifyUrl = (token) => {
+  const base = (
+    process.env.CLIENT_URL || "http://localhost:5173"
+  ).replace(/\/$/, "");
+
+  return `${base}/verify-email?token=${token}`;
+};
+
+/*
+| Issues a fresh token, saves its hash on the user and emails the link.
+| Returns whether the mail actually went out so the caller can be honest
+| with the user instead of silently pretending it was sent.
+*/
+
+const issueVerificationEmail = async (user) => {
+  const token = crypto.randomBytes(32).toString("hex");
+
+  user.emailVerificationTokenHash = hashToken(token);
+  user.emailVerificationExpires = new Date(
+    Date.now() + VERIFICATION_TTL_MS
+  );
+  user.emailVerificationSentAt = new Date();
+
+  await user.save({ validateBeforeSave: false });
+
+  const result = await sendVerificationEmail({
+    to: user.email,
+    name: user.name,
+    verifyUrl: buildVerifyUrl(token),
+  });
+
+  return result;
+};
 
 const formatAuthUser = (user) => ({
   id: user._id,
@@ -77,14 +129,18 @@ exports.register = asyncHandler(async (req, res, next) => {
     authProvider: "local",
   });
 
-  const token = generateToken(user._id);
+  const delivery = await issueVerificationEmail(user);
 
   res.status(201).json({
     success: true,
-    message: "Account created successfully",
+
+    message: delivery.sent
+      ? "Account created. Check your inbox for the confirmation link."
+      : "Account created, but the confirmation email could not be sent. Use the resend button in a moment.",
 
     data: {
-      token,
+      emailSent: delivery.sent,
+      email: user.email,
       user: formatAuthUser(user),
     },
   });
@@ -121,6 +177,22 @@ exports.login = asyncHandler(async (req, res, next) => {
 
   if (!passwordMatches) {
     return next(new AppError("Invalid email or password", 401));
+  }
+
+  /*
+  | Local accounts must confirm their email address before signing in.
+  | Google accounts arrive already verified by Google.
+  */
+
+  if (!user.emailVerified) {
+    const verificationError = new AppError(
+      "Confirm your email address before signing in. Check your inbox for the link.",
+      403
+    );
+
+    verificationError.code = "EMAIL_NOT_VERIFIED";
+
+    return next(verificationError);
   }
 
   if (user.accountStatus !== "active") {
@@ -264,6 +336,122 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
       user: formatAuthUser(user),
     },
   });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Confirm email address
+| POST /api/auth/verify-email
+|--------------------------------------------------------------------------
+*/
+
+exports.verifyEmail = asyncHandler(async (req, res, next) => {
+  const token =
+    typeof req.body.token === "string" ? req.body.token.trim() : "";
+
+  if (!token) {
+    return next(
+      new AppError("The confirmation link is incomplete", 400)
+    );
+  }
+
+  const user = await User.findOne({
+    emailVerificationTokenHash: hashToken(token),
+  }).select(
+    "+emailVerificationTokenHash +emailVerificationExpires"
+  );
+
+  if (!user) {
+    return next(
+      new AppError(
+        "This confirmation link is invalid or has already been used",
+        400
+      )
+    );
+  }
+
+  if (
+    user.emailVerificationExpires &&
+    user.emailVerificationExpires.getTime() < Date.now()
+  ) {
+    return next(
+      new AppError(
+        "This confirmation link has expired. Request a new one.",
+        400
+      )
+    );
+  }
+
+  if (user.accountStatus !== "active") {
+    return next(
+      new AppError(
+        `Your account is currently ${user.accountStatus}`,
+        403
+      )
+    );
+  }
+
+  user.emailVerified = true;
+  user.emailVerificationTokenHash = null;
+  user.emailVerificationExpires = null;
+  user.lastLoginAt = new Date();
+
+  await user.save({ validateBeforeSave: false });
+
+  const authToken = generateToken(user._id);
+
+  res.status(200).json({
+    success: true,
+    message: "Email confirmed successfully",
+
+    data: {
+      token: authToken,
+      user: formatAuthUser(user),
+    },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Resend the confirmation email
+| POST /api/auth/resend-verification
+|--------------------------------------------------------------------------
+|
+| Always answers the same way, so this cannot be used to discover which
+| email addresses have accounts.
+|
+*/
+
+exports.resendVerification = asyncHandler(async (req, res) => {
+  const normalizedEmail = normalizeEmail(req.body.email);
+
+  const genericResponse = {
+    success: true,
+    message:
+      "If that address still needs confirming, a new link is on its way.",
+  };
+
+  const user = await findUserByEmail(
+    normalizedEmail,
+    "+emailVerificationSentAt"
+  );
+
+  if (!user || user.emailVerified) {
+    return res.status(200).json(genericResponse);
+  }
+
+  const lastSentAt = user.emailVerificationSentAt;
+
+  if (
+    lastSentAt &&
+    Date.now() - lastSentAt.getTime() < RESEND_COOLDOWN_MS
+  ) {
+    return res.status(200).json(genericResponse);
+  }
+
+  await issueVerificationEmail(user);
+
+  res.status(200).json(genericResponse);
 });
 
 /*

@@ -170,6 +170,24 @@ const errorHandler = (
 
   /*
   |--------------------------------------------------------------------------
+  | Machine-readable code
+  |--------------------------------------------------------------------------
+  |
+  | Lets the client react to a specific case (for example offering to resend
+  | the confirmation email) instead of matching on the message text.
+  |
+  */
+
+  if (
+    operational &&
+    typeof err.code === "string" &&
+    /^[A-Z_]+$/.test(err.code)
+  ) {
+    response.code = err.code;
+  }
+
+  /*
+  |--------------------------------------------------------------------------
   | Stack only during development
   |--------------------------------------------------------------------------
   */

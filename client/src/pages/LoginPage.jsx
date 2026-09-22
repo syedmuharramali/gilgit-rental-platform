@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import AuthLayout from '../layouts/AuthLayout'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import VerificationNotice from '../components/VerificationNotice'
 import { clearAuthError, googleSignIn, loginUser } from '../features/auth/authSlice'
 import { useGetMyVerificationQuery } from '../features/verification/verificationApi'
 
@@ -43,7 +44,7 @@ function LoginPage() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { status, error, token, user } = useSelector((state) => state.auth)
+  const { status, error, token, user, pendingVerificationEmail } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
   const shouldCheckVerification = Boolean(token && user && user.role !== 'admin')
@@ -101,6 +102,17 @@ function LoginPage() {
 
   return (
     <AuthLayout eyebrow="Welcome back" title="Continue your rental journey." subtitle="Return to saved homes, viewings, applications and everything connected to your stay.">
+      {pendingVerificationEmail && (
+        <div className="mb-5">
+          <VerificationNotice
+            email={pendingVerificationEmail}
+            tone="warning"
+            title="Confirm your email to sign in"
+            text="We sent a confirmation link to this address. Open it once and you can sign in straight away."
+          />
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <label className="block">
           <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Email address</span>

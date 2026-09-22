@@ -35,20 +35,56 @@ export const loginUser = createAsyncThunk(
       persistSession(data.data)
       return data.data
     } catch (error) {
-      return rejectWithValue(getErrorMessage(error, 'Unable to sign in'))
+      return rejectWithValue({
+        message: getErrorMessage(error, 'Unable to sign in'),
+        code: error.response?.data?.code || null,
+        email: credentials?.email || null,
+      })
     }
   },
 )
 
+/*
+ * Registration no longer signs the user in. The account exists, but it stays
+ * unusable until the emailed confirmation link is opened.
+ */
 export const registerUser = createAsyncThunk(
   'auth/registerUser',
   async (payload, { rejectWithValue }) => {
     try {
       const { data } = await api.post('/auth/register', payload)
+      return {
+        email: data.data?.email || payload.email,
+        emailSent: data.data?.emailSent !== false,
+        message: data.message,
+      }
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Unable to create account'))
+    }
+  },
+)
+
+export const verifyEmailToken = createAsyncThunk(
+  'auth/verifyEmailToken',
+  async (token, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post('/auth/verify-email', { token })
       persistSession(data.data)
       return data.data
     } catch (error) {
-      return rejectWithValue(getErrorMessage(error, 'Unable to create account'))
+      return rejectWithValue(getErrorMessage(error, 'This confirmation link could not be used'))
+    }
+  },
+)
+
+export const resendVerificationEmail = createAsyncThunk(
+  'auth/resendVerificationEmail',
+  async (email, { rejectWithValue }) => {
+    try {
+      const { data } = await api.post('/auth/resend-verification', { email })
+      return data.message
+    } catch (error) {
+      return rejectWithValue(getErrorMessage(error, 'Unable to send a new link'))
     }
   },
 )
@@ -107,6 +143,8 @@ const initialState = {
   status: 'idle',
   sessionChecked: false,
   error: null,
+  // Set when an account exists but its email address is not confirmed yet.
+  pendingVerificationEmail: null,
 }
 
 const authSlice = createSlice({
@@ -120,9 +158,13 @@ const authSlice = createSlice({
       state.status = 'idle'
       state.error = null
       state.sessionChecked = true
+      state.pendingVerificationEmail = null
     },
     clearAuthError(state) {
       state.error = null
+    },
+    clearPendingVerification(state) {
+      state.pendingVerificationEmail = null
     },
   },
   extraReducers: (builder) => {
@@ -139,9 +181,16 @@ const authSlice = createSlice({
     }
 
     const rejected = (state, action) => {
+      const payload = action.payload
+      const isDetailed = payload && typeof payload === 'object'
+
       state.status = 'failed'
-      state.error = action.payload || 'Authentication failed'
+      state.error = (isDetailed ? payload.message : payload) || 'Authentication failed'
       state.sessionChecked = true
+
+      if (isDetailed && payload.code === 'EMAIL_NOT_VERIFIED') {
+        state.pendingVerificationEmail = payload.email || null
+      }
     }
 
     builder
@@ -149,8 +198,17 @@ const authSlice = createSlice({
       .addCase(loginUser.fulfilled, fulfilled)
       .addCase(loginUser.rejected, rejected)
       .addCase(registerUser.pending, pending)
-      .addCase(registerUser.fulfilled, fulfilled)
+      .addCase(registerUser.fulfilled, (state, action) => {
+        state.status = 'succeeded'
+        state.pendingVerificationEmail = action.payload.email
+      })
       .addCase(registerUser.rejected, rejected)
+      .addCase(verifyEmailToken.pending, pending)
+      .addCase(verifyEmailToken.fulfilled, (state, action) => {
+        fulfilled(state, action)
+        state.pendingVerificationEmail = null
+      })
+      .addCase(verifyEmailToken.rejected, rejected)
       .addCase(googleSignIn.pending, pending)
       .addCase(googleSignIn.fulfilled, fulfilled)
       .addCase(googleSignIn.rejected, rejected)
@@ -174,5 +232,5 @@ const authSlice = createSlice({
   },
 })
 
-export const { logout, clearAuthError } = authSlice.actions
+export const { logout, clearAuthError, clearPendingVerification } = authSlice.actions
 export default authSlice.reducer

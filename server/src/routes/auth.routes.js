@@ -6,6 +6,8 @@ const {
   register,
   login,
   googleLogin,
+  verifyEmail,
+  resendVerification,
   getMe,
   updateMe,
 } = require("../controllers/auth.controller");
@@ -131,6 +133,53 @@ router.post(
   validateRequest,
 
   googleLogin
+);
+
+/*
+|--------------------------------------------------------------------------
+| Email confirmation
+|--------------------------------------------------------------------------
+*/
+
+router.post(
+  "/verify-email",
+
+  authLimiter,
+
+  [
+    body("token")
+      .isString()
+      .withMessage("Confirmation token is required")
+      .trim()
+      .notEmpty()
+      .withMessage("Confirmation token is required")
+      .isLength({
+        max: 200,
+      })
+      .withMessage("Confirmation token is invalid"),
+  ],
+
+  validateRequest,
+
+  verifyEmail
+);
+
+router.post(
+  "/resend-verification",
+
+  authLimiter,
+
+  [
+    body("email")
+      .trim()
+      .isEmail()
+      .withMessage("Enter a valid email address")
+      .toLowerCase(),
+  ],
+
+  validateRequest,
+
+  resendVerification
 );
 
 /*

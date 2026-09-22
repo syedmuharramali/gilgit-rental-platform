@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import { z } from 'zod'
 import AuthLayout from '../layouts/AuthLayout'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import VerificationNotice from '../components/VerificationNotice'
 import { clearAuthError, googleSignIn, registerUser } from '../features/auth/authSlice'
 
 const registerSchema = z.object({
@@ -25,6 +26,7 @@ function RegisterPage() {
   const navigate = useNavigate()
   const { status, error, token } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
+  const [createdEmail, setCreatedEmail] = useState(null)
   const isLoading = status === 'loading'
   const { register, handleSubmit, watch, formState: { errors } } = useForm({ resolver: zodResolver(registerSchema), defaultValues: { name: '', email: '', password: '' } })
   const password = watch('password') || ''
@@ -36,13 +38,31 @@ function RegisterPage() {
 
   const onSubmit = async (form) => {
     const result = await dispatch(registerUser(form))
-    if (registerUser.fulfilled.match(result)) toast.success('Your account is ready')
+    if (registerUser.fulfilled.match(result)) {
+      setCreatedEmail(result.payload.email)
+      toast.success(result.payload.emailSent
+        ? 'Account created. Check your inbox.'
+        : 'Account created, but the email could not be sent. Try resending it.')
+    }
   }
 
   const onGoogleCredential = useCallback(async (credential) => {
     const result = await dispatch(googleSignIn(credential))
     if (googleSignIn.fulfilled.match(result)) toast.success('Account connected with Google')
   }, [dispatch])
+
+  if (createdEmail) {
+    return (
+      <AuthLayout eyebrow="One last step" title="Confirm your email." subtitle="Your account exists, but it stays locked until you open the link we just sent.">
+        <VerificationNotice
+          email={createdEmail}
+          title="Check your inbox"
+          text="Open the confirmation link to activate your account and sign in. The link works for 24 hours."
+        />
+        <p className="mt-6 text-center text-sm text-white/38">Already confirmed? <Link className="font-black text-cyan-200 hover:text-white" to="/login">Sign in</Link></p>
+      </AuthLayout>
+    )
+  }
 
   return (
     <AuthLayout eyebrow="Create your account" title="Start with one great place." subtitle="Build your preferences, save homes and unlock the full rental journey from one account.">
