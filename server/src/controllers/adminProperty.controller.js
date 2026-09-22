@@ -16,6 +16,12 @@ const {
   "../services/storage.service"
 );
 
+const {
+  safeCreateNotification,
+} = require(
+  "../services/notification.service"
+);
+
 /*
 |--------------------------------------------------------------------------
 | Format property images
@@ -308,6 +314,24 @@ exports.approveProperty =
 
       await property.save();
 
+      await safeCreateNotification({
+        user: property.owner,
+
+        type: "system",
+
+        title:
+          "Property Published",
+
+        message:
+          `${property.title} passed admin review and is now live for renters.`,
+
+        resourceType:
+          "property",
+
+        resourceId:
+          property._id,
+      });
+
       res.status(200).json({
         success: true,
 
@@ -405,6 +429,24 @@ exports.rejectProperty =
         null;
 
       await property.save();
+
+      await safeCreateNotification({
+        user: property.owner,
+
+        type: "system",
+
+        title:
+          "Property Needs Changes",
+
+        message:
+          `${property.title} was not approved. Open the listing to read the reason and resubmit it.`,
+
+        resourceType:
+          "property",
+
+        resourceId:
+          property._id,
+      });
 
       res.status(200).json({
         success: true,

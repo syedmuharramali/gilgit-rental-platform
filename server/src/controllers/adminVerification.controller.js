@@ -8,6 +8,10 @@ const asyncHandler = require("../utils/asyncHandler");
 const {
   getPrivateFileView,
 } = require("../services/storage.service");
+
+const {
+  safeCreateNotification,
+} = require("../services/notification.service");
 /*
 |--------------------------------------------------------------------------
 | Get verification requests
@@ -154,6 +158,15 @@ exports.approveVerification = asyncHandler(
 
     await verification.save();
 
+    await safeCreateNotification({
+      user: verification.user,
+      type: "system",
+      title: "Identity Verified",
+      message:
+        "Your identity verification was approved. You can now create and publish property listings.",
+      resourceType: "system",
+    });
+
     res.status(200).json({
       success: true,
       message: "Owner identity verified successfully",
@@ -214,6 +227,16 @@ exports.rejectVerification = asyncHandler(
     verification.reviewedBy = req.user._id;
 
     await verification.save();
+
+    await safeCreateNotification({
+      user: verification.user,
+      type: "system",
+      title: "Identity Verification Update",
+      message: allowResubmission
+        ? "Your identity verification needs changes. Open the verification page to see why and submit again."
+        : "Your identity verification was rejected. Open the verification page for details.",
+      resourceType: "system",
+    });
 
     res.status(200).json({
       success: true,

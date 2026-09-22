@@ -77,6 +77,16 @@ function ApplicationsPage({ owner = false }) {
     try { await fn(payload).unwrap(); toast.success(success) } catch (error) { toast.error(errorMessage(error)) }
   }
 
+  // Accepting is not reversible: it also rejects every other pending application.
+  const acceptWithConfirmation = (item) => {
+    const applicantName = item.applicant?.name || 'this applicant'
+    const confirmed = window.confirm(
+      `Accept ${applicantName} for ${item.property?.title || 'this property'}?\n\nEvery other pending application for this property will be rejected automatically, and this cannot be undone.`,
+    )
+    if (!confirmed) return
+    act(accept, item._id, 'Application accepted')
+  }
+
   const openConversation = async (application) => {
     try {
       const result = await startApplicationConversation(application._id).unwrap()
@@ -208,7 +218,7 @@ function ApplicationsPage({ owner = false }) {
 
                   <div className="flex shrink-0 flex-wrap gap-2 lg:max-w-64 lg:justify-end">
                     <SecondaryButton disabled={conversationState.isLoading} onClick={() => openConversation(item)}><MessageCircle className="h-4 w-4" /> {owner ? 'Message renter' : 'Message owner'}</SecondaryButton>
-                    {owner && item.status === 'pending' && <><PrimaryButton onClick={() => act(accept, item._id, 'Application accepted')}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
+                    {owner && item.status === 'pending' && <><PrimaryButton onClick={() => acceptWithConfirmation(item)}>Accept</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, reason: 'Application was not selected at this time.' }, 'Application rejected')}>Reject</SecondaryButton></>}
                     {owner && item.status === 'accepted' && (!terms || ['proposed', 'change_requested'].includes(terms.status)) && <PrimaryButton onClick={() => openTerms(item, terms)}>{terms ? 'Revise rental terms' : 'Confirm rental terms'}</PrimaryButton>}
                     {!owner && item.status === 'pending' && <SecondaryButton onClick={() => act(withdraw, item._id, 'Application withdrawn')}>Withdraw</SecondaryButton>}
                     {!owner && item.status === 'accepted' && terms?.status === 'proposed' && <><PrimaryButton disabled={acceptTermsState.isLoading} onClick={() => acceptTerms(terms)}>Accept terms</PrimaryButton><SecondaryButton onClick={() => { setChangeTerms(terms); setChangeMessage('') }}>Request changes</SecondaryButton></>}

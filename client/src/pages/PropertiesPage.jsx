@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import PropertyCard from '../components/properties/PropertyCard'
 import PropertyResultsMap from '../components/properties/PropertyResultsMap'
@@ -45,6 +45,7 @@ const quickFilters = [
 function PropertiesPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [searchText, setSearchText] = useState(() => searchParams.get('search') || '')
   const [view, setView] = useState('grid')
   const { data: amenityData } = useGetAmenitiesQuery()
 
@@ -75,8 +76,36 @@ function PropertiesPage() {
     setParam('amenities', nextValues.join(','))
   }
 
-  const clearFilters = () => setSearchParams({})
+  const clearFilters = () => {
+    setSearchText('')
+    setSearchParams({})
+  }
   const toggleBoolean = (key) => setParam(key, searchParams.get(key) === 'true' ? '' : 'true')
+
+  // Keep the box in sync when the URL changes from elsewhere (back button, Clear).
+  const urlSearch = searchParams.get('search') || ''
+  const lastTypedSearch = useRef(urlSearch)
+
+  useEffect(() => {
+    if (urlSearch !== lastTypedSearch.current) {
+      lastTypedSearch.current = urlSearch
+      setSearchText(urlSearch)
+    }
+  }, [urlSearch])
+
+  // Only query the API once typing pauses, instead of on every keystroke.
+  useEffect(() => {
+    if (searchText === urlSearch) return
+
+    const timer = setTimeout(() => {
+      lastTypedSearch.current = searchText
+      setParam('search', searchText)
+    }, 400)
+
+    return () => clearTimeout(timer)
+    // setParam reads the latest searchParams on each render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchText, urlSearch])
 
   return (
     <main className="min-h-screen overflow-hidden bg-[#070b14] text-white">
@@ -115,8 +144,8 @@ function PropertiesPage() {
             <div className="flex items-center gap-3 rounded-[22px] bg-[#0b111f]/88 px-4">
               <Search className="h-5 w-5 shrink-0 text-cyan-300" />
               <input
-                value={searchParams.get('search') || ''}
-                onChange={(event) => setParam('search', event.target.value)}
+                value={searchText}
+                onChange={(event) => setSearchText(event.target.value)}
                 placeholder="Search Jutial, Danyor, apartment, hostel..."
                 className="h-14 min-w-0 flex-1 bg-transparent text-sm font-semibold text-white outline-none placeholder:text-white/28"
               />

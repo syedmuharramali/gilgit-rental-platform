@@ -437,7 +437,7 @@ exports.createApplication =
           path: "property",
 
           select:
-            "title slug monthlyRent propertyType address listingStatus",
+            "title slug monthlyRent propertyType address listingStatus reservationStatus",
         },
 
         {
@@ -497,7 +497,7 @@ exports.getMyApplications =
         })
           .populate(
             "property",
-            "title slug monthlyRent propertyType address listingStatus images"
+            "title slug monthlyRent propertyType address listingStatus reservationStatus"
           )
           .populate(
             "owner",
@@ -566,7 +566,7 @@ exports.getReceivedApplications =
         )
           .populate(
             "property",
-            "title slug monthlyRent propertyType address listingStatus"
+            "title slug monthlyRent propertyType address listingStatus reservationStatus"
           )
           .populate(
             "applicant",

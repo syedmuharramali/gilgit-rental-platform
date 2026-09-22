@@ -469,7 +469,7 @@ exports.getMyConversations =
             path: "property",
 
             select:
-              "title slug propertyType monthlyRent listingStatus address images",
+              "title slug propertyType monthlyRent listingStatus address",
           })
           .populate({
             path: "owner",

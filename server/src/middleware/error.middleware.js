@@ -121,7 +121,13 @@ const errorHandler = (
       err.code ===
       "LIMIT_FILE_SIZE"
     ) {
+      /*
+      | Keep the specific limit message the upload middleware sets
+      | ("Property images must be 1 MB or smaller"), and fall back to a
+      | generic one when there is none.
+      */
       message =
+        err.message ||
         "Uploaded file exceeds the allowed size";
     } else if (
       err.code ===

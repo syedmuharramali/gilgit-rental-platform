@@ -27,7 +27,13 @@ export const applicationsApi = baseApi.injectEndpoints({
     }),
     acceptApplication: builder.mutation({
       query: (id) => ({ url: `/applications/${id}/accept`, method: 'PATCH' }),
-      invalidatesTags: [{ type: 'Application', id: 'RECEIVED' }, { type: 'Application', id: 'MINE' }],
+      // Accepting reserves the property, so listing views need refreshing too.
+      invalidatesTags: [
+        { type: 'Application', id: 'RECEIVED' },
+        { type: 'Application', id: 'MINE' },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
     }),
     rejectApplication: builder.mutation({
       query: ({ id, reason }) => ({ url: `/applications/${id}/reject`, method: 'PATCH', body: { reason } }),
