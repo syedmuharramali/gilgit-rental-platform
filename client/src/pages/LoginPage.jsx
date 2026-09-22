@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail } from 'lucide-react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
@@ -41,6 +42,7 @@ function FieldShell({ error, icon: Icon, children }) {
 }
 
 function LoginPage() {
+  const { t } = useTranslation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
@@ -101,44 +103,44 @@ function LoginPage() {
   }, [dispatch])
 
   return (
-    <AuthLayout eyebrow="Welcome back" title="Continue your rental journey." subtitle="Return to saved homes, viewings, applications and everything connected to your stay.">
+    <AuthLayout eyebrow={t('auth.signInEyebrow')} title={t('auth.signInTitle')} subtitle={t('auth.signInSubtitle')}>
       {pendingVerificationEmail && (
         <div className="mb-5">
           <VerificationNotice
             email={pendingVerificationEmail}
             tone="warning"
-            title="Confirm your email to sign in"
-            text="We sent a confirmation link to this address. Open it once and you can sign in straight away."
+            title={t('auth.verify.loginNoticeTitle')}
+            text={t('auth.verify.loginNoticeText')}
           />
         </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
         <label className="block">
-          <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Email address</span>
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{t('auth.email')}</span>
           <FieldShell error={errors.email} icon={Mail}>
-            <input type="email" {...register('email')} autoComplete="email" placeholder="you@example.com" className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
+            <input type="email" {...register('email')} autoComplete="email" placeholder={t('auth.emailPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
           </FieldShell>
           {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.email.message}</p>}
         </label>
 
         <label className="block">
-          <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Password</span>
+          <span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{t('auth.password')}</span>
           <FieldShell error={errors.password} icon={LockKeyhole}>
-            <input type={showPassword ? 'text' : 'password'} {...register('password')} autoComplete="current-password" placeholder="Enter your password" className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
-            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-white/28 transition hover:bg-white/8 hover:text-white" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+            <input type={showPassword ? 'text' : 'password'} {...register('password')} autoComplete="current-password" placeholder={t('auth.passwordPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
+            <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-white/28 transition hover:bg-white/8 hover:text-white" aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
           </FieldShell>
           {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.password.message}</p>}
         </label>
 
-        <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs text-white/35"><span>Your session stays signed in on this device.</span><span className="shrink-0 font-black text-cyan-200">Protected</span></div>
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs text-white/35"><span>{t('auth.sessionNote')}</span><span className="shrink-0 font-black text-cyan-200">{t('auth.protected')}</span></div>
 
-        <button type="submit" disabled={isLoading} className="flex h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 text-sm font-black text-[#07101e] shadow-[0_18px_38px_rgba(56,189,248,.18)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">{isLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <>Sign in <ArrowRight className="h-4 w-4" /></>}</button>
+        <button type="submit" disabled={isLoading} className="flex h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 text-sm font-black text-[#07101e] shadow-[0_18px_38px_rgba(56,189,248,.18)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">{isLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <>{t('common.signIn')} <ArrowRight className="h-4 w-4" /></>}</button>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/24 before:h-px before:flex-1 before:bg-white/8 after:h-px after:flex-1 after:bg-white/8"><span>or continue with</span></div>
+      <div className="my-5 flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/24 before:h-px before:flex-1 before:bg-white/8 after:h-px after:flex-1 after:bg-white/8"><span>{t('auth.orContinue')}</span></div>
       <GoogleSignInButton onCredential={onGoogleCredential} disabled={isLoading} />
-      <p className="mt-6 text-center text-sm text-white/38">New here? <Link className="font-black text-cyan-200 hover:text-white" to="/register">Create an account</Link></p>
+      <p className="mt-6 text-center text-sm text-white/38">{t('auth.noAccount')} <Link className="font-black text-cyan-200 hover:text-white" to="/register">{t('common.createAccount')}</Link></p>
     </AuthLayout>
   )
 }

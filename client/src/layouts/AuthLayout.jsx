@@ -1,15 +1,19 @@
 import { ArrowLeft, BadgeCheck, Home, MapPin, ShieldCheck, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import SplineHero from '../components/three-d/SplineHero'
 
-const trust = [
-  { icon: ShieldCheck, label: 'Verified owners' },
-  { icon: MapPin, label: 'Gilgit focused' },
-  { icon: Sparkles, label: 'Living Score' },
-]
-
 function AuthLayout({ children, eyebrow, title, subtitle }) {
+  const { t } = useTranslation()
+
+  const trust = [
+    { icon: ShieldCheck, label: t('footer.verifiedOwners') },
+    { icon: MapPin, label: t('footer.location') },
+    { icon: Sparkles, label: t('nav.livingScore') },
+  ]
+
   return (
     <main className="min-h-screen bg-[#060914] text-white">
       <div className="grid min-h-screen lg:grid-cols-[1.05fr_.95fr]">
@@ -20,9 +24,9 @@ function AuthLayout({ children, eyebrow, title, subtitle }) {
             <div className="relative z-20 flex items-center justify-between">
               <Link to="/" className="flex items-center gap-3">
                 <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 via-blue-400 to-violet-500 text-[#07101e] shadow-xl"><Home className="h-5 w-5" /></div>
-                <div><p className="text-sm font-black tracking-[-0.02em]">Gilgit Rental</p><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">Stay smarter</p></div>
+                <div><p className="text-sm font-black tracking-[-0.02em]">{t('common.brand')}</p><p className="text-[10px] font-bold uppercase tracking-[0.18em] text-white/30">{t('common.brandTagline')}</p></div>
               </Link>
-              <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/60 backdrop-blur-xl transition hover:bg-white/10 hover:text-white"><ArrowLeft className="h-3.5 w-3.5" /> Back home</Link>
+              <Link to="/" className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.05] px-4 py-2 text-xs font-bold text-white/60 backdrop-blur-xl transition hover:bg-white/10 hover:text-white"><ArrowLeft className="h-3.5 w-3.5" /> {t('common.brand')}</Link>
             </div>
 
             <div className="relative z-10 mx-auto mt-7 h-[50vh] min-h-[390px] max-w-[760px] xl:h-[55vh]">
@@ -47,8 +51,10 @@ function AuthLayout({ children, eyebrow, title, subtitle }) {
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_80%_10%,rgba(59,130,246,.12),transparent_26%),radial-gradient(circle_at_20%_80%,rgba(139,92,246,.1),transparent_30%)]" />
           <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.55 }} className="relative z-10 w-full max-w-[500px]">
             <div className="mb-8 flex items-center justify-between lg:hidden">
-              <Link to="/" className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-500 text-[#07101e]"><Home className="h-4 w-4" /></div><div><p className="text-sm font-black">Gilgit Rental</p><p className="text-[10px] uppercase tracking-[.14em] text-white/30">Stay smarter</p></div></Link><Link to="/" className="text-xs font-bold text-white/45">Home</Link>
+              <Link to="/" className="flex items-center gap-3"><div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-500 text-[#07101e]"><Home className="h-4 w-4" /></div><div><p className="text-sm font-black">{t('common.brand')}</p><p className="text-[10px] uppercase tracking-[.14em] text-white/30">{t('common.brandTagline')}</p></div></Link><LanguageSwitcher compact />
             </div>
+
+            <div className="mb-6 hidden justify-end lg:flex"><LanguageSwitcher compact /></div>
 
             <p className="text-xs font-black uppercase tracking-[0.18em] text-cyan-300">{eyebrow}</p>
             <h1 className="mt-3 text-4xl font-black leading-[.98] tracking-[-0.055em] text-white sm:text-5xl">{title}</h1>

@@ -8,6 +8,7 @@ import { Toaster } from 'sonner'
 import App from './App.jsx'
 import { store } from './app/store'
 import AppErrorFallback from './components/AppErrorFallback.jsx'
+import './i18n/config'
 import './index.css'
 import './pages/properties.css'
 

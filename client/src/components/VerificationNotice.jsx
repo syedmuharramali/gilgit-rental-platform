@@ -1,5 +1,6 @@
 import { LoaderCircle, MailCheck } from 'lucide-react'
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDispatch } from 'react-redux'
 import { toast } from 'sonner'
 import { resendVerificationEmail } from '../features/auth/authSlice'
@@ -9,6 +10,7 @@ import { resendVerificationEmail } from '../features/auth/authSlice'
  * account tries to log in. Lets the person send themselves a fresh link.
  */
 export default function VerificationNotice({ email, title, text, tone = 'info' }) {
+  const { t } = useTranslation()
   const dispatch = useDispatch()
   const [sending, setSending] = useState(false)
   const [sentAt, setSentAt] = useState(null)
@@ -21,7 +23,7 @@ export default function VerificationNotice({ email, title, text, tone = 'info' }
 
     if (resendVerificationEmail.fulfilled.match(result)) {
       setSentAt(Date.now())
-      toast.success('If that address still needs confirming, a new link is on its way.')
+      toast.success(t('auth.verify.resent'))
       return
     }
 
@@ -49,9 +51,9 @@ export default function VerificationNotice({ email, title, text, tone = 'info' }
               className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/15 bg-white/[0.06] px-4 text-xs font-black text-white transition hover:bg-white/[0.12] disabled:opacity-50"
             >
               {sending ? <LoaderCircle className="h-3.5 w-3.5 animate-spin" /> : null}
-              Send the link again
+              {t('auth.verify.resend')}
             </button>
-            {sentAt && <span className="text-[11px] font-bold text-white/45">Sent. Check spam too.</span>}
+            {sentAt && <span className="text-[11px] font-bold text-white/45">{t('auth.verify.resent')}</span>}
           </div>
         </div>
       </div>

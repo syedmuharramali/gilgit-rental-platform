@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ArrowRight, CheckCircle2, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, UserRound } from 'lucide-react'
 import { useForm } from 'react-hook-form'
+import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import { toast } from 'sonner'
@@ -22,6 +23,7 @@ function FieldShell({ error, icon: Icon, children }) {
 }
 
 function RegisterPage() {
+  const { t } = useTranslation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const { status, error, token } = useSelector((state) => state.auth)
@@ -34,7 +36,7 @@ function RegisterPage() {
   useEffect(() => { if (token) navigate('/dashboard', { replace: true }) }, [token, navigate])
   useEffect(() => { if (error) toast.error(error); return () => dispatch(clearAuthError()) }, [error, dispatch])
 
-  const rules = useMemo(() => [['8+ characters', password.length >= 8], ['Uppercase', /[A-Z]/.test(password)], ['Lowercase', /[a-z]/.test(password)], ['Number', /[0-9]/.test(password)]], [password])
+  const rules = useMemo(() => [[t('auth.rule.length'), password.length >= 8], [t('auth.rule.uppercase'), /[A-Z]/.test(password)], [t('auth.rule.lowercase'), /[a-z]/.test(password)], [t('auth.rule.number'), /[0-9]/.test(password)]], [password, t])
 
   const onSubmit = async (form) => {
     const result = await dispatch(registerUser(form))
@@ -53,32 +55,32 @@ function RegisterPage() {
 
   if (createdEmail) {
     return (
-      <AuthLayout eyebrow="One last step" title="Confirm your email." subtitle="Your account exists, but it stays locked until you open the link we just sent.">
+      <AuthLayout eyebrow={t('auth.verify.inboxEyebrow')} title={t('auth.verify.inboxTitle')} subtitle={t('auth.verify.inboxSubtitle')}>
         <VerificationNotice
           email={createdEmail}
-          title="Check your inbox"
-          text="Open the confirmation link to activate your account and sign in. The link works for 24 hours."
+          title={t('auth.verify.inboxNoticeTitle')}
+          text={t('auth.verify.inboxNoticeText')}
         />
-        <p className="mt-6 text-center text-sm text-white/38">Already confirmed? <Link className="font-black text-cyan-200 hover:text-white" to="/login">Sign in</Link></p>
+        <p className="mt-6 text-center text-sm text-white/38">{t('auth.verify.alreadyConfirmed')} <Link className="font-black text-cyan-200 hover:text-white" to="/login">{t('common.signIn')}</Link></p>
       </AuthLayout>
     )
   }
 
   return (
-    <AuthLayout eyebrow="Create your account" title="Start with one great place." subtitle="Build your preferences, save homes and unlock the full rental journey from one account.">
+    <AuthLayout eyebrow={t('auth.registerEyebrow')} title={t('auth.registerTitle')} subtitle={t('auth.registerSubtitle')}>
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Full name</span><FieldShell error={errors.name} icon={UserRound}><input type="text" {...register('name')} autoComplete="name" placeholder="Your full name" className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /></FieldShell>{errors.name && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.name.message}</p>}</label>
-        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Email address</span><FieldShell error={errors.email} icon={Mail}><input type="email" {...register('email')} autoComplete="email" placeholder="you@example.com" className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /></FieldShell>{errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.email.message}</p>}</label>
-        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">Password</span><FieldShell error={errors.password} icon={LockKeyhole}><input type={showPassword ? 'text' : 'password'} {...register('password')} autoComplete="new-password" placeholder="Create a strong password" className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-white/28 transition hover:bg-white/8 hover:text-white" aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></FieldShell>{errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.password.message}</p>}</label>
+        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{t('auth.fullName')}</span><FieldShell error={errors.name} icon={UserRound}><input type="text" {...register('name')} autoComplete="name" placeholder={t('auth.fullNamePlaceholder')} className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /></FieldShell>{errors.name && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.name.message}</p>}</label>
+        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{t('auth.email')}</span><FieldShell error={errors.email} icon={Mail}><input type="email" {...register('email')} autoComplete="email" placeholder={t('auth.emailPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /></FieldShell>{errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.email.message}</p>}</label>
+        <label className="block"><span className="mb-2 block text-[10px] font-black uppercase tracking-[0.16em] text-white/36">{t('auth.password')}</span><FieldShell error={errors.password} icon={LockKeyhole}><input type={showPassword ? 'text' : 'password'} {...register('password')} autoComplete="new-password" placeholder={t('auth.newPasswordPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" /><button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-white/28 transition hover:bg-white/8 hover:text-white" aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></FieldShell>{errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.password.message}</p>}</label>
 
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">{rules.map(([label, passed]) => <div key={label} className={`flex min-h-9 items-center justify-center gap-1.5 rounded-full border px-2 text-[9px] font-black uppercase tracking-[.07em] ${passed ? 'border-cyan-300/25 bg-cyan-300/10 text-cyan-200' : 'border-white/8 bg-white/[0.025] text-white/25'}`}><CheckCircle2 className="h-3.5 w-3.5" /> {label}</div>)}</div>
 
-        <button type="submit" disabled={isLoading} className="flex h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 text-sm font-black text-[#07101e] shadow-[0_18px_38px_rgba(56,189,248,.18)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">{isLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <>Create account <ArrowRight className="h-4 w-4" /></>}</button>
+        <button type="submit" disabled={isLoading} className="flex h-14 w-full items-center justify-center gap-2 rounded-[18px] bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 text-sm font-black text-[#07101e] shadow-[0_18px_38px_rgba(56,189,248,.18)] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-60">{isLoading ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <>{t('common.createAccount')} <ArrowRight className="h-4 w-4" /></>}</button>
       </form>
 
-      <div className="my-5 flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/24 before:h-px before:flex-1 before:bg-white/8 after:h-px after:flex-1 after:bg-white/8"><span>or continue with</span></div>
+      <div className="my-5 flex items-center gap-3 text-[9px] font-black uppercase tracking-[0.16em] text-white/24 before:h-px before:flex-1 before:bg-white/8 after:h-px after:flex-1 after:bg-white/8"><span>{t('auth.orContinue')}</span></div>
       <GoogleSignInButton onCredential={onGoogleCredential} disabled={isLoading} />
-      <p className="mt-6 text-center text-sm text-white/38">Already have an account? <Link className="font-black text-cyan-200 hover:text-white" to="/login">Sign in</Link></p>
+      <p className="mt-6 text-center text-sm text-white/38">{t('auth.haveAccount')} <Link className="font-black text-cyan-200 hover:text-white" to="/login">{t('common.signIn')}</Link></p>
     </AuthLayout>
   )
 }
