@@ -21,6 +21,12 @@ const {
   "./services/tenancyActivation.service"
 );
 
+const {
+  ensureDefaultAmenities,
+} = require(
+  "./services/amenitySeed.service"
+);
+
 const PORT =
   Number(
     process.env.PORT
@@ -109,6 +115,26 @@ const startServer =
   async () => {
     try {
       await connectDB();
+
+      /*
+      | Owners cannot create a listing without amenities, so make sure
+      | the default catalogue exists. Never blocks startup.
+      */
+      try {
+        const { inserted } =
+          await ensureDefaultAmenities();
+
+        if (inserted > 0) {
+          console.log(
+            `Seeded ${inserted} missing default amenities`
+          );
+        }
+      } catch (error) {
+        console.error(
+          "Default amenity check failed:",
+          error.message
+        );
+      }
 
       startTenancyActivationSchedule();
 

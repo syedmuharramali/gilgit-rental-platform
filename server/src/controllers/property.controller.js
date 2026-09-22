@@ -151,7 +151,7 @@ const validateAmenities = async (amenityIds) => {
   const uniqueIds = [
     ...new Set(
       amenityIds.map((id) =>
-        id.toString()
+        String(id ?? "")
       )
     ),
   ];

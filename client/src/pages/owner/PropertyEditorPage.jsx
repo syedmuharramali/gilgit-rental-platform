@@ -3,12 +3,12 @@ import {
   CheckCircle2,
   ImagePlus,
   Info,
-  MapPin,
+  RefreshCw,
   ShieldCheck,
   UploadCloud,
 } from 'lucide-react'
 import { motion } from 'motion/react'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -32,6 +32,8 @@ import {
   useUpdatePropertyMutation,
   useUploadPropertyImagesMutation,
 } from '../../features/properties/propertiesApi'
+
+const LocationPicker = lazy(() => import('../../components/properties/LocationPicker'))
 
 const ONE_MB = 1024 * 1024
 
@@ -70,7 +72,7 @@ const steps = [
   { title: 'Basics', text: 'Give renters a clear first impression of the property.' },
   { title: 'Pricing', text: 'Explain the monthly cost, deposit and move-in timing.' },
   { title: 'Details', text: 'Describe the physical setup and who the home suits.' },
-  { title: 'Location', text: 'Tell renters exactly where the property is in Gilgit.' },
+  { title: 'Location', text: 'Describe the area, then pin the exact spot on the map.' },
   { title: 'Amenities', text: 'Select only the facilities that are genuinely available.' },
   { title: 'Living score', text: 'Capture the Gilgit-specific conditions that affect everyday living.' },
   { title: 'Images', text: 'Add at least three clear photos and choose one cover image.' },
@@ -136,7 +138,14 @@ export default function PropertyEditorPage() {
   const [newFiles, setNewFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({ percent: 0, loaded: 0, total: 0, saving: false })
   const { data: property, isLoading } = useGetPropertyQuery(id, { skip: !editing })
-  const { data: amenityData } = useGetAmenitiesQuery()
+  const {
+    data: amenityData,
+    isLoading: amenitiesLoading,
+    isFetching: amenitiesFetching,
+    isError: amenitiesError,
+    refetch: refetchAmenities,
+  } = useGetAmenitiesQuery()
+  const stepStripRef = useRef(null)
   const [createProperty, createState] = useCreatePropertyMutation()
   const [updateProperty, updateState] = useUpdatePropertyMutation()
   const [uploadImages, uploadState] = useUploadPropertyImagesMutation()
@@ -231,6 +240,29 @@ export default function PropertyEditorPage() {
   }), [form])
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+
+  const setPin = useCallback(({ latitude, longitude }) => {
+    setForm((current) => ({
+      ...current,
+      latitude: latitude === '' ? '' : String(latitude),
+      longitude: longitude === '' ? '' : String(longitude),
+    }))
+  }, [])
+
+  // Fill empty address fields from the pinned map location; never overwrite what the owner typed.
+  const applyAddressSuggestion = useCallback(({ area, street }) => {
+    setForm((current) => ({
+      ...current,
+      area: current.area.trim() ? current.area : area || current.area,
+      street: current.street.trim() ? current.street : street || current.street,
+    }))
+  }, [])
+
+  // Keep the active step pill visible in the horizontal step strip.
+  useEffect(() => {
+    const active = stepStripRef.current?.querySelector('[aria-current="step"]')
+    active?.scrollIntoView?.({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+  }, [step])
   const toggleAmenity = (amenityId) => set(
     'amenities',
     form.amenities.includes(amenityId)
@@ -262,8 +294,8 @@ export default function PropertyEditorPage() {
     if (index === 3) {
       if (!form.area.trim()) return 'Enter the area or neighbourhood.'
       if (!form.city.trim()) return 'Enter the city.'
-      if (form.latitude !== '' && (Number(form.latitude) < -90 || Number(form.latitude) > 90)) return 'Latitude must be between -90 and 90.'
-      if (form.longitude !== '' && (Number(form.longitude) < -180 || Number(form.longitude) > 180)) return 'Longitude must be between -180 and 180.'
+      if (form.latitude === '' || form.longitude === '') return 'Pin the property location on the map.'
+      if (Number(form.latitude) < -90 || Number(form.latitude) > 90 || Number(form.longitude) < -180 || Number(form.longitude) > 180) return 'The map pin is not a valid location. Place it again.'
     }
 
     if (index === 4 && form.amenities.length === 0) {
@@ -410,7 +442,7 @@ export default function PropertyEditorPage() {
         text="Complete one clear section at a time. Required fields are labelled, optional details can be skipped, and your listing stays a draft until you submit it for admin review."
       />
 
-      <div className="mb-6 overflow-x-auto pb-2">
+      <div ref={stepStripRef} className="mb-6 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex min-w-max gap-2">
           {steps.map((item, index) => {
             const completed = Boolean(completion[index]) && index !== step
@@ -503,15 +535,20 @@ export default function PropertyEditorPage() {
 
           {step === 3 && (
             <div>
-              <StepNotice>Area and city are required. Street, landmark and map coordinates are optional, but they make the listing easier to understand.</StepNotice>
+              <StepNotice>Type the area and city, then drop a pin on the map exactly where the property is. The map opens on your current location — search a place or tap anywhere to move the pin.</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
                 <Field label="Area / neighbourhood" required hint="Example: Jutial, Danyore, Konodas or another local area."><TextInput value={form.area} onChange={(event) => set('area', event.target.value)} placeholder="Jutial" /></Field>
                 <Field label="Street / road" optional hint="Street, road or block information if available."><TextInput value={form.street} onChange={(event) => set('street', event.target.value)} placeholder="Main Jutial Road" /></Field>
                 <Field label="City" required hint="Defaults to Gilgit but can be changed if the property is elsewhere in the supported area."><TextInput value={form.city} onChange={(event) => set('city', event.target.value)} placeholder="Gilgit" /></Field>
                 <Field label="Nearby landmark" optional hint="A well-known nearby place that helps renters recognize the location."><TextInput value={form.landmark} onChange={(event) => set('landmark', event.target.value)} placeholder="Near Jutial Bus Stand" /></Field>
-                <Field label="Latitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty."><TextInput type="number" step="any" min="-90" max="90" value={form.latitude} onChange={(event) => set('latitude', event.target.value)} placeholder="35.9208" /></Field>
-                <Field label="Longitude" optional hint="Only enter this if you know the exact coordinate. Otherwise leave it empty."><TextInput type="number" step="any" min="-180" max="180" value={form.longitude} onChange={(event) => set('longitude', event.target.value)} placeholder="74.3089" /></Field>
-                <div className="sm:col-span-2 flex gap-3 rounded-[22px] border border-cyan-300/15 bg-cyan-300/[0.055] p-4 text-sm leading-6 text-cyan-100/75"><MapPin className="mt-1 h-4 w-4 shrink-0 text-cyan-300" /><p>Coordinates power the map pin. Leave them empty rather than guessing—the written area and city are enough to save the draft.</p></div>
+                <div className="sm:col-span-2">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <span className="text-xs font-black text-slate-200">Property location on map<span className="ml-1 text-cyan-300">*</span></span>
+                  </div>
+                  <Suspense fallback={<div className="grid h-[340px] place-items-center rounded-[24px] border border-white/10 bg-white/[0.02] sm:h-[420px]"><LoadingState /></div>}>
+                    <LocationPicker latitude={form.latitude} longitude={form.longitude} onChange={setPin} onAddressSuggestion={applyAddressSuggestion} />
+                  </Suspense>
+                </div>
               </div>
             </div>
           )}
@@ -520,12 +557,24 @@ export default function PropertyEditorPage() {
             <div>
               <StepNotice>Click a card to select or remove an amenity. At least one amenity is required before the listing can be submitted for review.</StepNotice>
               <div className="mb-4 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">Available amenities</p><span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-1.5 text-xs font-black text-cyan-200">{form.amenities.length} selected</span></div>
+              {amenitiesLoading ? (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading amenities">
+                  {Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[74px] animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />)}
+                </div>
+              ) : amenitiesError || !(amenityData?.amenities || []).length ? (
+                <div className="rounded-[24px] border border-dashed border-amber-300/20 bg-amber-300/[0.04] p-8 text-center">
+                  <p className="font-black text-amber-100">{amenitiesError ? 'Amenities could not be loaded' : 'No amenities are available yet'}</p>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">{amenitiesError ? 'Check that the server is running and your connection is working, then try again.' : 'The amenity list is empty on the server. Try again in a moment, or ask the admin to add amenities.'}</p>
+                  <SecondaryButton className="mt-4" disabled={amenitiesFetching} onClick={() => refetchAmenities()}><RefreshCw className={`h-4 w-4 ${amenitiesFetching ? 'animate-spin' : ''}`} />Try again</SecondaryButton>
+                </div>
+              ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {(amenityData?.amenities || []).map((amenity) => {
                   const selected = form.amenities.includes(amenity._id)
                   return <button type="button" aria-pressed={selected} key={amenity._id} onClick={() => toggleAmenity(amenity._id)} className={`${choiceClass(selected)} flex items-start justify-between gap-3`}><span><span className="block text-sm font-black">{amenity.name}</span><span className="mt-1 block text-[10px] font-semibold opacity-55">{pretty(amenity.category)}</span></span><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? 'border-cyan-300 bg-cyan-300 text-[#07101e]' : 'border-white/10 bg-white/[0.03] text-transparent'}`}><Check className="h-3.5 w-3.5" /></span></button>
                 })}
               </div>
+              )}
             </div>
           )}
 
