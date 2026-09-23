@@ -21,6 +21,8 @@ function GlassBadge({ className = '', children, delay = 0 }) {
 }
 
 function FallbackScene() {
+  const { t } = useTranslation()
+
   return (
     <div className="relative h-full w-full overflow-hidden rounded-[34px] bg-[#090d18] [perspective:1400px]">
       <motion.div
@@ -85,7 +87,7 @@ function SplineHero() {
       </Suspense>
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070b16]/70 via-transparent to-transparent" />
       <div className="pointer-events-none absolute bottom-5 left-5 flex items-center gap-2 rounded-full border border-white/15 bg-[#070b16]/70 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur-2xl">
-        <Sparkles className="h-3.5 w-3.5 text-cyan-300" /> Interactive 3D rental experience
+        <Sparkles className="h-3.5 w-3.5 text-cyan-300" /> {t('hero.interactive')}
       </div>
     </div>
   )
