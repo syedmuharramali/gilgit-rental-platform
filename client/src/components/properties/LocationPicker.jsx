@@ -1,6 +1,7 @@
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
 import { Crosshair, Loader2, LocateFixed, MapPin, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
@@ -23,6 +24,7 @@ const pickCity = (address = {}) => address.city || address.town || address.count
  * - Search a place name, or pin the device's current position.
  */
 export default function LocationPicker({ latitude, longitude, onChange, onAddressSuggestion }) {
+  const { t } = useTranslation()
   const mapRef = useRef(null)
   const searchAbort = useRef(null)
   const reverseAbort = useRef(null)
@@ -81,7 +83,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
 
   const locate = useCallback(({ pin = false } = {}) => {
     if (!('geolocation' in navigator)) {
-      setGeoMessage('Your browser does not support location access. Search or tap the map instead.')
+      setGeoMessage(t('map.noGeolocation'))
       return
     }
     setLocating(true)
@@ -98,13 +100,13 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
         setLocating(false)
         setGeoMessage(
           error.code === error.PERMISSION_DENIED
-            ? 'Location permission was blocked. Search for the area or tap the map to place the pin.'
-            : 'Could not detect your location. Search for the area or tap the map to place the pin.',
+            ? t('map.permissionDenied')
+            : t('map.locationFailed'),
         )
       },
       { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
     )
-  }, [flyTo, placePin])
+  }, [flyTo, placePin, t])
 
   // Open on the owner's current location when no pin exists yet.
   useEffect(() => {
@@ -132,9 +134,9 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
       if (!response.ok) throw new Error('search failed')
       const data = await response.json()
       setResults(data)
-      if (!data.length) setSearchMessage('No places found. Try a nearby landmark or tap the map directly.')
+      if (!data.length) setSearchMessage(t('map.noPlaces'))
     } catch (error) {
-      if (error.name !== 'AbortError') setSearchMessage('Search is unavailable right now. Tap the map to place the pin.')
+      if (error.name !== 'AbortError') setSearchMessage(t('map.searchUnavailable'))
     } finally {
       setSearching(false)
     }
@@ -158,13 +160,13 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search a place, e.g. Jutial, Konodas, Zulfiqarabad"
-              aria-label="Search a place on the map"
+              placeholder={t('map.searchPlaceholder')}
+              aria-label={t('map.searchAria')}
               className="h-full w-full bg-transparent text-sm text-slate-100 outline-none placeholder:text-slate-600"
             />
-            {query && <button type="button" aria-label="Clear search" onClick={() => { setQuery(''); setResults([]); setSearchMessage('') }} className="text-slate-500 hover:text-slate-300"><X className="h-4 w-4" /></button>}
+            {query && <button type="button" aria-label={t('map.clearSearch')} onClick={() => { setQuery(''); setResults([]); setSearchMessage('') }} className="text-slate-500 hover:text-slate-300"><X className="h-4 w-4" /></button>}
             <button type="button" onClick={search} disabled={searching} className="rounded-xl bg-cyan-300/10 px-3 py-1.5 text-xs font-black text-cyan-200 hover:bg-cyan-300/20 disabled:opacity-50">
-              {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : 'Search'}
+              {searching ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t('map.search')}
             </button>
           </form>
 
@@ -184,7 +186,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
 
         <button type="button" onClick={() => locate({ pin: true })} disabled={locating} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl border border-cyan-300/20 bg-cyan-300/[0.07] px-4 text-xs font-black text-cyan-100 transition hover:bg-cyan-300/[0.12] disabled:opacity-60">
           {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <LocateFixed className="h-4 w-4" />}
-          I'm at the property
+          {t('map.imAtProperty')}
         </button>
       </div>
 
@@ -193,7 +195,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
       <div className="relative h-[340px] overflow-hidden rounded-[24px] border border-white/10 bg-[#0b1322] sm:h-[420px]">
         {mapError ? (
           <div className="grid h-full place-items-center p-6 text-center">
-            <div><MapPin className="mx-auto h-6 w-6 text-slate-500" /><p className="mt-3 text-sm font-black text-white">The map could not load</p><p className="mt-1 text-xs text-slate-500">Check your internet connection and reload the page. The area and city fields are still enough to save a draft.</p></div>
+            <div><MapPin className="mx-auto h-6 w-6 text-slate-500" /><p className="mt-3 text-sm font-black text-white">{t('map.loadFailed')}</p><p className="mt-1 text-xs text-slate-500">{t('map.loadFailedText')}</p></div>
           </div>
         ) : (
           <Map
@@ -213,7 +215,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
 
             {userPosition && (
               <Marker latitude={userPosition.latitude} longitude={userPosition.longitude} anchor="center">
-                <span className="relative block h-4 w-4" title="Your current location">
+                <span className="relative block h-4 w-4" title={t('map.yourLocation')}>
                   <span className="absolute inset-0 animate-ping rounded-full bg-blue-400/60" />
                   <span className="absolute inset-0 rounded-full border-2 border-white bg-blue-500 shadow" />
                 </span>
@@ -228,7 +230,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
                 draggable
                 onDragEnd={(event) => placePin(event.lngLat.lat, event.lngLat.lng)}
               >
-                <div className="flex cursor-grab flex-col items-center active:cursor-grabbing" title="Drag to adjust">
+                <div className="flex cursor-grab flex-col items-center active:cursor-grabbing" title={t('map.dragToAdjust')}>
                   <div className="grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-cyan-400 to-violet-500 text-white shadow-xl">
                     <MapPin className="h-5 w-5" />
                   </div>
@@ -242,7 +244,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
         {!mapError && !hasPin && (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-2xl bg-[#07101e]/85 px-4 py-3 text-xs font-bold text-slate-200 backdrop-blur">
             <Crosshair className="h-4 w-4 shrink-0 text-cyan-300" />
-            Tap or click on the map exactly where the property is to drop the pin.
+            {t('map.tapToPin')}
           </div>
         )}
       </div>
@@ -254,13 +256,13 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
           <div className="flex gap-3">
             <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
             <div>
-              <p className="text-sm font-black text-cyan-100">Pin placed</p>
-              <p className="mt-0.5 text-xs leading-5 text-slate-400">{addressLabel || 'Drag the pin or tap elsewhere on the map to adjust it.'}</p>
+              <p className="text-sm font-black text-cyan-100">{t('map.pinPlaced')}</p>
+              <p className="mt-0.5 text-xs leading-5 text-slate-400">{addressLabel || t('map.pinHint')}</p>
               <p className="mt-1 font-mono text-[10px] text-slate-600">{Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}</p>
             </div>
           </div>
           <button type="button" onClick={() => { onChange({ latitude: '', longitude: '' }); setAddressLabel('') }} className="self-start rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-slate-300 hover:border-rose-300/30 hover:text-rose-200 sm:self-center">
-            Remove pin
+            {t('map.removePin')}
           </button>
         </div>
       ) : null}

@@ -1,6 +1,7 @@
 import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre'
 import { MapPin } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { money } from '../workspace/WorkspaceUI'
@@ -9,6 +10,7 @@ const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
 const DEFAULT_GILGIT = { latitude: 35.9208, longitude: 74.3144, zoom: 11 }
 
 export default function PropertyResultsMap({ properties = [] }) {
+  const { t } = useTranslation()
   const [selected, setSelected] = useState(null)
   const mapped = useMemo(() => properties.filter((property) => Number.isFinite(Number(property.address?.latitude)) && Number.isFinite(Number(property.address?.longitude))), [properties])
   const first = mapped[0]
@@ -30,13 +32,13 @@ export default function PropertyResultsMap({ properties = [] }) {
             <div className="min-w-52 p-1 text-slate-900">
               <p className="text-sm font-black">{selected.title}</p>
               <p className="mt-1 text-xs text-slate-500">{selected.address?.area}</p>
-              <p className="mt-2 text-sm font-black text-emerald-800">{money(selected.monthlyRent)} / month</p>
-              <Link to={`/properties/${selected._id}`} className="mt-3 inline-flex rounded-full bg-[#102f26] px-3 py-2 text-xs font-black text-white">View property</Link>
+              <p className="mt-2 text-sm font-black text-emerald-800">{money(selected.monthlyRent)} {t('card.perMonth')}</p>
+              <Link to={`/properties/${selected._id}`} className="mt-3 inline-flex rounded-full bg-[#102f26] px-3 py-2 text-xs font-black text-white">{t('resultsMap.viewProperty')}</Link>
             </div>
           </Popup>
         )}
       </Map>
-      {mapped.length === 0 && <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-2xl bg-white/90 p-4 text-center text-xs font-bold text-slate-500 shadow-lg backdrop-blur">These results do not include coordinates yet. Use grid view for complete listing details.</div>}
+      {mapped.length === 0 && <div className="pointer-events-none absolute inset-x-4 bottom-4 rounded-2xl bg-white/90 p-4 text-center text-xs font-bold text-slate-500 shadow-lg backdrop-blur">{t('resultsMap.noCoordinates')}</div>}
     </div>
   )
 }

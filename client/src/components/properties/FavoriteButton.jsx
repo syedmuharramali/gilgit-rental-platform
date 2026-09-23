@@ -1,5 +1,6 @@
 import { Heart, LoaderCircle } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -11,6 +12,7 @@ import {
 } from '../../features/favorites/favoritesApi'
 
 function FavoriteButton({ propertyId, className = '', showLabel = false }) {
+  const { t } = useTranslation()
   const token = useSelector((state) => state.auth.token)
   const navigate = useNavigate()
   const location = useLocation()
@@ -36,13 +38,13 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
     try {
       if (isSaved) {
         await removeFavorite(propertyId).unwrap()
-        toast.success('Removed from saved homes')
+        toast.success(t('favorite.removed'))
       } else {
         await addFavorite(propertyId).unwrap()
-        toast.success('Saved to your favorites')
+        toast.success(t('favorite.saved'))
       }
     } catch (error) {
-      toast.error(error?.data?.message || 'Unable to update favorites')
+      toast.error(error?.data?.message || t('favorite.error'))
     }
   }
 
@@ -52,11 +54,11 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
       onClick={handleClick}
       whileTap={{ scale: 0.92 }}
       disabled={isLoading}
-      aria-label={isSaved ? 'Remove from favorites' : 'Save to favorites'}
+      aria-label={isSaved ? t('favorite.removeAria') : t('favorite.saveAria')}
       className={`inline-flex items-center justify-center gap-2 rounded-full transition ${className}`}
     >
       {isLoading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Heart className={`h-4 w-4 ${isSaved ? 'fill-current' : ''}`} />}
-      {showLabel && <span>{isSaved ? 'Saved' : 'Save home'}</span>}
+      {showLabel && <span>{isSaved ? t('favorite.savedLabel') : t('favorite.saveLabel')}</span>}
     </motion.button>
   )
 }

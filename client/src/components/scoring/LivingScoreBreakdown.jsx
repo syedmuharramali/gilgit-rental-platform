@@ -1,19 +1,22 @@
 import { Droplets, Flame, Gauge, PlugZap, Route, Snowflake } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 const rows = [
-  ['heating', 'Heating', Flame, 20],
-  ['hotWater', 'Hot water', Droplets, 20],
-  ['electricityBackup', 'Power backup', PlugZap, 15],
-  ['waterAvailability', 'Water reliability', Gauge, 15],
-  ['roadAccess', 'Road access', Route, 15],
-  ['winterAccessible', 'Winter access', Snowflake, 15],
+  ['heating', Flame, 20],
+  ['hotWater', Droplets, 20],
+  ['electricityBackup', PlugZap, 15],
+  ['waterAvailability', Gauge, 15],
+  ['roadAccess', Route, 15],
+  ['winterAccessible', Snowflake, 15],
 ]
 
 function LivingScoreBreakdown({ breakdown = {} }) {
+  const { t } = useTranslation()
+
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      {rows.map(([key, label, Icon, max], index) => {
+      {rows.map(([key, Icon, max], index) => {
         const value = Number(breakdown?.[key] || 0)
         const percent = Math.round((value / max) * 100)
 
@@ -30,8 +33,8 @@ function LivingScoreBreakdown({ breakdown = {} }) {
               <div className="flex items-center gap-2.5">
                 <span className="grid h-9 w-9 place-items-center rounded-2xl bg-cyan-300/10 text-cyan-200"><Icon className="h-4 w-4" /></span>
                 <div>
-                  <p className="text-sm font-black text-white">{label}</p>
-                  <p className="text-xs text-slate-500">{value} / {max} points</p>
+                  <p className="text-sm font-black text-white">{t(`score.${key}`)}</p>
+                  <p className="text-xs text-slate-500">{t('score.points', { value, max })}</p>
                 </div>
               </div>
               <span className="text-sm font-black text-slate-300">{percent}%</span>

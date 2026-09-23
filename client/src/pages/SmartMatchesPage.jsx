@@ -1,5 +1,6 @@
 import { AlertTriangle, RefreshCw, SlidersHorizontal, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import MatchCard from '../components/scoring/MatchCard'
 import PreferenceForm from '../components/scoring/PreferenceForm'
@@ -11,6 +12,7 @@ import {
 } from '../features/scoring/scoringApi'
 
 function SmartMatchesPage() {
+  const { t } = useTranslation()
   const { data: preferences, isLoading: preferencesLoading } = useGetPreferencesQuery()
   const { data: amenitiesData } = useGetAmenitiesQuery()
   const {
@@ -25,9 +27,9 @@ function SmartMatchesPage() {
   const onSave = async (values) => {
     try {
       await savePreferences(values).unwrap()
-      toast.success('Preferences saved and matches refreshed')
+      toast.success(t('matches.saved'))
     } catch (error) {
-      toast.error(error?.data?.message || 'Unable to save preferences')
+      toast.error(error?.data?.message || t('matches.saveError'))
     }
   }
 
@@ -45,19 +47,19 @@ function SmartMatchesPage() {
           <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
             <div className="max-w-3xl">
               <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-2 text-xs font-black text-cyan-200">
-                <Sparkles className="h-4 w-4" /> Smart Matching
+                <Sparkles className="h-4 w-4" /> {t('matches.badge')}
               </span>
               <h1 className="mt-5 text-4xl font-black leading-[.98] tracking-[-0.055em] sm:text-6xl">
-                Homes ranked around what <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent">matters to you.</span>
+                {t('matches.title1')} <span className="bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-400 bg-clip-text text-transparent">{t('matches.title2')}</span>
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-white/48">
-                Set your budget, location, furnishing, amenities and winter priorities. Published rentals are scored transparently against those preferences.
+                {t('matches.lede')}
               </p>
             </div>
             <div className="min-w-[190px] rounded-[26px] border border-white/10 bg-white/[0.045] p-5 backdrop-blur-xl">
-              <p className="text-xs font-black uppercase tracking-[0.15em] text-white/35">Current results</p>
+              <p className="text-xs font-black uppercase tracking-[0.15em] text-white/35">{t('matches.currentResults')}</p>
               <p className="mt-2 text-4xl font-black">{matchesError ? '—' : matchCount}</p>
-              <p className="mt-1 text-sm text-white/42">ranked properties</p>
+              <p className="mt-1 text-sm text-white/42">{t('matches.rankedProperties')}</p>
             </div>
           </div>
         </motion.section>
@@ -70,8 +72,8 @@ function SmartMatchesPage() {
                   <SlidersHorizontal className="h-5 w-5" />
                 </span>
                 <div>
-                  <h2 className="text-lg font-black">Your preferences</h2>
-                  <p className="text-xs text-white/35">Tune the ranking whenever your needs change.</p>
+                  <h2 className="text-lg font-black">{t('matches.yourPreferences')}</h2>
+                  <p className="text-xs text-white/35">{t('matches.tuneRanking')}</p>
                 </div>
               </div>
               <div className="mt-6">
@@ -92,12 +94,12 @@ function SmartMatchesPage() {
           <div>
             <div className="mb-5 flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-300">Best fit first</p>
-                <h2 className="mt-2 text-3xl font-black tracking-[-0.045em]">Your ranked matches</h2>
+                <p className="text-xs font-black uppercase tracking-[0.15em] text-cyan-300">{t('matches.bestFit')}</p>
+                <h2 className="mt-2 text-3xl font-black tracking-[-0.045em]">{t('matches.rankedMatches')}</h2>
               </div>
               {isFetching && !matchesLoading ? (
                 <span className="inline-flex items-center gap-2 text-xs font-bold text-white/35">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" /> Refreshing
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" /> {t('matches.refreshing')}
                 </span>
               ) : null}
             </div>
@@ -111,19 +113,17 @@ function SmartMatchesPage() {
             {!matchesLoading && matchesError ? (
               <div className="rounded-[30px] border border-amber-300/15 bg-amber-300/[0.06] p-8 text-center">
                 <AlertTriangle className="mx-auto h-7 w-7 text-amber-200" />
-                <p className="mt-4 text-lg font-black">We could not load your matches</p>
-                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-white/42">
-                  If you have not saved preferences yet, complete the panel first. Otherwise retry the live matching request.
-                </p>
-                <button type="button" onClick={refetch} className="mt-5 rounded-full bg-white px-5 py-2.5 text-xs font-black text-[#07101e]">Try again</button>
+                <p className="mt-4 text-lg font-black">{t('matches.errorTitle')}</p>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-white/42">{t('matches.errorText')}</p>
+                <button type="button" onClick={refetch} className="mt-5 rounded-full bg-white px-5 py-2.5 text-xs font-black text-[#07101e]">{t('common.tryAgain')}</button>
               </div>
             ) : null}
 
             {!matchesLoading && !matchesError && (matchesData?.matches?.length || 0) === 0 ? (
               <div className="rounded-[30px] border border-dashed border-white/12 bg-white/[0.025] p-10 text-center">
                 <Sparkles className="mx-auto h-7 w-7 text-white/20" />
-                <p className="mt-4 text-lg font-black">No public rentals to rank yet</p>
-                <p className="mt-2 text-sm text-white/38">Your preferences are saved. New published listings will appear here automatically.</p>
+                <p className="mt-4 text-lg font-black">{t('matches.emptyTitle')}</p>
+                <p className="mt-2 text-sm text-white/38">{t('matches.emptyText')}</p>
               </div>
             ) : null}
 

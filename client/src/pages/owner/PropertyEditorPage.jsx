@@ -10,6 +10,7 @@ import {
 import { motion } from 'motion/react'
 import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
@@ -21,6 +22,8 @@ import {
   Select,
   TextArea,
   TextInput,
+  amenityLabel,
+  money,
   pretty,
 } from '../../components/workspace/WorkspaceUI'
 import { useGetAmenitiesQuery } from '../../features/amenities/amenitiesApi'
@@ -68,22 +71,13 @@ const blank = {
   winterAccessible: true,
 }
 
-const steps = [
-  { title: 'Basics', text: 'Give renters a clear first impression of the property.' },
-  { title: 'Pricing', text: 'Explain the monthly cost, deposit and move-in timing.' },
-  { title: 'Details', text: 'Describe the physical setup and who the home suits.' },
-  { title: 'Location', text: 'Describe the area, then pin the exact spot on the map.' },
-  { title: 'Amenities', text: 'Select only the facilities that are genuinely available.' },
-  { title: 'Living score', text: 'Capture the Gilgit-specific conditions that affect everyday living.' },
-  { title: 'Images', text: 'Add at least three clear photos and choose one cover image.' },
-  { title: 'Review', text: 'Check the listing before sending it to the admin review queue.' },
-]
+const stepKeys = ['basics', 'pricing', 'details', 'location', 'amenities', 'living', 'images', 'review']
 
-const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
+const errorMessage = (error, t) => error?.data?.message || error?.error || t('common.somethingWrong')
 const choiceClass = (active) => `rounded-2xl border p-4 text-left transition ${active ? 'border-cyan-300/35 bg-cyan-300/[0.09] text-cyan-100 shadow-[0_12px_34px_rgba(34,211,238,.06)]' : 'border-white/[0.08] bg-white/[0.025] text-slate-400 hover:border-white/15 hover:bg-white/[0.045] hover:text-slate-200'}`
 const formatBytes = (bytes = 0) => bytes < ONE_MB ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / ONE_MB).toFixed(2)} MB`
 
-function Field({ label, hint, required = false, optional = false, children, className = '' }) {
+function Field({ label, hint, required = false, optional = false, optionalLabel = '', children, className = '' }) {
   return (
     <label className={`block ${className}`}>
       <div className="mb-2 flex items-center justify-between gap-3">
@@ -91,7 +85,7 @@ function Field({ label, hint, required = false, optional = false, children, clas
           {label}
           {required && <span className="ml-1 text-cyan-300">*</span>}
         </span>
-        {optional && <span className="text-[10px] font-bold uppercase tracking-[.12em] text-slate-600">Optional</span>}
+        {optional && <span className="text-[10px] font-bold uppercase tracking-[.12em] text-slate-600">{optionalLabel}</span>}
       </div>
       {children}
       {hint && <p className="mt-2 text-[11px] leading-5 text-slate-500">{hint}</p>}
@@ -126,6 +120,8 @@ function StepNotice({ children }) {
 }
 
 export default function PropertyEditorPage() {
+  const { t } = useTranslation()
+  const steps = stepKeys.map((key) => ({ key, title: t(`ed.step.${key}`), text: t(`ed.step.${key}Text`) }))
   const { id } = useParams()
   const editing = Boolean(id)
   const navigate = useNavigate()
@@ -161,10 +157,10 @@ export default function PropertyEditorPage() {
     onDropRejected: (rejections) => {
       const rejectedFile = rejections?.[0]?.file
       if (rejectedFile?.size > ONE_MB) {
-        toast.error(`${rejectedFile.name} is ${formatBytes(rejectedFile.size)}. Property images must be smaller than 1 MB.`)
+        toast.error(t('ed.err.imageSize', { name: rejectedFile.name, size: formatBytes(rejectedFile.size) }))
         return
       }
-      toast.error('Choose one JPG or PNG image smaller than 1 MB.')
+      toast.error(t('ed.err.imageType'))
     },
   })
 
@@ -272,38 +268,38 @@ export default function PropertyEditorPage() {
 
   const getStepError = (index) => {
     if (index === 0) {
-      if (form.title.trim().length < 5) return 'Property title must be at least 5 characters.'
-      if (form.description.trim().length < 20) return 'Property description must be at least 20 characters.'
+      if (form.title.trim().length < 5) return t('ed.err.title')
+      if (form.description.trim().length < 20) return t('ed.err.description')
     }
 
     if (index === 1) {
-      if (form.monthlyRent === '' || Number(form.monthlyRent) < 0) return 'Enter a valid monthly rent.'
-      if (Number(form.securityDeposit || 0) < 0) return 'Security deposit cannot be negative.'
-      if (!form.availableFrom) return 'Choose when the property is available from.'
+      if (form.monthlyRent === '' || Number(form.monthlyRent) < 0) return t('ed.err.rent')
+      if (Number(form.securityDeposit || 0) < 0) return t('ed.err.deposit')
+      if (!form.availableFrom) return t('ed.err.availableFrom')
     }
 
     if (index === 2) {
       const stay = Number(form.minimumStayMonths)
-      if (!Number.isFinite(stay) || stay < 1 || stay > 120) return 'Minimum stay must be between 1 and 120 months.'
-      if (Number(form.bedrooms) < 0 || Number(form.bedrooms) > 100) return 'Bedrooms must be between 0 and 100.'
-      if (Number(form.bathrooms) < 0 || Number(form.bathrooms) > 100) return 'Bathrooms must be between 0 and 100.'
-      if (Number(form.maxOccupants) < 1) return 'Maximum occupants must be at least 1.'
-      if (form.totalAreaValue !== '' && Number(form.totalAreaValue) < 0) return 'Total area cannot be negative.'
+      if (!Number.isFinite(stay) || stay < 1 || stay > 120) return t('ed.err.stay')
+      if (Number(form.bedrooms) < 0 || Number(form.bedrooms) > 100) return t('ed.err.bedrooms')
+      if (Number(form.bathrooms) < 0 || Number(form.bathrooms) > 100) return t('ed.err.bathrooms')
+      if (Number(form.maxOccupants) < 1) return t('ed.err.occupants')
+      if (form.totalAreaValue !== '' && Number(form.totalAreaValue) < 0) return t('ed.err.area')
     }
 
     if (index === 3) {
-      if (!form.area.trim()) return 'Enter the area or neighbourhood.'
-      if (!form.city.trim()) return 'Enter the city.'
-      if (form.latitude === '' || form.longitude === '') return 'Pin the property location on the map.'
-      if (Number(form.latitude) < -90 || Number(form.latitude) > 90 || Number(form.longitude) < -180 || Number(form.longitude) > 180) return 'The map pin is not a valid location. Place it again.'
+      if (!form.area.trim()) return t('ed.err.areaRequired')
+      if (!form.city.trim()) return t('ed.err.cityRequired')
+      if (form.latitude === '' || form.longitude === '') return t('ed.err.pin')
+      if (Number(form.latitude) < -90 || Number(form.latitude) > 90 || Number(form.longitude) < -180 || Number(form.longitude) > 180) return t('ed.err.pinInvalid')
     }
 
     if (index === 4 && form.amenities.length === 0) {
-      return 'Select at least one amenity before continuing.'
+      return t('ed.err.amenity')
     }
 
     if (index === 6 && editing && (property?.images?.length || 0) < 3) {
-      return 'Upload at least 3 property images before reviewing the listing.'
+      return t('ed.err.images')
     }
 
     return null
@@ -335,7 +331,7 @@ export default function PropertyEditorPage() {
         ? await updateProperty({ id, ...payload }).unwrap()
         : await createProperty(payload).unwrap()
       const propertyId = editing ? id : result?.data?.property?._id || result?.property?._id
-      toast.success(editing ? 'Property changes saved' : 'Draft property created')
+      toast.success(editing ? t('ed.toast.saved') : t('ed.toast.created'))
 
       if (!editing && propertyId) {
         navigate(`/owner/properties/${propertyId}/edit${goToImages ? '?step=6' : ''}`, { replace: true })
@@ -344,7 +340,7 @@ export default function PropertyEditorPage() {
 
       return true
     } catch (error) {
-      toast.error(errorMessage(error))
+      toast.error(errorMessage(error, t))
       return false
     }
   }
@@ -356,7 +352,7 @@ export default function PropertyEditorPage() {
     }
 
     if (!editing && target >= 6) {
-      toast.error('Complete the listing details and save the draft before adding photos.')
+      toast.error(t('ed.err.saveFirst'))
       return
     }
 
@@ -403,28 +399,28 @@ export default function PropertyEditorPage() {
       }).unwrap()
       setNewFiles([])
       setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
-      toast.success('Property image uploaded')
+      toast.success(t('ed.toast.uploaded'))
     } catch (error) {
       setUploadProgress({ percent: 0, loaded: 0, total: 0, saving: false })
-      toast.error(errorMessage(error))
+      toast.error(errorMessage(error, t))
     }
   }
 
   const chooseCover = async (imageId) => {
     try {
       await setCover({ id, imageId }).unwrap()
-      toast.success('Cover image updated')
+      toast.success(t('ed.toast.cover'))
     } catch (error) {
-      toast.error(errorMessage(error))
+      toast.error(errorMessage(error, t))
     }
   }
 
   const removeImage = async (imageId) => {
     try {
       await deleteImage({ id, imageId }).unwrap()
-      toast.success('Image removed')
+      toast.success(t('ed.toast.removed'))
     } catch (error) {
-      toast.error(errorMessage(error))
+      toast.error(errorMessage(error, t))
     }
   }
 
@@ -437,9 +433,9 @@ export default function PropertyEditorPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Property studio"
-        title={editing ? 'Edit property' : 'Create property'}
-        text="Complete one clear section at a time. Required fields are labelled, optional details can be skipped, and your listing stays a draft until you submit it for admin review."
+        eyebrow={t('ed.eyebrow')}
+        title={editing ? t('ed.editTitle') : t('ed.createTitle')}
+        text={t('ed.text')}
       />
 
       <div ref={stepStripRef} className="mb-6 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -454,7 +450,7 @@ export default function PropertyEditorPage() {
                 disabled={locked}
                 onClick={() => goToStep(index)}
                 aria-current={step === index ? 'step' : undefined}
-                title={locked ? 'Save the draft before opening this step' : item.title}
+                title={locked ? t('ed.lockedStep') : item.title}
                 className={`group inline-flex items-center gap-2 rounded-full border px-4 py-2.5 text-xs font-black transition ${
                   step === index
                     ? 'border-cyan-300/30 bg-gradient-to-r from-cyan-300/15 via-blue-400/12 to-violet-500/12 text-cyan-100 shadow-[0_10px_30px_rgba(34,211,238,.06)]'
@@ -476,7 +472,7 @@ export default function PropertyEditorPage() {
       <Panel className="overflow-hidden">
         <div className="mb-6 flex flex-col gap-4 border-b border-white/[0.07] pb-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-300">Step {step + 1} of {steps.length}</p>
+            <p className="text-[10px] font-black uppercase tracking-[.17em] text-cyan-300">{t('ed.stepOf', { current: step + 1, total: steps.length })}</p>
             <h2 className="mt-1 text-xl font-black text-white">{steps[step].title}</h2>
             <p className="mt-1 text-sm text-slate-500">{steps[step].text}</p>
           </div>
@@ -488,16 +484,16 @@ export default function PropertyEditorPage() {
         <motion.div key={step} initial={{ opacity: 0, x: 14 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.22 }}>
           {step === 0 && (
             <div>
-              <StepNotice>Use a specific title and a useful description. Renters should understand what the property is before they open the listing.</StepNotice>
+              <StepNotice>{t('ed.notice.basics')}</StepNotice>
               <div className="grid gap-5">
-                <Field label="Property title" required hint="Example: Modern 2-Bed Apartment in Jutial">
-                  <TextInput value={form.title} maxLength={120} onChange={(event) => set('title', event.target.value)} placeholder="Modern 2-Bed Apartment in Jutial" />
+                <Field label={t('ed.field.title')} required hint={t('ed.field.titleHint')}>
+                  <TextInput value={form.title} maxLength={120} onChange={(event) => set('title', event.target.value)} placeholder={t('ed.field.titleHint')} />
                 </Field>
-                <Field label="Property description" required hint={`${form.description.trim().length}/3000 characters · minimum 20 characters`}>
-                  <TextArea value={form.description} maxLength={3000} onChange={(event) => set('description', event.target.value)} placeholder="Describe the condition, surroundings, nearby places and the kind of renter this property suits." />
+                <Field label={t('ed.field.description')} required hint={t('ed.field.descriptionHint', { count: form.description.trim().length })}>
+                  <TextArea value={form.description} maxLength={3000} onChange={(event) => set('description', event.target.value)} placeholder={t('ed.field.descriptionPlaceholder')} />
                 </Field>
-                <Field label="Property type" required hint="Choose the option that best describes what the renter will actually occupy.">
-                  <Select aria-label="Property type" value={form.propertyType} onChange={(event) => set('propertyType', event.target.value)}>
+                <Field label={t('ed.field.type')} required hint={t('ed.field.typeHint')}>
+                  <Select aria-label={t('ed.field.type')} value={form.propertyType} onChange={(event) => set('propertyType', event.target.value)}>
                     {['hostel','hostel_bed','shared_room','private_room','apartment','house','upper_portion','lower_portion','studio'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
                   </Select>
                 </Field>
@@ -507,43 +503,43 @@ export default function PropertyEditorPage() {
 
           {step === 1 && (
             <div>
-              <StepNotice>Enter amounts in Pakistani rupees. The security deposit can be zero, and negotiable rent simply tells renters that discussion is possible.</StepNotice>
+              <StepNotice>{t('ed.notice.pricing')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Monthly rent (PKR)" required hint="Amount charged each month, for example 45000."><TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder="45000" /></Field>
-                <Field label="Security deposit (PKR)" hint="One-time refundable deposit. Enter 0 if no deposit is required."><TextInput type="number" min="0" inputMode="numeric" value={form.securityDeposit} onChange={(event) => set('securityDeposit', event.target.value)} placeholder="90000" /></Field>
-                <Field label="Available from" required hint="The earliest date a renter can move in."><TextInput type="date" value={form.availableFrom} onChange={(event) => set('availableFrom', event.target.value)} /></Field>
-                <div><div className="mb-2 text-xs font-black text-slate-200">Negotiation</div><ToggleCard checked={form.negotiable} onChange={(event) => set('negotiable', event.target.checked)} title="Rent is negotiable" text="Turn this on only if you are willing to discuss the listed monthly rent." /></div>
+                <Field label={t('ed.field.rent')} required hint={t('ed.field.rentHint')}><TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder="45000" /></Field>
+                <Field label={t('ed.field.deposit')} hint={t('ed.field.depositHint')}><TextInput type="number" min="0" inputMode="numeric" value={form.securityDeposit} onChange={(event) => set('securityDeposit', event.target.value)} placeholder="90000" /></Field>
+                <Field label={t('ed.field.availableFrom')} required hint={t('ed.field.availableFromHint')}><TextInput type="date" value={form.availableFrom} onChange={(event) => set('availableFrom', event.target.value)} /></Field>
+                <div><div className="mb-2 text-xs font-black text-slate-200">{t('ed.field.negotiation')}</div><ToggleCard checked={form.negotiable} onChange={(event) => set('negotiable', event.target.checked)} title={t('ed.field.negotiable')} text={t('ed.field.negotiableText')} /></div>
               </div>
             </div>
           )}
 
           {step === 2 && (
             <div>
-              <StepNotice>These details help renters compare properties. Use 0 bedrooms for hostel beds or room-style listings when a separate bedroom count does not apply.</StepNotice>
+              <StepNotice>{t('ed.notice.details')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label="Minimum stay" required hint="Minimum number of months the renter must stay (1–120)."><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>
-                <Field label="Bedrooms" required hint="Number of bedrooms included in the rental."><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>
-                <Field label="Bathrooms" required hint="Number of bathrooms available to the renter."><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
-                <Field label="Floor" optional hint="Example: 1 for first floor. Leave empty if it does not apply."><TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" /></Field>
-                <Field label="Total area" optional hint="Enter the size, then choose its unit."><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
-                <Field label="Area unit" hint="Unit used for the total property area."><Select aria-label="Area unit" value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}><option value="sqft">Square feet (sqft)</option><option value="sqm">Square metres (sqm)</option><option value="kanal">Kanal</option><option value="marla">Marla</option></Select></Field>
-                <Field label="Furnishing" hint="Choose the condition in which the property will be handed over."><Select aria-label="Furnishing status" value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}><option value="furnished">Furnished</option><option value="semi_furnished">Semi furnished</option><option value="unfurnished">Unfurnished</option></Select></Field>
-                <Field label="Maximum occupants" required hint="Highest number of people you allow to live in the property."><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>
+                <Field label={t('ed.field.minimumStay')} required hint={t('ed.field.minimumStayHint')}><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>
+                <Field label={t('ed.field.bedrooms')} required hint={t('ed.field.bedroomsHint')}><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>
+                <Field label={t('ed.field.bathrooms')} required hint={t('ed.field.bathroomsHint')}><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
+                <Field label={t('ed.field.floor')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.floorHint')}><TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" /></Field>
+                <Field label={t('ed.field.totalArea')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.totalAreaHint')}><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
+                <Field label={t('ed.field.areaUnit')} hint={t('ed.field.areaUnitHint')}><Select aria-label={t('ed.field.areaUnit')} value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}>{['sqft','sqm','kanal','marla'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>
+                <Field label={t('ed.field.furnishing')} hint={t('ed.field.furnishingHint')}><Select aria-label={t('ed.field.furnishing')} value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>
+                <Field label={t('ed.field.maxOccupants')} required hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>
               </div>
             </div>
           )}
 
           {step === 3 && (
             <div>
-              <StepNotice>Type the area and city, then drop a pin on the map exactly where the property is. The map opens on your current location — search a place or tap anywhere to move the pin.</StepNotice>
+              <StepNotice>{t('ed.notice.location')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
-                <Field label="Area / neighbourhood" required hint="Example: Jutial, Danyore, Konodas or another local area."><TextInput value={form.area} onChange={(event) => set('area', event.target.value)} placeholder="Jutial" /></Field>
-                <Field label="Street / road" optional hint="Street, road or block information if available."><TextInput value={form.street} onChange={(event) => set('street', event.target.value)} placeholder="Main Jutial Road" /></Field>
-                <Field label="City" required hint="Defaults to Gilgit but can be changed if the property is elsewhere in the supported area."><TextInput value={form.city} onChange={(event) => set('city', event.target.value)} placeholder="Gilgit" /></Field>
-                <Field label="Nearby landmark" optional hint="A well-known nearby place that helps renters recognize the location."><TextInput value={form.landmark} onChange={(event) => set('landmark', event.target.value)} placeholder="Near Jutial Bus Stand" /></Field>
+                <Field label={t('ed.field.area')} required hint={t('ed.field.areaHint')}><TextInput value={form.area} onChange={(event) => set('area', event.target.value)} placeholder="Jutial" /></Field>
+                <Field label={t('ed.field.street')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.streetHint')}><TextInput value={form.street} onChange={(event) => set('street', event.target.value)} placeholder="Main Jutial Road" /></Field>
+                <Field label={t('ed.field.city')} required hint={t('ed.field.cityHint')}><TextInput value={form.city} onChange={(event) => set('city', event.target.value)} placeholder="Gilgit" /></Field>
+                <Field label={t('ed.field.landmark')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.landmarkHint')}><TextInput value={form.landmark} onChange={(event) => set('landmark', event.target.value)} placeholder="Near Jutial Bus Stand" /></Field>
                 <div className="sm:col-span-2">
                   <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-xs font-black text-slate-200">Property location on map<span className="ml-1 text-cyan-300">*</span></span>
+                    <span className="text-xs font-black text-slate-200">{t('ed.field.mapLocation')}<span className="ml-1 text-cyan-300">*</span></span>
                   </div>
                   <Suspense fallback={<div className="grid h-[340px] place-items-center rounded-[24px] border border-white/10 bg-white/[0.02] sm:h-[420px]"><LoadingState /></div>}>
                     <LocationPicker latitude={form.latitude} longitude={form.longitude} onChange={setPin} onAddressSuggestion={applyAddressSuggestion} />
@@ -555,23 +551,23 @@ export default function PropertyEditorPage() {
 
           {step === 4 && (
             <div>
-              <StepNotice>Click a card to select or remove an amenity. At least one amenity is required before the listing can be submitted for review.</StepNotice>
-              <div className="mb-4 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">Available amenities</p><span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-1.5 text-xs font-black text-cyan-200">{form.amenities.length} selected</span></div>
+              <StepNotice>{t('ed.notice.amenities')}</StepNotice>
+              <div className="mb-4 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">{t('ed.availableAmenities')}</p><span className="rounded-full border border-cyan-300/15 bg-cyan-300/[0.06] px-3 py-1.5 text-xs font-black text-cyan-200">{t('ed.selectedCount', { count: form.amenities.length })}</span></div>
               {amenitiesLoading ? (
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label="Loading amenities">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-label={t('ed.loadingAmenities')}>
                   {Array.from({ length: 6 }).map((_, index) => <div key={index} className="h-[74px] animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />)}
                 </div>
               ) : amenitiesError || !(amenityData?.amenities || []).length ? (
                 <div className="rounded-[24px] border border-dashed border-amber-300/20 bg-amber-300/[0.04] p-8 text-center">
-                  <p className="font-black text-amber-100">{amenitiesError ? 'Amenities could not be loaded' : 'No amenities are available yet'}</p>
-                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">{amenitiesError ? 'Check that the server is running and your connection is working, then try again.' : 'The amenity list is empty on the server. Try again in a moment, or ask the admin to add amenities.'}</p>
-                  <SecondaryButton className="mt-4" disabled={amenitiesFetching} onClick={() => refetchAmenities()}><RefreshCw className={`h-4 w-4 ${amenitiesFetching ? 'animate-spin' : ''}`} />Try again</SecondaryButton>
+                  <p className="font-black text-amber-100">{amenitiesError ? t('ed.amenitiesError') : t('ed.amenitiesEmpty')}</p>
+                  <p className="mx-auto mt-1 max-w-md text-sm text-slate-400">{amenitiesError ? t('ed.amenitiesErrorText') : t('ed.amenitiesEmptyText')}</p>
+                  <SecondaryButton className="mt-4" disabled={amenitiesFetching} onClick={() => refetchAmenities()}><RefreshCw className={`h-4 w-4 ${amenitiesFetching ? 'animate-spin' : ''}`} />{t('common.tryAgain')}</SecondaryButton>
                 </div>
               ) : (
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 {(amenityData?.amenities || []).map((amenity) => {
                   const selected = form.amenities.includes(amenity._id)
-                  return <button type="button" aria-pressed={selected} key={amenity._id} onClick={() => toggleAmenity(amenity._id)} className={`${choiceClass(selected)} flex items-start justify-between gap-3`}><span><span className="block text-sm font-black">{amenity.name}</span><span className="mt-1 block text-[10px] font-semibold opacity-55">{pretty(amenity.category)}</span></span><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? 'border-cyan-300 bg-cyan-300 text-[#07101e]' : 'border-white/10 bg-white/[0.03] text-transparent'}`}><Check className="h-3.5 w-3.5" /></span></button>
+                  return <button type="button" aria-pressed={selected} key={amenity._id} onClick={() => toggleAmenity(amenity._id)} className={`${choiceClass(selected)} flex items-start justify-between gap-3`}><span><span className="block text-sm font-black">{amenityLabel(amenity)}</span><span className="mt-1 block text-[10px] font-semibold opacity-55">{pretty(amenity.category)}</span></span><span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border ${selected ? 'border-cyan-300 bg-cyan-300 text-[#07101e]' : 'border-white/10 bg-white/[0.03] text-transparent'}`}><Check className="h-3.5 w-3.5" /></span></button>
                 })}
               </div>
               )}
@@ -580,46 +576,46 @@ export default function PropertyEditorPage() {
 
           {step === 5 && (
             <div>
-              <StepNotice>These fields power the Gilgit Living Score. Use the real condition of the property—unknown is better than guessing.</StepNotice>
+              <StepNotice>{t('ed.notice.living')}</StepNotice>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                <ToggleCard checked={form.heatingAvailable} onChange={(event) => set('heatingAvailable', event.target.checked)} title="Heating" text="A usable heating system is available inside the rental." />
-                <ToggleCard checked={form.hotWaterAvailable} onChange={(event) => set('hotWaterAvailable', event.target.checked)} title="Hot water" text="Reliable hot water is available for normal daily use." />
-                <ToggleCard checked={form.electricityBackup} onChange={(event) => set('electricityBackup', event.target.checked)} title="Power backup" text="UPS, generator, solar or another backup source is available." />
-                <ToggleCard checked={form.winterAccessible} onChange={(event) => set('winterAccessible', event.target.checked)} title="Winter accessible" text="The property remains reasonably reachable during winter conditions." />
+                <ToggleCard checked={form.heatingAvailable} onChange={(event) => set('heatingAvailable', event.target.checked)} title={t('ed.toggle.heating')} text={t('ed.toggle.heatingText')} />
+                <ToggleCard checked={form.hotWaterAvailable} onChange={(event) => set('hotWaterAvailable', event.target.checked)} title={t('ed.toggle.hotWater')} text={t('ed.toggle.hotWaterText')} />
+                <ToggleCard checked={form.electricityBackup} onChange={(event) => set('electricityBackup', event.target.checked)} title={t('ed.toggle.power')} text={t('ed.toggle.powerText')} />
+                <ToggleCard checked={form.winterAccessible} onChange={(event) => set('winterAccessible', event.target.checked)} title={t('ed.toggle.winter')} text={t('ed.toggle.winterText')} />
               </div>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                <Field label="Water availability" hint="Rate the normal reliability of running water at the property."><Select aria-label="Water availability" value={form.waterAvailability} onChange={(event) => set('waterAvailability', event.target.value)}><option value="unknown">Unknown / not confirmed</option><option value="excellent">Excellent — consistently reliable</option><option value="good">Good — usually reliable</option><option value="limited">Limited — available with restrictions</option><option value="unreliable">Unreliable — frequent interruptions</option></Select></Field>
-                <Field label="Road access" hint="Rate how easily renters can normally reach the property by road."><Select aria-label="Road access" value={form.roadAccess} onChange={(event) => set('roadAccess', event.target.value)}><option value="unknown">Unknown / not confirmed</option><option value="excellent">Excellent — easy vehicle access</option><option value="good">Good — generally accessible</option><option value="limited">Limited — some access restrictions</option><option value="difficult">Difficult — challenging road access</option></Select></Field>
+                <Field label={t('ed.field.water')} hint={t('ed.field.waterHint')}><Select aria-label={t('ed.field.water')} value={form.waterAvailability} onChange={(event) => set('waterAvailability', event.target.value)}>{['unknown','excellent','good','limited','unreliable'].map((value) => <option key={value} value={value}>{t(`ed.water.${value}`)}</option>)}</Select></Field>
+                <Field label={t('ed.field.road')} hint={t('ed.field.roadHint')}><Select aria-label={t('ed.field.road')} value={form.roadAccess} onChange={(event) => set('roadAccess', event.target.value)}>{['unknown','excellent','good','limited','difficult'].map((value) => <option key={value} value={value}>{value === 'unknown' ? t('ed.water.unknown') : t(`ed.road.${value}`)}</option>)}</Select></Field>
               </div>
-              {!editing && <div className="mt-5 rounded-2xl border border-violet-400/15 bg-violet-400/[0.055] p-4"><p className="text-sm font-black text-violet-100">Next: save the draft and add photos</p><p className="mt-1 text-xs leading-5 text-slate-400">Your property record must exist before images can be attached. The next button will create the draft and take you directly to the Images step.</p></div>}
+              {!editing && <div className="mt-5 rounded-2xl border border-violet-400/15 bg-violet-400/[0.055] p-4"><p className="text-sm font-black text-violet-100">{t('ed.nextPhotos')}</p><p className="mt-1 text-xs leading-5 text-slate-400">{t('ed.nextPhotosText')}</p></div>}
             </div>
           )}
 
           {step === 6 && (
             <div>
-              <StepNotice>Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically.</StepNotice>
+              <StepNotice>{t('ed.notice.images')}</StepNotice>
               {!editing ? (
-                <div className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.02] p-9 text-center"><ImagePlus className="mx-auto h-8 w-8 text-slate-600" /><p className="mt-3 font-black text-white">Save the listing first</p><p className="mt-1 text-sm text-slate-500">Complete steps 1–6 and save the draft before adding property photos.</p></div>
+                <div className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.02] p-9 text-center"><ImagePlus className="mx-auto h-8 w-8 text-slate-600" /><p className="mt-3 font-black text-white">{t('ed.saveFirst')}</p><p className="mt-1 text-sm text-slate-500">{t('ed.saveFirstText')}</p></div>
               ) : (
                 <>
                   <div {...getRootProps()} className={`rounded-[28px] border-2 border-dashed p-9 text-center transition ${uploadState.isLoading ? 'cursor-not-allowed border-white/8 bg-white/[0.015] opacity-55' : isDragActive ? 'cursor-pointer border-cyan-300/45 bg-cyan-300/[0.08]' : 'cursor-pointer border-white/12 bg-white/[0.025] hover:border-white/20 hover:bg-white/[0.04]'}`}>
                     <input {...getInputProps()} />
                     <UploadCloud className="mx-auto h-8 w-8 text-cyan-300" />
-                    <p className="mt-3 font-black text-white">Drag one photo here or click to choose a file</p>
-                    <p className="mt-1 text-xs text-slate-500">JPG or PNG · one image at a time · 1 MB maximum per image · 10 images per property</p>
+                    <p className="mt-3 font-black text-white">{t('ed.dragPhoto')}</p>
+                    <p className="mt-1 text-xs text-slate-500">{t('ed.dragPhotoHint')}</p>
                   </div>
 
                   {newFiles.length > 0 && (
                     <div className="mt-4 rounded-2xl border border-cyan-300/12 bg-cyan-300/[0.05] p-4">
                       <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div><p className="text-sm font-black text-cyan-100">{newFiles[0].name}</p><p className="mt-1 text-[11px] text-slate-500">{formatBytes(newFiles[0].size)} · ready to upload</p></div>
-                        <PrimaryButton disabled={uploadState.isLoading} onClick={upload}>{uploadState.isLoading ? 'Uploading…' : 'Upload image'}</PrimaryButton>
+                        <div><p className="text-sm font-black text-cyan-100">{newFiles[0].name}</p><p className="mt-1 text-[11px] text-slate-500">{t('ed.readyToUpload', { size: formatBytes(newFiles[0].size) })}</p></div>
+                        <PrimaryButton disabled={uploadState.isLoading} onClick={upload}>{uploadState.isLoading ? t('ed.uploading') : t('ed.uploadImage')}</PrimaryButton>
                       </div>
 
                       {uploadState.isLoading && (
                         <div className="mt-4">
                           <div className="flex items-center justify-between gap-3 text-xs font-bold text-slate-400">
-                            <span>{uploadProgress.saving ? 'Upload complete · saving securely…' : `Uploading ${uploadProgress.percent}%`}</span>
+                            <span>{uploadProgress.saving ? t('ed.uploadComplete') : t('ed.uploadingPercent', { percent: uploadProgress.percent })}</span>
                             <span>{formatBytes(uploadProgress.loaded)} / {formatBytes(uploadProgress.total || newFiles[0].size)}</span>
                           </div>
                           <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/[0.07]"><div className="h-full rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 transition-[width] duration-200" style={{ width: `${uploadProgress.percent}%` }} /></div>
@@ -628,14 +624,14 @@ export default function PropertyEditorPage() {
                     </div>
                   )}
 
-                  <div className="mt-5 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">Uploaded photos</p><span className={`rounded-full px-3 py-1.5 text-xs font-black ${images.length >= 3 ? 'bg-cyan-300/10 text-cyan-200' : 'bg-amber-300/10 text-amber-200'}`}>{images.length}/3 minimum</span></div>
+                  <div className="mt-5 flex items-center justify-between gap-4"><p className="text-sm font-black text-white">{t('ed.uploadedPhotos')}</p><span className={`rounded-full px-3 py-1.5 text-xs font-black ${images.length >= 3 ? 'bg-cyan-300/10 text-cyan-200' : 'bg-amber-300/10 text-amber-200'}`}>{t('ed.minimumImages', { count: images.length })}</span></div>
                   <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     {images.map((image) => (
                       <div key={image.id} className="group relative overflow-hidden rounded-[22px] border border-white/10 bg-white/[0.03]">
                         <img src={image.url} alt={image.alt || property.title} loading="lazy" decoding="async" className="aspect-[4/3] w-full object-cover" />
                         <div className="absolute inset-x-2 bottom-2 flex gap-2">
-                          <button type="button" disabled={coverState.isLoading || image.isCover} onClick={() => chooseCover(image.id)} className={`rounded-full px-3 py-2 text-[10px] font-black backdrop-blur-xl ${image.isCover ? 'bg-cyan-300 text-[#07101e]' : 'bg-[#07101e]/80 text-white ring-1 ring-white/15'}`}>{image.isCover ? 'Cover' : 'Set cover'}</button>
-                          <button type="button" disabled={deleteState.isLoading} onClick={() => removeImage(image.id)} className="rounded-full bg-[#07101e]/80 px-3 py-2 text-[10px] font-black text-rose-300 ring-1 ring-white/15 backdrop-blur-xl">Delete</button>
+                          <button type="button" disabled={coverState.isLoading || image.isCover} onClick={() => chooseCover(image.id)} className={`rounded-full px-3 py-2 text-[10px] font-black backdrop-blur-xl ${image.isCover ? 'bg-cyan-300 text-[#07101e]' : 'bg-[#07101e]/80 text-white ring-1 ring-white/15'}`}>{image.isCover ? t('ed.cover') : t('ed.setCover')}</button>
+                          <button type="button" disabled={deleteState.isLoading} onClick={() => removeImage(image.id)} className="rounded-full bg-[#07101e]/80 px-3 py-2 text-[10px] font-black text-rose-300 ring-1 ring-white/15 backdrop-blur-xl">{t('ed.delete')}</button>
                         </div>
                       </div>
                     ))}
@@ -648,44 +644,44 @@ export default function PropertyEditorPage() {
           {step === 7 && (
             <div className="grid gap-5 lg:grid-cols-[1.2fr_.8fr]">
               <div>
-                <p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">Listing preview</p>
-                <h2 className="mt-3 text-2xl font-black tracking-[-.04em] text-white">{form.title || 'Untitled property'}</h2>
-                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">{form.description || 'Add a property description.'}</p>
+                <p className="text-xs font-black uppercase tracking-[.18em] text-cyan-300">{t('ed.preview')}</p>
+                <h2 className="mt-3 text-2xl font-black tracking-[-.04em] text-white">{form.title || t('ed.untitled')}</h2>
+                <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">{form.description || t('ed.addDescription')}</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {[
-                    ['Monthly rent', form.monthlyRent ? `PKR ${Number(form.monthlyRent).toLocaleString()}` : '—'],
-                    ['Property type', pretty(form.propertyType)],
-                    ['Location', form.area ? `${form.area}, ${form.city}` : '—'],
-                    ['Bedrooms', form.bedrooms],
-                    ['Bathrooms', form.bathrooms],
-                    ['Amenities', form.amenities.length],
+                    [t('ed.field.rent'), form.monthlyRent ? money(form.monthlyRent) : '—'],
+                    [t('ed.field.type'), pretty(form.propertyType)],
+                    [t('details.location'), form.area ? `${form.area}, ${form.city}` : '—'],
+                    [t('ed.field.bedrooms'), form.bedrooms],
+                    [t('ed.field.bathrooms'), form.bathrooms],
+                    [t('ed.step.amenities'), form.amenities.length],
                   ].map(([label, value]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4"><p className="text-[10px] font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}
                 </div>
               </div>
 
               <div className="rounded-[26px] border border-cyan-300/15 bg-[radial-gradient(circle_at_80%_15%,rgba(56,189,248,.13),transparent_35%),#0a111e] p-5 text-white">
                 <ShieldCheck className="h-5 w-5 text-cyan-300" />
-                <p className="mt-3 font-black">Ready for admin review?</p>
+                <p className="mt-3 font-black">{t('ed.readyTitle')}</p>
                 <div className="mt-4 space-y-3 text-xs">
                   {[
-                    ['Required listing details complete', [0,1,2,3,4].every((index) => !getStepError(index))],
-                    [`At least 3 images (${images.length} uploaded)`, images.length >= 3],
-                    ['Exactly one cover image selected', hasCover && images.filter((image) => image.isCover).length === 1],
-                    [`At least 1 amenity (${form.amenities.length} selected)`, form.amenities.length >= 1],
+                    [t('ed.readyDetails'), [0,1,2,3,4].every((index) => !getStepError(index))],
+                    [t('ed.readyImages', { count: images.length }), images.length >= 3],
+                    [t('ed.readyCover'), hasCover && images.filter((image) => image.isCover).length === 1],
+                    [t('ed.readyAmenity', { count: form.amenities.length }), form.amenities.length >= 1],
                   ].map(([label, ready]) => <div key={label} className="flex items-center gap-2"><span className={`grid h-5 w-5 place-items-center rounded-full ${ready ? 'bg-cyan-300 text-[#07101e]' : 'bg-amber-300/10 text-amber-200'}`}>{ready ? <Check className="h-3 w-3" /> : <span className="text-[9px] font-black">!</span>}</span><span className={ready ? 'text-slate-300' : 'text-amber-200'}>{label}</span></div>)}
                 </div>
-                <p className="mt-4 border-t border-white/[0.07] pt-4 text-xs leading-6 text-slate-500">When everything is ready, return to Your Properties and click “Submit for review”. The property remains a private draft until then.</p>
+                <p className="mt-4 border-t border-white/[0.07] pt-4 text-xs leading-6 text-slate-500">{t('ed.readyNote')}</p>
               </div>
             </div>
           )}
         </motion.div>
 
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/[0.07] pt-5 sm:flex-row sm:items-center sm:justify-between">
-          <SecondaryButton disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>Back</SecondaryButton>
+          <SecondaryButton disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>{t('ed.back')}</SecondaryButton>
           <div className="flex flex-col gap-2 sm:flex-row">
-            {editing && step <= 5 && <SecondaryButton disabled={saving} onClick={() => save()}>{saving ? 'Saving…' : 'Save changes'}</SecondaryButton>}
-            {step < steps.length - 1 && <PrimaryButton disabled={saving || uploadState.isLoading} onClick={nextStep}>{!editing && step === 5 ? 'Save draft & add photos' : step === 6 ? 'Review listing' : 'Continue'}</PrimaryButton>}
-            {editing && step === steps.length - 1 && <PrimaryButton onClick={() => navigate('/owner/properties')}>Back to your properties</PrimaryButton>}
+            {editing && step <= 5 && <SecondaryButton disabled={saving} onClick={() => save()}>{saving ? t('ed.saving') : t('ed.saveChanges')}</SecondaryButton>}
+            {step < steps.length - 1 && <PrimaryButton disabled={saving || uploadState.isLoading} onClick={nextStep}>{!editing && step === 5 ? t('ed.saveDraftPhotos') : step === 6 ? t('ed.reviewListing') : t('ed.continue')}</PrimaryButton>}
+            {editing && step === steps.length - 1 && <PrimaryButton onClick={() => navigate('/owner/properties')}>{t('ed.backToProperties')}</PrimaryButton>}
           </div>
         </div>
       </Panel>

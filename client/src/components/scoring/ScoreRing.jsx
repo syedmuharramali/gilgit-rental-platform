@@ -1,6 +1,8 @@
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 
 function ScoreRing({ score = 0, label, size = 150, compact = false }) {
+  const { t } = useTranslation()
   const safeScore = Math.max(0, Math.min(100, Number(score) || 0))
   const stroke = compact ? 8 : 10
   const radius = 54
@@ -27,8 +29,8 @@ function ScoreRing({ score = 0, label, size = 150, compact = false }) {
       </svg>
       <div className="absolute text-center">
         <div className={compact ? 'text-2xl font-black text-slate-950' : 'text-4xl font-black tracking-[-0.05em] text-slate-950'}>{safeScore}</div>
-        <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">/ 100</div>
-        {label ? <div className="mt-1 text-xs font-bold text-emerald-700">{label}</div> : null}
+        <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-slate-400">{t('score.outOf')}</div>
+        {label ? <div className="mt-1 text-xs font-bold text-emerald-700">{t(`score.${label}`, { defaultValue: label })}</div> : null}
       </div>
     </div>
   )

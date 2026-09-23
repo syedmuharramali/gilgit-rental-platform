@@ -1,31 +1,23 @@
 import { ArrowRight, CircleHelp, ShieldCheck, Sparkles } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
-const content = {
-  'living-score': {
-    eyebrow: 'Gilgit Living Score',
-    title: 'Look beyond the room itself.',
-    text: 'The platform surfaces practical local living details such as heating, hot water, power backup, water reliability, road access and winter accessibility so renters can compare homes with more context.',
-    icon: Sparkles,
-  },
-  about: {
-    eyebrow: 'How it works',
-    title: 'One connected rental journey.',
-    text: 'Discover verified listings, apply, schedule viewings, agree on terms and complete a rental agreement without scattering important details across chats and paper records.',
-    icon: ShieldCheck,
-  },
-  help: {
-    eyebrow: 'Help centre',
-    title: 'Know what to do next.',
-    text: 'The dashboard keeps renter and owner actions organized around simple next steps, from finding a home through completing an agreement.',
-    icon: CircleHelp,
-  },
+const icons = {
+  'living-score': Sparkles,
+  about: ShieldCheck,
+  help: CircleHelp,
 }
 
 function InfoPage({ type }) {
-  const page = content[type] || content.about
-  const Icon = page.icon
+  const { t } = useTranslation()
+  const key = icons[type] ? type : 'about'
+  const Icon = icons[key]
+  const page = {
+    eyebrow: t(`info.${key}.eyebrow`),
+    title: t(`info.${key}.title`),
+    text: t(`info.${key}.text`),
+  }
 
   return (
     <main className="relative min-h-[70vh] overflow-hidden bg-[#070b14] px-5 py-14 text-white sm:px-8 lg:px-10 lg:py-24">
@@ -38,7 +30,7 @@ function InfoPage({ type }) {
             <h1 className="mt-6 text-4xl font-black leading-[.98] tracking-[-0.055em] sm:text-6xl">{page.title}</h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/46">{page.text}</p>
           </div>
-          <Link to="/properties" className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-5 py-3 text-sm font-black text-[#07101e] shadow-[0_16px_40px_rgba(56,189,248,.14)] transition hover:-translate-y-0.5">Browse rentals <ArrowRight className="h-4 w-4" /></Link>
+          <Link to="/properties" className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-5 py-3 text-sm font-black text-[#07101e] shadow-[0_16px_40px_rgba(56,189,248,.14)] transition hover:-translate-y-0.5">{t('common.browseRentals')} <ArrowRight className="h-4 w-4" /></Link>
         </div>
       </motion.section>
     </main>

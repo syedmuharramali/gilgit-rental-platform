@@ -1,17 +1,19 @@
 import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
 import { MapPin } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 import 'maplibre-gl/dist/maplibre-gl.css'
 
 const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
 
 export default function PropertyMap({ latitude, longitude, title, className = '' }) {
+  const { t } = useTranslation()
   const lat = Number(latitude)
   const lng = Number(longitude)
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return (
       <div className={`grid min-h-64 place-items-center rounded-[28px] border border-slate-200 bg-[radial-gradient(circle_at_30%_30%,#e5f2ec,transparent_30%),linear-gradient(145deg,#edf3f0,#dfe8e4)] text-center ${className}`}>
-        <div className="px-6"><MapPin className="mx-auto h-6 w-6 text-emerald-700" /><p className="mt-3 text-sm font-black text-slate-800">Exact map location not provided</p><p className="mt-1 text-xs text-slate-500">Use the area and landmark details shown on this listing.</p></div>
+        <div className="px-6"><MapPin className="mx-auto h-6 w-6 text-emerald-700" /><p className="mt-3 text-sm font-black text-slate-800">{t('propertyMap.noLocation')}</p><p className="mt-1 text-xs text-slate-500">{t('propertyMap.noLocationText')}</p></div>
       </div>
     )
   }

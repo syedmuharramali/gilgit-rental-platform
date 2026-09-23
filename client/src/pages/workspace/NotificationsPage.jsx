@@ -1,5 +1,6 @@
 import { ArrowRight, Bell, Trash2 } from 'lucide-react'
 import { motion } from 'motion/react'
+import { useTranslation } from 'react-i18next'
 import { useLocation, useNavigate } from 'react-router-dom'
 import {
   useDeleteNotificationMutation,
@@ -23,7 +24,7 @@ const getResourceId = (notification) => {
   return resource._id || resource.id || null
 }
 
-const getNotificationDestination = (notification, ownerMode) => {
+const getNotificationDestination = (notification, ownerMode, t) => {
   const base = ownerMode ? '/owner' : '/dashboard'
   const resourceId = getResourceId(notification)
 
@@ -32,30 +33,31 @@ const getNotificationDestination = (notification, ownerMode) => {
       return {
         pathname: `${base}/messages`,
         state: resourceId ? { conversationId: resourceId } : undefined,
-        label: 'Open conversation',
+        label: t('notif.openConversation'),
       }
     case 'application':
-      return { pathname: `${base}/applications`, label: 'Open applications' }
+      return { pathname: `${base}/applications`, label: t('notif.openApplications') }
     case 'viewing':
-      return { pathname: `${base}/viewings`, label: 'Open viewings' }
+      return { pathname: `${base}/viewings`, label: t('notif.openViewings') }
     case 'tenancy': // older notifications
     case 'agreement':
-      return { pathname: `${base}/agreements`, label: 'Open agreement' }
+      return { pathname: `${base}/agreements`, label: t('notif.openAgreement') }
     case 'report':
-      return { pathname: `${base}/reports`, label: 'Open safety reports' }
+      return { pathname: `${base}/reports`, label: t('notif.openReports') }
     case 'review':
-      return { pathname: `${base}/reviews`, label: 'Open reviews' }
+      return { pathname: `${base}/reviews`, label: t('notif.openReviews') }
     case 'property':
-      if (ownerMode) return { pathname: '/owner/properties', label: 'Open properties' }
+      if (ownerMode) return { pathname: '/owner/properties', label: t('notif.openProperties') }
       return resourceId
-        ? { pathname: `/properties/${resourceId}`, label: 'Open property' }
-        : { pathname: '/properties', label: 'Browse properties' }
+        ? { pathname: `/properties/${resourceId}`, label: t('notif.openProperty') }
+        : { pathname: '/properties', label: t('notif.browseProperties') }
     default:
       return null
   }
 }
 
 function NotificationsPage() {
+  const { t } = useTranslation()
   const location = useLocation()
   const navigate = useNavigate()
   const ownerMode = location.pathname.startsWith('/owner')
@@ -68,7 +70,7 @@ function NotificationsPage() {
   const [remove] = useDeleteNotificationMutation()
 
   const openNotification = async (notification) => {
-    const destination = getNotificationDestination(notification, ownerMode)
+    const destination = getNotificationDestination(notification, ownerMode, t)
 
     if (!notification.isRead) {
       try {
@@ -89,17 +91,17 @@ function NotificationsPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Activity centre"
-        title="Notifications"
-        text="Open an update to jump directly to the part of your rental journey that needs attention."
+        eyebrow={t('notif.eyebrow')}
+        title={t('notif.title')}
+        text={t('notif.text')}
         action={items.some((notification) => !notification.isRead)
-          ? <SecondaryButton onClick={() => readAll()}>Mark all read</SecondaryButton>
+          ? <SecondaryButton onClick={() => readAll()}>{t('notif.markAllRead')}</SecondaryButton>
           : null}
       />
 
       <div className="space-y-3">
         {items.length ? items.map((notification, index) => {
-          const destination = getNotificationDestination(notification, ownerMode)
+          const destination = getNotificationDestination(notification, ownerMode, t)
 
           return (
             <motion.div
@@ -122,7 +124,7 @@ function NotificationsPage() {
                   >
                     <div className="flex flex-wrap items-center gap-2">
                       <p className="font-black text-white">{notification.title}</p>
-                      {!notification.isRead && <span className="h-2 w-2 rounded-full bg-cyan-300" aria-label="Unread" />}
+                      {!notification.isRead && <span className="h-2 w-2 rounded-full bg-cyan-300" aria-label={t('notif.unread')} />}
                     </div>
                     <p className="mt-1 text-sm leading-6 text-slate-400">{notification.message}</p>
                     <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -133,7 +135,7 @@ function NotificationsPage() {
                         </span>
                       )}
                       {!destination && !notification.isRead && (
-                        <span className="text-xs font-black text-cyan-300">Mark as read</span>
+                        <span className="text-xs font-black text-cyan-300">{t('notif.markAsRead')}</span>
                       )}
                     </div>
                   </button>
@@ -142,7 +144,7 @@ function NotificationsPage() {
                     type="button"
                     onClick={() => remove(notification._id)}
                     className="grid h-9 w-9 shrink-0 place-items-center rounded-xl text-slate-600 transition hover:bg-rose-400/10 hover:text-rose-300"
-                    aria-label={`Delete notification: ${notification.title}`}
+                    aria-label={t('notif.delete', { title: notification.title })}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -150,7 +152,7 @@ function NotificationsPage() {
               </Panel>
             </motion.div>
           )
-        }) : <EmptyState title="You're all caught up" text="New rental activity will appear here." />}
+        }) : <EmptyState title={t('notif.emptyTitle')} text={t('notif.emptyText')} />}
       </div>
     </>
   )

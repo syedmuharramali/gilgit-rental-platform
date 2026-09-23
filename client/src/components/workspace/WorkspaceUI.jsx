@@ -1,9 +1,10 @@
 import { LoaderCircle, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useId, useRef } from 'react'
-import { dateTime, money, pretty, shortDate } from '../../utils/formatters'
+import { useTranslation } from 'react-i18next'
+import { amenityLabel, dateTime, money, pretty, shortDate } from '../../utils/formatters'
 
-export { dateTime, money, pretty, shortDate }
+export { amenityLabel, dateTime, money, pretty, shortDate }
 
 export function PageHeader({ eyebrow, title, text, action }) {
   return (
@@ -33,19 +34,24 @@ export function StatusBadge({ value }) {
   return <span className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[.1em] ring-1 ${style}`}>{pretty(value || 'unknown')}</span>
 }
 
-export function EmptyState({ title = 'Nothing here yet', text = 'New activity will appear here.', action = null }) {
+export function EmptyState({ title, text, action = null }) {
+  const { t } = useTranslation()
+  const heading = title ?? t('workspace.emptyTitle')
+  const body = text === undefined ? t('workspace.emptyText') : text
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="rounded-[28px] border border-dashed border-white/12 bg-white/[0.025] px-6 py-14 text-center">
       <div className="mx-auto grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-500 text-[#07101e]"><Sparkles className="h-4 w-4" /></div>
-      <p className="mt-4 font-black text-white">{title}</p>
-      {text && <p className="mt-2 text-sm text-slate-400">{text}</p>}
+      <p className="mt-4 font-black text-white">{heading}</p>
+      {body && <p className="mt-2 text-sm text-slate-400">{body}</p>}
       {action && <div className="mt-5 flex justify-center">{action}</div>}
     </motion.div>
   )
 }
 
 export function LoadingState() {
-  return <div className="grid min-h-52 place-items-center" role="status" aria-label="Loading"><LoaderCircle className="h-6 w-6 animate-spin text-cyan-300" /></div>
+  const { t } = useTranslation()
+  return <div className="grid min-h-52 place-items-center" role="status" aria-label={t('common.loading')}><LoaderCircle className="h-6 w-6 animate-spin text-cyan-300" /></div>
 }
 
 export function Modal({ open, onClose, title, children }) {

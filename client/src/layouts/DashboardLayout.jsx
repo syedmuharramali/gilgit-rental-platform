@@ -18,8 +18,10 @@ import {
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 import { logout } from '../features/auth/authSlice'
 import {
   useGetUnreadCountQuery,
@@ -28,79 +30,80 @@ import {
 
 const renterGroups = [
   {
-    label: 'Find a home',
+    key: 'groupFind',
     links: [
-      ['/dashboard', 'Overview', Home],
-      ['/dashboard/favorites', 'Saved homes', Heart],
-      ['/dashboard/matches', 'Smart matches', Sparkles],
-      ['/dashboard/applications', 'Applications', ClipboardList],
-      ['/dashboard/viewings', 'Viewings', FileCheck2],
+      ['/dashboard', 'overview', Home],
+      ['/dashboard/favorites', 'savedHomes', Heart],
+      ['/dashboard/matches', 'smartMatches', Sparkles],
+      ['/dashboard/applications', 'applications', ClipboardList],
+      ['/dashboard/viewings', 'viewings', FileCheck2],
     ],
   },
   {
-    label: 'Communication',
+    key: 'groupCommunication',
     links: [
-      ['/dashboard/messages', 'Messages', MessageCircle],
-      ['/dashboard/notifications', 'Notifications', Bell],
+      ['/dashboard/messages', 'messages', MessageCircle],
+      ['/dashboard/notifications', 'notifications', Bell],
     ],
   },
   {
-    label: 'Agreement',
-    links: [['/dashboard/agreements', 'Agreements', FileCheck2]],
+    key: 'groupAgreement',
+    links: [['/dashboard/agreements', 'agreements', FileCheck2]],
   },
   {
-    label: 'Account',
+    key: 'groupAccount',
     links: [
-      ['/dashboard/reviews', 'Reviews', Star],
-      ['/dashboard/reports', 'Safety reports', TriangleAlert],
-      ['/dashboard/profile', 'Profile', Settings2],
+      ['/dashboard/reviews', 'reviews', Star],
+      ['/dashboard/reports', 'reports', TriangleAlert],
+      ['/dashboard/profile', 'profile', Settings2],
     ],
   },
 ]
 
 const ownerGroups = [
   {
-    label: 'Properties',
+    key: 'groupProperties',
     links: [
-      ['/owner', 'Owner overview', Home],
-      ['/owner/properties', 'Properties', Building2],
-      ['/owner/media', 'Property media', Images],
-      ['/owner/applications', 'Applications', ClipboardList],
-      ['/owner/viewings', 'Viewings', FileCheck2],
+      ['/owner', 'ownerOverview', Home],
+      ['/owner/properties', 'properties', Building2],
+      ['/owner/media', 'media', Images],
+      ['/owner/applications', 'applications', ClipboardList],
+      ['/owner/viewings', 'viewings', FileCheck2],
     ],
   },
   {
-    label: 'Communication',
+    key: 'groupCommunication',
     links: [
-      ['/owner/messages', 'Messages', MessageCircle],
-      ['/owner/notifications', 'Notifications', Bell],
+      ['/owner/messages', 'messages', MessageCircle],
+      ['/owner/notifications', 'notifications', Bell],
     ],
   },
   {
-    label: 'Agreement',
-    links: [['/owner/agreements', 'Agreements', FileCheck2]],
+    key: 'groupAgreement',
+    links: [['/owner/agreements', 'agreements', FileCheck2]],
   },
   {
-    label: 'Account',
+    key: 'groupAccount',
     links: [
-      ['/owner/verification', 'Verification', ShieldCheck],
-      ['/owner/reviews', 'Reviews', Star],
-      ['/owner/reports', 'Safety reports', TriangleAlert],
-      ['/owner/profile', 'Profile', Settings2],
+      ['/owner/verification', 'verification', ShieldCheck],
+      ['/owner/reviews', 'reviews', Star],
+      ['/owner/reports', 'reports', TriangleAlert],
+      ['/owner/profile', 'profile', Settings2],
     ],
   },
 ]
 
-const badgeTypesByLabel = {
-  Applications: ['application', 'application_accepted', 'application_rejected', 'application_withdrawn'],
-  Viewings: ['viewing', 'viewing_confirmed', 'viewing_rejected', 'viewing_cancelled'],
-  Messages: ['message'],
-  Agreements: ['agreement'],
-  Reviews: ['review'],
-  'Safety reports': ['report'],
+const badgeTypesByKey = {
+  applications: ['application', 'application_accepted', 'application_rejected', 'application_withdrawn'],
+  viewings: ['viewing', 'viewing_confirmed', 'viewing_rejected', 'viewing_cancelled'],
+  messages: ['message'],
+  agreements: ['agreement'],
+  reviews: ['review'],
+  reports: ['report'],
 }
 
 function DashboardLayout({ mode = 'renter' }) {
+  const { t } = useTranslation()
   const dispatch = useDispatch()
   const location = useLocation()
   const user = useSelector((state) => state.auth.user)
@@ -110,35 +113,35 @@ function DashboardLayout({ mode = 'renter' }) {
   const groups = mode === 'owner' ? ownerGroups : renterGroups
   const links = useMemo(() => groups.flatMap((group) => group.links), [groups])
   const notificationPath = mode === 'owner' ? '/owner/notifications' : '/dashboard/notifications'
-  const workspaceLabel = mode === 'owner' ? 'Owner workspace' : 'Renter workspace'
+  const workspaceLabel = mode === 'owner' ? t('ws.ownerWorkspace') : t('ws.renterWorkspace')
   const primaryMobileLinks = mode === 'owner'
-    ? [links[0], links[1], links.find(([, label]) => label === 'Applications'), links.find(([, label]) => label === 'Messages')].filter(Boolean)
-    : [links[0], links.find(([, label]) => label === 'Saved homes'), links.find(([, label]) => label === 'Applications'), links.find(([, label]) => label === 'Messages')].filter(Boolean)
+    ? [links[0], links[1], links.find(([, key]) => key === 'applications'), links.find(([, key]) => key === 'messages')].filter(Boolean)
+    : [links[0], links.find(([, key]) => key === 'savedHomes'), links.find(([, key]) => key === 'applications'), links.find(([, key]) => key === 'messages')].filter(Boolean)
   const primaryPaths = new Set(primaryMobileLinks.map(([to]) => to))
   const secondaryMobileLinks = links.filter(([to]) => !primaryPaths.has(to))
   const isMoreActive = secondaryMobileLinks.some(([to]) => location.pathname === to || location.pathname.startsWith(`${to}/`))
 
-  const getBadgeCount = (label) => {
-    if (label === 'Notifications') return unread?.unreadCount || 0
-    const types = badgeTypesByLabel[label]
+  const getBadgeCount = (key) => {
+    if (key === 'notifications') return unread?.unreadCount || 0
+    const types = badgeTypesByKey[key]
     if (!types?.length) return 0
     return types.reduce((total, type) => total + (unread?.byType?.[type] || 0), 0)
   }
 
-  const moreBadgeCount = secondaryMobileLinks.reduce((total, [, label]) => {
-    if (label === 'Notifications') return total
-    return total + getBadgeCount(label)
+  const moreBadgeCount = secondaryMobileLinks.reduce((total, [, key]) => {
+    if (key === 'notifications') return total
+    return total + getBadgeCount(key)
   }, 0)
 
   useEffect(() => {
-    const currentLink = links.find(([to, label]) => {
-      if (label === 'Notifications') return false
+    const currentLink = links.find(([to, key]) => {
+      if (key === 'notifications') return false
       return location.pathname === to || location.pathname.startsWith(`${to}/`)
     })
     if (!currentLink) return
-    const [, label] = currentLink
-    const types = badgeTypesByLabel[label]
-    if (!types?.length || getBadgeCount(label) === 0) return
+    const [, key] = currentLink
+    const types = badgeTypesByKey[key]
+    if (!types?.length || getBadgeCount(key) === 0) return
     markNotificationTypesRead(types).catch(() => {})
   }, [location.pathname, unread?.unreadCount, unread?.byType, links, markNotificationTypesRead])
 
@@ -147,8 +150,9 @@ function DashboardLayout({ mode = 'renter' }) {
     dispatch(logout())
   }
 
-  const renderNavLink = ([to, label, Icon], mobile = false) => {
-    const badgeCount = getBadgeCount(label)
+  const renderNavLink = ([to, key, Icon], mobile = false) => {
+    const badgeCount = getBadgeCount(key)
+    const label = t(`ws.${key}`)
     return (
       <NavLink
         key={to}
@@ -161,7 +165,7 @@ function DashboardLayout({ mode = 'renter' }) {
       >
         <span className={`${mobile ? '' : 'grid h-8 w-8 place-items-center rounded-xl bg-white/[0.04] text-slate-400 transition group-hover:text-cyan-300'}`}><Icon className="h-4 w-4 shrink-0" /></span>
         <span className="min-w-0 flex-1 truncate">{label}</span>
-        {badgeCount > 0 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${label === 'Notifications' ? 'bg-rose-500' : 'bg-cyan-500'}`}>{badgeCount}</span>}
+        {badgeCount > 0 && <span className={`rounded-full px-2 py-0.5 text-[10px] font-black text-white ${key === 'notifications' ? 'bg-rose-500' : 'bg-cyan-500'}`}>{badgeCount}</span>}
       </NavLink>
     )
   }
@@ -172,18 +176,18 @@ function DashboardLayout({ mode = 'renter' }) {
 
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-72 border-r border-white/[0.07] bg-[#090f1b]/95 backdrop-blur-2xl lg:flex lg:flex-col">
         <div className="flex h-20 items-center gap-3 border-b border-white/[0.06] px-6">
-          <Link to="/" className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 via-blue-400 to-violet-500 text-[#07101e] shadow-[0_12px_35px_rgba(56,189,248,.18)]" aria-label="Gilgit Rental home"><Sparkles className="h-4 w-4" /></Link>
-          <div><p className="font-black tracking-[-.03em]">Gilgit Rental</p><p className="text-xs text-slate-500">{workspaceLabel}</p></div>
+          <Link to="/" className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 via-blue-400 to-violet-500 text-[#07101e] shadow-[0_12px_35px_rgba(56,189,248,.18)]" aria-label={t('ws.homeAria')}><Sparkles className="h-4 w-4" /></Link>
+          <div><p className="font-black tracking-[-.03em]">{t('common.brand')}</p><p className="text-xs text-slate-500">{workspaceLabel}</p></div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label={`${workspaceLabel} navigation`}>
+        <nav className="flex-1 overflow-y-auto px-4 py-4" aria-label={t('ws.navigationLabel', { workspace: workspaceLabel })}>
           {groups.map((group, groupIndex) => (
-            <div key={group.label} className={groupIndex ? 'mt-5' : ''}>
-              <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.18em] text-slate-700">{group.label}</p>
+            <div key={group.key} className={groupIndex ? 'mt-5' : ''}>
+              <p className="mb-2 px-3 text-[9px] font-black uppercase tracking-[.18em] text-slate-700">{t(`ws.${group.key}`)}</p>
               <div className="space-y-1">{group.links.map((link) => renderNavLink(link))}</div>
             </div>
           ))}
-          {user?.role === 'admin' && <NavLink to="/admin" className="mt-5 flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin console</NavLink>}
+          {user?.role === 'admin' && <NavLink to="/admin" className="mt-5 flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> {t('ws.adminConsole')}</NavLink>}
         </nav>
 
         <div className="border-t border-white/[0.06] p-4">
@@ -191,50 +195,52 @@ function DashboardLayout({ mode = 'renter' }) {
             {user?.avatar?.url ? <img src={user.avatar.url} alt="" className="h-10 w-10 rounded-xl object-cover ring-1 ring-white/10" /> : <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 font-black text-cyan-200">{user?.name?.[0] || 'U'}</div>}
             <div className="min-w-0"><p className="truncate text-sm font-black">{user?.name}</p><p className="truncate text-xs text-slate-500">{user?.email}</p></div>
           </div>
-          <button type="button" onClick={signOut} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-400 transition hover:bg-white/[0.06] hover:text-white"><LogOut className="h-4 w-4" /> Sign out</button>
+          <button type="button" onClick={signOut} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm font-bold text-slate-400 transition hover:bg-white/[0.06] hover:text-white"><LogOut className="h-4 w-4" /> {t('ws.signOut')}</button>
         </div>
       </aside>
 
       <div className="relative z-10 lg:pl-72">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#070b14]/82 px-5 backdrop-blur-2xl sm:px-8 lg:h-20">
-          <div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">{mode === 'owner' ? 'Manage your rentals' : 'Your rental journey'}</p><p className="mt-1 truncate text-sm font-black text-white/90">{workspaceLabel}</p></div>
+          <div className="min-w-0"><p className="truncate text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">{mode === 'owner' ? t('ws.manageRentals') : t('ws.yourJourney')}</p><p className="mt-1 truncate text-sm font-black text-white/90">{workspaceLabel}</p></div>
           <div className="flex shrink-0 items-center gap-2">
-            {mode === 'renter' ? <Link to="/owner" className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-white sm:block">Owner mode</Link> : <Link to="/dashboard" className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-white sm:block">Renter mode</Link>}
-            <Link to={notificationPath} aria-label="Notifications" className="relative grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:text-white"><Bell className="h-4 w-4" />{unread?.unreadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{unread.unreadCount}</span>}</Link>
+            <LanguageSwitcher compact className="hidden sm:inline-flex" />
+            {mode === 'renter' ? <Link to="/owner" className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-white sm:block">{t('ws.ownerMode')}</Link> : <Link to="/dashboard" className="hidden rounded-full border border-white/10 bg-white/[0.04] px-4 py-2 text-xs font-black text-slate-300 transition hover:border-cyan-300/30 hover:text-white sm:block">{t('ws.renterMode')}</Link>}
+            <Link to={notificationPath} aria-label={t('ws.notifications')} className="relative grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:text-white"><Bell className="h-4 w-4" />{unread?.unreadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{unread.unreadCount}</span>}</Link>
           </div>
         </header>
         <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
       </div>
 
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/[0.07] bg-[#090f1b]/95 px-2 py-2 backdrop-blur-2xl lg:hidden" aria-label={`${workspaceLabel} mobile navigation`}>
-        {primaryMobileLinks.map(([to, label, Icon]) => {
-          const badgeCount = getBadgeCount(label)
+      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/[0.07] bg-[#090f1b]/95 px-2 py-2 backdrop-blur-2xl lg:hidden" aria-label={t('ws.mobileNavigationLabel', { workspace: workspaceLabel })}>
+        {primaryMobileLinks.map(([to, key, Icon]) => {
+          const badgeCount = getBadgeCount(key)
           return (
             <NavLink key={to} to={to} end={to === '/dashboard' || to === '/owner'} className={({ isActive }) => `relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${isActive ? 'bg-cyan-300/10 text-cyan-200' : 'text-slate-500'}`}>
               <span className="relative"><Icon className="h-4 w-4" />{badgeCount > 0 && <span className="absolute -right-3 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-cyan-500 px-1 text-[8px] font-black text-white">{badgeCount}</span>}</span>
-              <span className="max-w-full truncate">{label.split(' ')[0]}</span>
+              <span className="max-w-full truncate">{t(`ws.${key}`).split(' ')[0]}</span>
             </NavLink>
           )
         })}
-        <button type="button" onClick={() => setMobileMenuOpen(true)} aria-expanded={mobileMenuOpen} aria-controls="mobile-workspace-menu" className={`relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${isMoreActive ? 'bg-cyan-300/10 text-cyan-200' : 'text-slate-500'}`}><span className="relative"><Menu className="h-4 w-4" />{moreBadgeCount > 0 && <span className="absolute -right-3 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-cyan-500 px-1 text-[8px] font-black text-white">{moreBadgeCount}</span>}</span>More</button>
+        <button type="button" onClick={() => setMobileMenuOpen(true)} aria-expanded={mobileMenuOpen} aria-controls="mobile-workspace-menu" className={`relative flex min-w-0 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[9px] font-bold transition ${isMoreActive ? 'bg-cyan-300/10 text-cyan-200' : 'text-slate-500'}`}><span className="relative"><Menu className="h-4 w-4" />{moreBadgeCount > 0 && <span className="absolute -right-3 -top-2 grid h-4 min-w-4 place-items-center rounded-full bg-cyan-500 px-1 text-[8px] font-black text-white">{moreBadgeCount}</span>}</span>{t('ws.more')}</button>
       </nav>
 
       <AnimatePresence>
         {mobileMenuOpen && (
           <>
-            <motion.button type="button" aria-label="Close workspace menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-[60] bg-black/65 backdrop-blur-sm lg:hidden" />
-            <motion.aside id="mobile-workspace-menu" role="dialog" aria-modal="true" aria-label={`${workspaceLabel} menu`} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 32 }} className="fixed inset-x-0 bottom-0 z-[70] max-h-[82vh] overflow-y-auto rounded-t-[30px] border-t border-white/10 bg-[#0a101c] p-5 pb-8 shadow-[0_-30px_90px_rgba(0,0,0,.45)] lg:hidden">
-              <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">All tools</p><h2 className="mt-1 text-lg font-black">{workspaceLabel}</h2></div><button type="button" onClick={() => setMobileMenuOpen(false)} aria-label="Close menu" className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300"><X className="h-4 w-4" /></button></div>
+            <motion.button type="button" aria-label={t('ws.closeMenu')} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setMobileMenuOpen(false)} className="fixed inset-0 z-[60] bg-black/65 backdrop-blur-sm lg:hidden" />
+            <motion.aside id="mobile-workspace-menu" role="dialog" aria-modal="true" aria-label={t('ws.menuLabel', { workspace: workspaceLabel })} initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }} transition={{ type: 'spring', stiffness: 320, damping: 32 }} className="fixed inset-x-0 bottom-0 z-[70] max-h-[82vh] overflow-y-auto rounded-t-[30px] border-t border-white/10 bg-[#0a101c] p-5 pb-8 shadow-[0_-30px_90px_rgba(0,0,0,.45)] lg:hidden">
+              <div className="mb-4 flex items-center justify-between"><div><p className="text-[10px] font-black uppercase tracking-[.18em] text-cyan-300">{t('ws.allTools')}</p><h2 className="mt-1 text-lg font-black">{workspaceLabel}</h2></div><button type="button" onClick={() => setMobileMenuOpen(false)} aria-label={t('ws.closeMenu')} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300"><X className="h-4 w-4" /></button></div>
               <div className="space-y-5">
                 {groups.map((group) => (
-                  <div key={group.label}>
-                    <p className="mb-2 px-1 text-[9px] font-black uppercase tracking-[.18em] text-slate-600">{group.label}</p>
+                  <div key={group.key}>
+                    <p className="mb-2 px-1 text-[9px] font-black uppercase tracking-[.18em] text-slate-600">{t(`ws.${group.key}`)}</p>
                     <nav className="grid gap-2 sm:grid-cols-2">{group.links.map((link) => renderNavLink(link, true))}</nav>
                   </div>
                 ))}
-                {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> Admin console</NavLink>}
+                {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 px-4 py-3 text-sm font-bold text-violet-200"><ShieldCheck className="h-4 w-4" /> {t('ws.adminConsole')}</NavLink>}
               </div>
-              <div className="mt-5 grid grid-cols-2 gap-2"><Link to={mode === 'owner' ? '/dashboard' : '/owner'} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-3 text-xs font-black text-slate-300">{mode === 'owner' ? 'Renter mode' : 'Owner mode'}</Link><button type="button" onClick={signOut} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-3 text-xs font-black text-rose-300"><LogOut className="h-4 w-4" /> Sign out</button></div>
+              <div className="mt-5"><LanguageSwitcher className="w-full justify-center" /></div>
+              <div className="mt-3 grid grid-cols-2 gap-2"><Link to={mode === 'owner' ? '/dashboard' : '/owner'} onClick={() => setMobileMenuOpen(false)} className="flex min-h-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.035] px-3 text-xs font-black text-slate-300">{mode === 'owner' ? t('ws.renterMode') : t('ws.ownerMode')}</Link><button type="button" onClick={signOut} className="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-rose-300/15 bg-rose-400/[0.06] px-3 text-xs font-black text-rose-300"><LogOut className="h-4 w-4" /> {t('ws.signOut')}</button></div>
             </motion.aside>
           </>
         )}

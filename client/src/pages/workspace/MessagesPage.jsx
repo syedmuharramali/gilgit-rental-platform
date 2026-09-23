@@ -1,5 +1,6 @@
 import { ArrowLeft, Send } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useLocation } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { toast } from 'sonner'
@@ -11,9 +12,9 @@ import {
 } from '../../features/messages/messagesApi'
 import { EmptyState, LoadingState, PageHeader, PrimaryButton, TextInput, dateTime } from '../../components/workspace/WorkspaceUI'
 
-const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
-
 function MessagesPage() {
+  const { t } = useTranslation()
+  const errorMessage = (error) => error?.data?.message || error?.error || t('common.somethingWrong')
   const location = useLocation()
   const user = useSelector((state) => state.auth.user)
   const { data, isLoading } = useGetConversationsQuery(undefined, { pollingInterval: 15000 })
@@ -71,13 +72,13 @@ function MessagesPage() {
 
   return (
     <>
-      <PageHeader eyebrow="Communication" title="Messages" text="Property-linked conversations keep every discussion attached to the correct rental journey." />
+      <PageHeader eyebrow={t('msg.eyebrow')} title={t('msg.title')} text={t('msg.text')} />
 
       <div className="min-h-[620px] overflow-hidden rounded-[30px] border border-white/[0.08] bg-[#0d1423] shadow-[0_30px_90px_rgba(0,0,0,.25)] lg:grid lg:grid-cols-[330px_1fr]">
         <aside className={`${mobileConversationOpen ? 'hidden' : 'block'} border-white/[0.07] bg-[#0a101c] lg:block lg:border-r`}>
           <div className="border-b border-white/[0.06] p-4">
-            <p className="text-xs font-black uppercase tracking-[.15em] text-slate-500">Conversations</p>
-            <p className="mt-1 text-xs text-slate-600">{conversations.length} rental conversation{conversations.length === 1 ? '' : 's'}</p>
+            <p className="text-xs font-black uppercase tracking-[.15em] text-slate-500">{t('msg.conversations')}</p>
+            <p className="mt-1 text-xs text-slate-600">{t('msg.count', { count: conversations.length })}</p>
           </div>
 
           {conversations.length ? conversations.map((conversation) => {
@@ -95,28 +96,28 @@ function MessagesPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="truncate text-sm font-black text-white">{conversationOther?.name || 'Rental conversation'}</p>
+                    <p className="truncate text-sm font-black text-white">{conversationOther?.name || t('msg.conversation')}</p>
                     {conversation.unreadCount > 0 && <span className="rounded-full bg-cyan-300 px-2 py-0.5 text-[9px] font-black text-[#07101e]">{conversation.unreadCount}</span>}
                   </div>
-                  <p className="mt-0.5 truncate text-xs font-bold text-slate-500">{conversation.property?.title || 'Property'}</p>
-                  <p className="mt-1 truncate text-xs text-slate-400">{conversation.lastMessage?.body || 'Start the conversation'}</p>
+                  <p className="mt-0.5 truncate text-xs font-bold text-slate-500">{conversation.property?.title || t('msg.property')}</p>
+                  <p className="mt-1 truncate text-xs text-slate-400">{conversation.lastMessage?.body || t('msg.startConversation')}</p>
                 </div>
               </button>
             )
-          }) : <div className="p-5"><EmptyState title="No conversations" text="Open a property and message its owner to start one." /></div>}
+          }) : <div className="p-5"><EmptyState title={t('msg.noConversations')} text={t('msg.noConversationsText')} /></div>}
         </aside>
 
         <section className={`${mobileConversationOpen ? 'flex' : 'hidden'} min-h-[620px] flex-col bg-[radial-gradient(circle_at_60%_0%,rgba(56,189,248,.05),transparent_32%),#0b111e] lg:flex`}>
           {active ? (
             <>
               <div className="flex items-center gap-3 border-b border-white/[0.07] bg-[#0a101c] p-4">
-                <button type="button" onClick={() => setMobileConversationOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-slate-300 lg:hidden" aria-label="Back to conversations"><ArrowLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setMobileConversationOpen(false)} className="grid h-10 w-10 place-items-center rounded-xl border border-white/10 bg-white/[0.035] text-slate-300 lg:hidden" aria-label={t('msg.backToConversations')}><ArrowLeft className="h-4 w-4" /></button>
                 <div className="grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 font-black text-cyan-100 ring-1 ring-white/10">
                   {other?.avatar?.url ? <img src={other.avatar.url} alt="" className="h-full w-full object-cover" /> : other?.name?.[0] || 'U'}
                 </div>
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-black text-white">{other?.name || 'Rental conversation'}</p>
-                  <p className="truncate text-xs text-slate-500">{activeConversation?.property?.title || 'Rental property'}</p>
+                  <p className="truncate text-sm font-black text-white">{other?.name || t('msg.conversation')}</p>
+                  <p className="truncate text-xs text-slate-500">{activeConversation?.property?.title || t('msg.rentalProperty')}</p>
                 </div>
               </div>
 
@@ -132,15 +133,15 @@ function MessagesPage() {
                       </div>
                     </div>
                   )
-                }) : <EmptyState title="No messages yet" text="Send the first message in this rental conversation." />}
+                }) : <EmptyState title={t('msg.noMessages')} text={t('msg.noMessagesText')} />}
               </div>
 
               <form onSubmit={submit} className="flex gap-2 border-t border-white/[0.07] bg-[#0a101c] p-4">
-                <TextInput value={body} maxLength={2000} onChange={(event) => setBody(event.target.value)} placeholder="Write a message…" />
-                <PrimaryButton disabled={sendState.isLoading || !body.trim()} aria-label="Send message"><Send className="h-4 w-4" /></PrimaryButton>
+                <TextInput value={body} maxLength={2000} onChange={(event) => setBody(event.target.value)} placeholder={t('msg.writeMessage')} />
+                <PrimaryButton disabled={sendState.isLoading || !body.trim()} aria-label={t('msg.send')}><Send className="h-4 w-4" /></PrimaryButton>
               </form>
             </>
-          ) : <div className="grid min-h-[620px] place-items-center p-5"><EmptyState title="Choose a conversation" /></div>}
+          ) : <div className="grid min-h-[620px] place-items-center p-5"><EmptyState title={t('msg.chooseConversation')} text={null} /></div>}
         </section>
       </div>
     </>

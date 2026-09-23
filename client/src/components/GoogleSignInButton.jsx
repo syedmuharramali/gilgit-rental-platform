@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 const GOOGLE_SCRIPT = 'https://accounts.google.com/gsi/client'
 
 function GoogleSignInButton({ onCredential, disabled = false }) {
+  const { t } = useTranslation()
   const buttonRef = useRef(null)
   const [ready, setReady] = useState(false)
   const [scriptError, setScriptError] = useState(false)
@@ -64,12 +66,12 @@ function GoogleSignInButton({ onCredential, disabled = false }) {
   }, [onCredential])
 
   if (scriptError) {
-    return <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">Google Sign-In is unavailable. Check VITE_GOOGLE_CLIENT_ID and your connection.</div>
+    return <div className="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">{t('google.unavailable')}</div>
   }
 
   return (
     <div className={`overflow-hidden rounded-[18px] border border-slate-200 bg-white p-1.5 ${disabled ? 'pointer-events-none opacity-60' : ''}`}>
-      {!ready && <div className="flex h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400"><LoaderCircle className="h-4 w-4 animate-spin" /> Loading Google Sign-In</div>}
+      {!ready && <div className="flex h-11 items-center justify-center gap-2 text-sm font-semibold text-slate-400"><LoaderCircle className="h-4 w-4 animate-spin" /> {t('google.loading')}</div>}
       <div ref={buttonRef} className={ready ? 'flex justify-center' : 'hidden'} />
     </div>
   )
