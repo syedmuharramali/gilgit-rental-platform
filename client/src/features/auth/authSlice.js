@@ -1,3 +1,4 @@
+import i18n from '../../i18n/config'
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import api from '../../services/api'
 
@@ -24,8 +25,14 @@ const clearSession = () => {
   localStorage.removeItem(USER_KEY)
 }
 
-const getErrorMessage = (error, fallback) =>
-  error.response?.data?.message || error.message || fallback
+// Server messages first; otherwise a translated reason instead of axios's
+// raw English ("Network Error", "timeout of 15000ms exceeded").
+const getErrorMessage = (error, fallback) => {
+  if (error.response?.data?.message) return error.response.data.message
+  if (error.code === 'ECONNABORTED') return i18n.t('common.timeout')
+  if (!error.response) return i18n.t('common.networkError')
+  return fallback
+}
 
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
@@ -117,8 +124,16 @@ export const hydrateCurrentUser = createAsyncThunk(
       localStorage.setItem(USER_KEY, JSON.stringify(user))
       return user
     } catch (error) {
-      clearSession()
-      return rejectWithValue(getErrorMessage(error, 'Session expired'))
+      const status = error.response?.status
+
+      // Only a real "you are not signed in" answer ends the session. A cold
+      // server, a 500, a timeout or being offline used to log people out too.
+      if (status === 401 || status === 403) {
+        clearSession()
+        return rejectWithValue({ message: getErrorMessage(error, 'Session expired'), endSession: true })
+      }
+
+      return rejectWithValue({ message: getErrorMessage(error, 'Session expired'), endSession: false })
     }
   },
 )
@@ -220,11 +235,16 @@ const authSlice = createSlice({
         state.user = action.payload
         state.sessionChecked = true
       })
-      .addCase(hydrateCurrentUser.rejected, (state) => {
+      .addCase(hydrateCurrentUser.rejected, (state, action) => {
         state.status = 'idle'
+        state.sessionChecked = true
+
+        // Keep the stored session if the server was merely unreachable; the
+        // next request will either work or come back 401 and sign out then.
+        if (action.payload?.endSession === false) return
+
         state.token = null
         state.user = null
-        state.sessionChecked = true
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload

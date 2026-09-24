@@ -3,6 +3,7 @@ import { FileCheck2, MessageCircle } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
+import { localToday } from '../../utils/formatters'
 import { toast } from 'sonner'
 import {
   useAcceptApplicationMutation,
@@ -129,7 +130,7 @@ function ApplicationsPage({ owner = false }) {
 
   const acceptTerms = async (terms) => {
     try {
-      await acceptRentalTerms(terms._id).unwrap()
+      await acceptRentalTerms({ id: terms._id, proposedAt: terms.proposedAt }).unwrap()
       toast.success(t('apps.termsAccepted'))
     } catch (error) {
       toast.error(errorMessage(error))
@@ -237,7 +238,7 @@ function ApplicationsPage({ owner = false }) {
             <p className="mt-1 text-xs leading-5 text-slate-400">{t('apps.modalIntroText')}</p>
           </div>
           {termsApplication && <div className="grid gap-3 rounded-2xl border border-white/[0.07] bg-white/[0.025] p-4 sm:grid-cols-2"><div><p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">{t('apps.property')}</p><p className="mt-1 text-sm font-black text-white">{termsApplication.property?.title || t('apps.property')}</p></div><div><p className="text-[10px] font-black uppercase tracking-[.12em] text-slate-600">{t('apps.renter')}</p><p className="mt-1 text-sm font-black text-white">{termsApplication.applicant?.name || t('apps.applicant')}</p></div></div>}
-          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">{t('apps.fieldMoveIn')}</span><TextInput type="date" aria-label={t('apps.fieldMoveIn')} value={termsForm.startDate} onChange={(event) => setTermsForm((current) => ({ ...current, startDate: event.target.value }))} /></label>
+          <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">{t('apps.fieldMoveIn')}</span><TextInput type="date" min={localToday()} aria-label={t('apps.fieldMoveIn')} value={termsForm.startDate} onChange={(event) => setTermsForm((current) => ({ ...current, startDate: event.target.value }))} /></label>
           <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">{t('apps.fieldDuration')}</span><div className="relative"><TextInput type="number" min="1" max="120" aria-label={t('apps.fieldDuration')} value={termsForm.durationMonths} onChange={(event) => setTermsForm((current) => ({ ...current, durationMonths: event.target.value }))} className="pr-20" /><span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-500">{t('apps.months')}</span></div></label>
           <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">{t('apps.fieldRent')}</span><TextInput type="number" min="0" aria-label={t('apps.fieldRent')} value={termsForm.monthlyRent} onChange={(event) => setTermsForm((current) => ({ ...current, monthlyRent: event.target.value }))} /></label>
           <label className="block"><span className="mb-2 block text-xs font-black text-slate-200">{t('apps.fieldDeposit')}</span><TextInput type="number" min="0" aria-label={t('apps.fieldDeposit')} value={termsForm.securityDeposit} onChange={(event) => setTermsForm((current) => ({ ...current, securityDeposit: event.target.value }))} placeholder={t('apps.depositPlaceholder')} /></label>

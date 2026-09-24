@@ -177,13 +177,26 @@ exports.createReport =
             isDeleted: {
               $ne: true,
             },
-          }).select("_id");
+          }).select("_id owner");
 
         if (!property) {
           return next(
             new AppError(
               "Property not found",
               404
+            )
+          );
+        }
+
+        // The page hides the button for owners, but the API accepted it.
+        if (
+          property.owner?.toString() ===
+          req.user._id.toString()
+        ) {
+          return next(
+            new AppError(
+              "You cannot report your own property",
+              400
             )
           );
         }
@@ -530,6 +543,12 @@ exports.updateReportStatus =
         );
       }
 
+      // Saving notes without changing the status must not send the reporter
+      // another "your report was resolved" notification.
+      const statusChanged =
+        report.status !==
+        status;
+
       report.status =
         status;
 
@@ -554,7 +573,8 @@ exports.updateReportStatus =
         new Date();
 
       await report.save();
-      await safeCreateNotification({
+
+      if (statusChanged) await safeCreateNotification({
   user:
     report.reporter,
 

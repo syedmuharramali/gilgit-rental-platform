@@ -31,7 +31,7 @@ function FallbackScene() {
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
         className="absolute inset-0"
       >
-        <img src={HERO_HOME} alt="Premium rental home" className="h-full w-full object-cover" />
+        <img src={HERO_HOME} alt={t('hero.imageAlt')} className="h-full w-full object-cover" />
       </motion.div>
 
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(7,10,20,.04)_0%,rgba(7,10,20,.16)_45%,rgba(7,10,20,.82)_100%)]" />
@@ -52,7 +52,7 @@ function FallbackScene() {
       </GlassBadge>
 
       <GlassBadge className="bottom-[23%] left-5 sm:left-8" delay={0.48}>
-        <div className="flex items-center gap-2 text-xs font-black"><MapPin className="h-4 w-4 text-cyan-300" /> Gilgit · Jutial</div>
+        <div className="flex items-center gap-2 text-xs font-black"><MapPin className="h-4 w-4 text-cyan-300" /> {t('hero.location')}</div>
       </GlassBadge>
 
       <motion.div
@@ -65,7 +65,7 @@ function FallbackScene() {
           <div>
             <div className="flex items-center gap-1 text-amber-300"><Star className="h-3.5 w-3.5 fill-current" /><span className="text-[10px] font-black uppercase tracking-[.14em] text-white/55">{t('hero.premiumDiscovery')}</span></div>
             <p className="mt-2 text-lg font-black tracking-[-.03em] sm:text-xl">{t('hero.tagline')}</p>
-            <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-white/65"><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><Flame className="h-3 w-3 text-orange-300" /> Heating</span><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><Waves className="h-3 w-3 text-cyan-300" /> Water</span><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><BadgeCheck className="h-3 w-3 text-blue-300" /> Verified</span></div>
+            <div className="mt-3 flex flex-wrap gap-2 text-[10px] font-bold text-white/65"><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><Flame className="h-3 w-3 text-orange-300" /> {t('home.signal.heating')}</span><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><Waves className="h-3 w-3 text-cyan-300" /> {t('home.signal.water')}</span><span className="inline-flex items-center gap-1 rounded-full bg-white/8 px-2.5 py-1.5"><BadgeCheck className="h-3 w-3 text-blue-300" /> {t('enums.verified')}</span></div>
           </div>
           <span className="hidden h-12 w-12 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300 to-blue-500 text-[#08101f] shadow-lg sm:grid"><Sparkles className="h-5 w-5" /></span>
         </div>

@@ -23,7 +23,10 @@ function DashboardOverviewPage({ owner = false }) {
 
   const agreementNeedingMe = agreements.find((agreement) => {
     if (agreement.status === 'executed' || agreement.status === 'cancelled') return false
-    const signature = owner ? agreement.ownerSignature : agreement.renterSignature
+    // Decide by which party the user is on this agreement, not by which
+    // workspace they happen to be looking at.
+    const ownerId = agreement.owner?._id || agreement.owner?.id || agreement.owner
+    const signature = String(ownerId) === String(user?.id) ? agreement.ownerSignature : agreement.renterSignature
     return !signature?.signed
   })
 

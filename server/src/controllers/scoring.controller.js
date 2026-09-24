@@ -433,6 +433,12 @@ exports.getSmartMatches =
           isDeleted: {
             $ne: true,
           },
+
+          // Never recommend someone their own listing.
+          owner: {
+            $ne:
+              req.user._id,
+          },
         })
           .populate(
             "amenities",

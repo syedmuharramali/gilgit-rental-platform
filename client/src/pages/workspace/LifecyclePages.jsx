@@ -56,8 +56,9 @@ export function ViewingsPage({ owner = false }) {
               {item.message && <p className="mt-4 text-sm leading-6 text-slate-300">{item.message}</p>}
               {item.ownerResponse && <p className="mt-3 rounded-2xl border border-white/8 bg-white/[0.035] p-3 text-sm text-slate-300">{t('viewings.ownerResponse', { message: item.ownerResponse })}</p>}
               <div className="mt-5 flex flex-wrap gap-2">
-                {owner && item.status === 'requested' && <><PrimaryButton onClick={() => act(confirm, { id: item._id, ownerResponse: t('viewings.confirmMessage') }, t('viewings.toastConfirmed'))}>{t('viewings.confirm')}</PrimaryButton><SecondaryButton onClick={() => act(reject, { id: item._id, ownerResponse: t('viewings.rejectMessage') }, t('viewings.toastRejected'))}>{t('viewings.reject')}</SecondaryButton></>}
-                {owner && item.status === 'confirmed' && <PrimaryButton onClick={() => act(complete, item._id, t('viewings.toastCompleted'))}>{t('viewings.markCompleted')}</PrimaryButton>}
+                {/* The server refuses to confirm a time that has passed or complete one that has not arrived yet; match it instead of offering buttons that fail. */}
+                {owner && item.status === 'requested' && <>{new Date(item.requestedDateTime) > new Date() ? <PrimaryButton onClick={() => act(confirm, { id: item._id, ownerResponse: t('viewings.confirmMessage') }, t('viewings.toastConfirmed'))}>{t('viewings.confirm')}</PrimaryButton> : <span className="self-center text-xs font-bold text-slate-500">{t('viewings.timePassed')}</span>}<SecondaryButton onClick={() => act(reject, { id: item._id, ownerResponse: t('viewings.rejectMessage') }, t('viewings.toastRejected'))}>{t('viewings.reject')}</SecondaryButton></>}
+                {owner && item.status === 'confirmed' && new Date(item.requestedDateTime) <= new Date() && <PrimaryButton onClick={() => act(complete, item._id, t('viewings.toastCompleted'))}>{t('viewings.markCompleted')}</PrimaryButton>}
                 {!owner && ['requested', 'confirmed'].includes(item.status) && <SecondaryButton onClick={() => act(cancel, item._id, t('viewings.toastCancelled'))}>{t('viewings.cancel')}</SecondaryButton>}
               </div>
             </Panel>

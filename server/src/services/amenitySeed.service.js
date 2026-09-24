@@ -60,11 +60,34 @@ const ensureDefaultAmenities =
         }
       );
 
-    const result =
-      await Amenity.bulkWrite(
-        operations,
-        { ordered: false }
-      );
+    let result;
+
+    try {
+      result =
+        await Amenity.bulkWrite(
+          operations,
+          { ordered: false }
+        );
+    } catch (error) {
+      /*
+      | Two first requests seeding at the same moment can both try to insert
+      | the same slug. The other one won, so the amenity exists — that is
+      | success, not a 409 for the owner's editor.
+      */
+      const onlyDuplicates =
+        error?.code === 11000 ||
+        (Array.isArray(error?.writeErrors) &&
+          error.writeErrors.length > 0 &&
+          error.writeErrors.every(
+            (writeError) => writeError.code === 11000
+          ));
+
+      if (!onlyDuplicates) {
+        throw error;
+      }
+
+      result = error.result || {};
+    }
 
     return {
       total: defaultAmenities.length,

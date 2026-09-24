@@ -21,9 +21,11 @@ export const rentalTermsApi = baseApi.injectEndpoints({
       ],
     }),
     acceptRentalTerms: builder.mutation({
-      query: (id) => ({
+      // proposedAt tells the server which version the renter was looking at.
+      query: ({ id, proposedAt }) => ({
         url: `/rental-terms/${id}/accept`,
         method: 'PATCH',
+        body: { proposedAt },
       }),
       invalidatesTags: [
         { type: 'RentalTerms', id: 'LIST' },

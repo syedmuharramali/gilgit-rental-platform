@@ -28,6 +28,8 @@ export default function OwnerVerificationPage() {
 
   const current = data?.verification
   const canSubmit = !current || current.status === 'resubmission_required'
+  // A final rejection cannot be resubmitted; it used to read "Under review".
+  const isClosed = !data?.ownerVerified && current?.status === 'rejected'
 
   const chooseFile = (key, label, file, input) => {
     if (!file) {
@@ -84,7 +86,7 @@ export default function OwnerVerificationPage() {
         </Panel>
 
         <Panel>
-          <h2 className="font-black text-white">{canSubmit ? t('ver.submitDocs') : data?.ownerVerified ? t('ver.verified') : t('ver.underReview')}</h2>
+          <h2 className="font-black text-white">{canSubmit ? t('ver.submitDocs') : data?.ownerVerified ? t('ver.verified') : isClosed ? t('ver.rejectedTitle') : t('ver.underReview')}</h2>
           {canSubmit ? (
             <div className="mt-5 space-y-4">
               <div>
@@ -125,7 +127,7 @@ export default function OwnerVerificationPage() {
               <PrimaryButton disabled={submitState.isLoading || form.cnicLast4.length !== 4 || !form.cnicFront || !form.cnicBack || !form.selfie} className="w-full" onClick={send}>{submitState.isLoading ? t('ver.submitting') : t('ver.submitForReview')}</PrimaryButton>
             </div>
           ) : (
-            <p className="mt-4 text-sm leading-6 text-slate-400">{data?.ownerVerified ? t('ver.verifiedNote') : t('ver.waitingNote')}</p>
+            <p className="mt-4 text-sm leading-6 text-slate-400">{data?.ownerVerified ? t('ver.verifiedNote') : isClosed ? t('ver.rejectedNote') : t('ver.waitingNote')}</p>
           )}
         </Panel>
       </div>

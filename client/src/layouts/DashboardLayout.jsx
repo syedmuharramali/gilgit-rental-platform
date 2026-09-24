@@ -20,7 +20,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
-import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher'
 import { logout } from '../features/auth/authSlice'
 import {
@@ -106,6 +106,7 @@ function DashboardLayout({ mode = 'renter' }) {
   const { t } = useTranslation()
   const dispatch = useDispatch()
   const location = useLocation()
+  const navigate = useNavigate()
   const user = useSelector((state) => state.auth.user)
   const { data: unread } = useGetUnreadCountQuery(undefined, { pollingInterval: 30000 })
   const [markNotificationTypesRead] = useMarkNotificationTypesReadMutation()
@@ -147,6 +148,9 @@ function DashboardLayout({ mode = 'renter' }) {
 
   const signOut = () => {
     setMobileMenuOpen(false)
+    // Leave first: otherwise ProtectedRoute redirects to /login carrying this
+    // page as "from", and the next person to sign in lands on it.
+    navigate('/login', { replace: true })
     dispatch(logout())
   }
 

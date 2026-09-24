@@ -17,18 +17,34 @@ const validateRequest = require("../middleware/validate.middleware");
 
 const router = express.Router();
 
-const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 20,
+/*
+| One limiter per purpose, each with its own counter. A single shared
+| counter meant a busy room on one IP (a lab, a demo, a mobile carrier)
+| used it up with ordinary signups and resends, and then nobody could
+| even open their confirmation link for 15 minutes.
+*/
 
-  standardHeaders: "draft-7",
-  legacyHeaders: false,
+const makeLimiter = (limit, extra = {}) =>
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit,
 
-  message: {
-    success: false,
-    message: "Too many authentication attempts. Please try again later.",
-  },
-});
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+
+    message: {
+      success: false,
+      message: "Too many authentication attempts. Please try again later.",
+    },
+
+    ...extra,
+  });
+
+// Only failed sign-ins count, so guessing is still capped but people who
+// type their password correctly are never locked out.
+const signInLimiter = makeLimiter(20, { skipSuccessfulRequests: true });
+const registerLimiter = makeLimiter(20);
+const emailLinkLimiter = makeLimiter(30);
 
 /*
 |--------------------------------------------------------------------------
@@ -39,7 +55,7 @@ const authLimiter = rateLimit({
 router.post(
   "/register",
 
-  authLimiter,
+  registerLimiter,
 
   [
     body("name")
@@ -87,7 +103,7 @@ router.post(
 router.post(
   "/login",
 
-  authLimiter,
+  signInLimiter,
 
   [
     body("email")
@@ -115,7 +131,7 @@ router.post(
 router.post(
   "/google",
 
-  authLimiter,
+  signInLimiter,
 
   [
     body("credential")
@@ -144,7 +160,7 @@ router.post(
 router.post(
   "/verify-email",
 
-  authLimiter,
+  emailLinkLimiter,
 
   [
     body("token")
@@ -167,7 +183,7 @@ router.post(
 router.post(
   "/resend-verification",
 
-  authLimiter,
+  emailLinkLimiter,
 
   [
     body("email")

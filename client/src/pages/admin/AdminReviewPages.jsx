@@ -86,7 +86,7 @@ export function AdminPropertyReviewPage() {
 
   return (
     <>
-      <Link to="/admin/properties" className="mb-5 inline-flex items-center gap-2 text-sm font-black text-slate-400 transition hover:text-cyan-300"><ArrowLeft className="h-4 w-4" /> Review queue</Link>
+      <Link to="/admin/properties" className="mb-5 inline-flex items-center gap-2 text-sm font-black text-slate-400 transition hover:text-cyan-300"><ArrowLeft className="h-4 w-4 rtl:rotate-180" /> {t('adm.backToPropertyQueue')}</Link>
       <PageHeader eyebrow={t('adm.propertyModeration')} title={property.title} text={`${property.owner?.name || t('adm.owner')} · ${property.owner?.email || ''}`} />
       <div className="grid gap-6 xl:grid-cols-[1.25fr_.75fr]">
         <div className="space-y-6">

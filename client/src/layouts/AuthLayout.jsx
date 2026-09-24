@@ -35,8 +35,8 @@ function AuthLayout({ children, eyebrow, title, subtitle }) {
 
             <div className="relative z-20 mt-7 grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">
               <div className="max-w-xl">
-                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200"><BadgeCheck className="h-3.5 w-3.5" /> Local rental journey</span>
-                <h2 className="mt-4 text-4xl font-black leading-[.98] tracking-[-0.055em] xl:text-5xl">A smarter way to rent in Gilgit.</h2>
+                <span className="inline-flex items-center gap-2 rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-cyan-200"><BadgeCheck className="h-3.5 w-3.5" /> {t('authLayout.journey')}</span>
+                <h2 className="mt-4 text-4xl font-black leading-[.98] tracking-[-0.055em] xl:text-5xl">{t('authLayout.tagline')}</h2>
                 <p className="mt-4 max-w-lg text-sm leading-6 text-white/42">{t('authLayout.lede')}</p>
               </div>
 

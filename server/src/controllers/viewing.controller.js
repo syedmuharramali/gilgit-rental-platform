@@ -98,6 +98,23 @@ exports.createViewingRequest =
       }
 
       /*
+      | Once a renter has been accepted the listing is spoken for. The page
+      | hides the button, but a stale tab or a direct call could still book.
+      */
+
+      if (
+        property.reservationStatus ===
+        "reserved"
+      ) {
+        return next(
+          new AppError(
+            "This property has already been reserved for another renter",
+            409
+          )
+        );
+      }
+
+      /*
       |--------------------------------------------------------------------------
       | Validate requested date/time
       |--------------------------------------------------------------------------

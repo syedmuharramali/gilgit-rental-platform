@@ -49,8 +49,10 @@ import { useCreateViewingMutation } from '../features/viewings/viewingsApi'
 import { useStartConversationMutation } from '../features/messages/messagesApi'
 import { useCreateReportMutation } from '../features/reports/reportsApi'
 import { useGetPropertyReviewsQuery } from '../features/reviews/reviewsApi'
+import i18n from '../i18n/config'
+import { localToday } from '../utils/formatters'
 
-const errorMessage = (error) => error?.data?.message || error?.error || 'Something went wrong'
+const errorMessage = (error) => error?.data?.message || error?.error || i18n.t('common.somethingWrong')
 const blankRoommate = () => ({ name: '', email: '', phone: '' })
 
 function PropertyDetailsPage() {
@@ -122,8 +124,10 @@ function PropertyDetailsPage() {
     } catch (requestError) { toast.error(errorMessage(requestError)) }
   }
 
+  // datetime-local has no timezone; the browser reads it as local time, so send
+  // an exact instant. Sent raw, a UTC server stored 3 PM as 3 PM UTC (8 PM here).
   const submitViewing = async () => {
-    try { await createViewing({ propertyId: id, requestedDateTime: viewing.requestedDateTime, message: viewing.message }).unwrap(); toast.success(t('details.toastViewing')); setModal(null) }
+    try { await createViewing({ propertyId: id, requestedDateTime: new Date(viewing.requestedDateTime).toISOString(), message: viewing.message }).unwrap(); toast.success(t('details.toastViewing')); setModal(null) }
     catch (requestError) { toast.error(errorMessage(requestError)) }
   }
 
@@ -291,7 +295,7 @@ function PropertyDetailsPage() {
 
           <label className="block">
             <span className="mb-2 block text-xs font-black text-slate-200">{t('details.preferredMoveIn')} <span className="font-semibold text-slate-600">{t('details.optional')}</span></span>
-            <TextInput aria-label={t('details.preferredMoveIn')} type="date" value={application.preferredMoveInDate} onChange={(event) => setApplication((current) => ({ ...current, preferredMoveInDate: event.target.value }))} />
+            <TextInput aria-label={t('details.preferredMoveIn')} type="date" min={localToday()} value={application.preferredMoveInDate} onChange={(event) => setApplication((current) => ({ ...current, preferredMoveInDate: event.target.value }))} />
             <span className="mt-2 block text-[11px] leading-5 text-slate-500">{t('details.preferredMoveInHint')}</span>
           </label>
 
@@ -342,7 +346,7 @@ function PropertyDetailsPage() {
         </div>
       </Modal>
 
-      <Modal open={modal === 'viewing'} onClose={() => setModal(null)} title={t('details.viewingModalTitle')}><div className="space-y-3"><TextInput type="datetime-local" value={viewing.requestedDateTime} onChange={(event) => setViewing({ ...viewing, requestedDateTime: event.target.value })} /><TextArea value={viewing.message} onChange={(event) => setViewing({ ...viewing, message: event.target.value })} placeholder={t('details.viewingNotePlaceholder')} /><PrimaryButton disabled={viewingState.isLoading || !viewing.requestedDateTime} className="w-full" onClick={submitViewing}>{t('details.sendViewingRequest')}</PrimaryButton></div></Modal>
+      <Modal open={modal === 'viewing'} onClose={() => setModal(null)} title={t('details.viewingModalTitle')}><div className="space-y-3"><TextInput type="datetime-local" min={`${localToday()}T00:00`} value={viewing.requestedDateTime} onChange={(event) => setViewing({ ...viewing, requestedDateTime: event.target.value })} /><TextArea value={viewing.message} onChange={(event) => setViewing({ ...viewing, message: event.target.value })} placeholder={t('details.viewingNotePlaceholder')} /><PrimaryButton disabled={viewingState.isLoading || !viewing.requestedDateTime} className="w-full" onClick={submitViewing}>{t('details.sendViewingRequest')}</PrimaryButton></div></Modal>
       <Modal open={modal === 'report'} onClose={() => setModal(null)} title={t('details.reportModalTitle')}><div className="space-y-3"><Select value={report.reason} onChange={(event) => setReport({ ...report, reason: event.target.value })}>{['fraud','misleading_listing','inappropriate_content','duplicate_listing','safety_concern','other'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select><TextArea value={report.description} onChange={(event) => setReport({ ...report, description: event.target.value })} placeholder={t('details.reportPlaceholder')} /><PrimaryButton disabled={reportState.isLoading} className="w-full" onClick={submitReport}>{t('details.submitReport')}</PrimaryButton></div></Modal>
     </main>
   )

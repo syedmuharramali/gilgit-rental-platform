@@ -2,6 +2,7 @@ import { LoaderCircle, Sparkles, X } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useId, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import i18n from '../../i18n/config'
 import { amenityLabel, dateTime, money, pretty, shortDate } from '../../utils/formatters'
 
 export { amenityLabel, dateTime, money, pretty, shortDate }
@@ -82,7 +83,7 @@ export function Modal({ open, onClose, title, children }) {
       {open && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] grid place-items-center bg-[#02050c]/80 p-4 backdrop-blur-xl" role="dialog" aria-modal="true" aria-labelledby={titleId}>
           <motion.div initial={{ opacity: 0, y: 20, scale: .96 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 10, scale: .98 }} transition={{ type: 'spring', stiffness: 260, damping: 24 }} className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-[30px] border border-white/10 bg-[#0d1423] p-6 text-white shadow-[0_40px_120px_rgba(0,0,0,.55)]">
-            <div className="mb-5 flex items-center justify-between gap-4"><h2 id={titleId} className="text-xl font-black tracking-[-.03em]">{title}</h2><button ref={closeRef} type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/50" aria-label={`Close ${title}`}><X className="h-4 w-4" /></button></div>
+            <div className="mb-5 flex items-center justify-between gap-4"><h2 id={titleId} className="text-xl font-black tracking-[-.03em]">{title}</h2><button ref={closeRef} type="button" onClick={onClose} className="grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-slate-300 transition hover:bg-white/10 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300/50" aria-label={i18n.t('common.closeNamed', { name: title })}><X className="h-4 w-4" /></button></div>
             {children}
           </motion.div>
         </motion.div>

@@ -16,7 +16,10 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
   const token = useSelector((state) => state.auth.token)
   const navigate = useNavigate()
   const location = useLocation()
-  const listQuery = useGetFavoritesQuery(undefined, { skip: !token || showLabel })
+  // Every card shares this one list. With the app-wide refetch-on-mount, each
+  // card mounting re-downloaded it and set every heart spinning; the add and
+  // remove mutations already refresh it when it actually changes.
+  const listQuery = useGetFavoritesQuery(undefined, { skip: !token || showLabel, refetchOnMountOrArgChange: false })
   const statusQuery = useCheckFavoriteQuery(propertyId, { skip: !token || !propertyId || !showLabel })
   const [addFavorite, { isLoading: isAdding }] = useAddFavoriteMutation()
   const [removeFavorite, { isLoading: isRemoving }] = useRemoveFavoriteMutation()

@@ -7,8 +7,10 @@ const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
 
 export default function PropertyMap({ latitude, longitude, title, className = '' }) {
   const { t } = useTranslation()
-  const lat = Number(latitude)
-  const lng = Number(longitude)
+  // Number(null) is 0, so a listing with no pin used to be drawn at 0,0 in
+  // the Atlantic instead of showing the "no location" card.
+  const lat = latitude == null || latitude === '' ? NaN : Number(latitude)
+  const lng = longitude == null || longitude === '' ? NaN : Number(longitude)
 
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
     return (
@@ -28,7 +30,7 @@ export default function PropertyMap({ latitude, longitude, title, className = ''
       >
         <NavigationControl position="top-right" showCompass={false} />
         <Marker latitude={lat} longitude={lng} anchor="bottom">
-          <div className="grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#102f26] text-white shadow-xl" title={title || 'Property location'}>
+          <div className="grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#102f26] text-white shadow-xl" title={title || t('propertyMap.pinTitle')}>
             <MapPin className="h-4 w-4" />
           </div>
         </Marker>

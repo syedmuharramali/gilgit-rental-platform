@@ -50,12 +50,16 @@ exports.protect = asyncHandler(async (req, res, next) => {
   }
 
   if (user.accountStatus !== "active") {
-    return next(
-      new AppError(
-        `Your account is currently ${user.accountStatus}`,
-        403
-      )
+    const inactiveError = new AppError(
+      `Your account is currently ${user.accountStatus}`,
+      403
     );
+
+    // Lets the client sign the person out instead of leaving a dashboard
+    // where every request fails.
+    inactiveError.code = "ACCOUNT_INACTIVE";
+
+    return next(inactiveError);
   }
 
   req.user = user;

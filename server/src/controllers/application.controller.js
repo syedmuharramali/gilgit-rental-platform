@@ -17,11 +17,25 @@ const Property =
     "../models/property.model"
   );
 
+const Viewing =
+  require(
+    "../models/viewing.model"
+  );
+
+const User =
+  require(
+    "../models/user.model"
+  );
+
 const AppError =
   require("../utils/AppError");
 
 const asyncHandler =
   require("../utils/asyncHandler");
+
+const {
+  isBeforeGilgitToday,
+} = require("../utils/gilgitDate");
 
 /*
 |--------------------------------------------------------------------------
@@ -175,6 +189,23 @@ exports.createApplication =
           );
         }
 
+        // [null] or ["x"] used to throw a TypeError here and answer 500.
+        if (
+          req.body.roommates.some(
+            (roommate) =>
+              !roommate ||
+              typeof roommate !==
+                "object"
+          )
+        ) {
+          return next(
+            new AppError(
+              "Each roommate needs a name and email",
+              400
+            )
+          );
+        }
+
         roommates =
           req.body.roommates.map(
             (roommate) => {
@@ -268,6 +299,26 @@ exports.createApplication =
             )
           );
         }
+
+        const ownerAccount =
+          await User.findById(
+            property.owner
+          ).select("email");
+
+        if (
+          ownerAccount?.email &&
+          emails.includes(
+            ownerAccount.email
+              .toLowerCase()
+          )
+        ) {
+          return next(
+            new AppError(
+              "The property owner cannot be listed as a roommate",
+              400
+            )
+          );
+        }
       }
 
       /*
@@ -298,6 +349,19 @@ exports.createApplication =
           return next(
             new AppError(
               "Preferred move-in date is invalid",
+              400
+            )
+          );
+        }
+
+        if (
+          isBeforeGilgitToday(
+            preferredMoveInDate
+          )
+        ) {
+          return next(
+            new AppError(
+              "Preferred move-in date cannot be in the past",
               400
             )
           );
@@ -770,7 +834,26 @@ exports.acceptApplication =
       application.rejectionReason =
         null;
 
-      await application.save();
+      /*
+      | One accepted application per property is enforced by a unique index.
+      | If two accepts race, the loser gets E11000 — which the generic
+      | handler turned into a baffling "property already exists".
+      */
+
+      try {
+        await application.save();
+      } catch (error) {
+        if (error?.code === 11000) {
+          return next(
+            new AppError(
+              "Another application for this property was just accepted",
+              409
+            )
+          );
+        }
+
+        throw error;
+      }
 
       /*
       |--------------------------------------------------------------------------
@@ -860,6 +943,85 @@ exports.acceptApplication =
           })
         )
       );
+
+      /*
+      |--------------------------------------------------------------------------
+      | Cancel other renters' upcoming viewings
+      |--------------------------------------------------------------------------
+      |
+      | Their applications are closed above; leaving a confirmed viewing in
+      | place meant people still turned up to see a home that was taken.
+      */
+
+      const openViewings =
+        await Viewing.find({
+          property:
+            application.property,
+
+          renter: {
+            $ne:
+              application.applicant,
+          },
+
+          status: {
+            $in: [
+              "requested",
+              "confirmed",
+            ],
+          },
+        }).select(
+          "_id renter"
+        );
+
+      if (openViewings.length > 0) {
+        await Viewing.updateMany(
+          {
+            _id: {
+              $in:
+                openViewings.map(
+                  (viewing) =>
+                    viewing._id
+                ),
+            },
+          },
+          {
+            $set: {
+              status:
+                "cancelled",
+
+              cancelledAt:
+                new Date(),
+
+              ownerResponse:
+                "This property has been reserved for another renter.",
+            },
+          }
+        );
+
+        await safeCreateNotifications(
+          openViewings.map(
+            (viewing) => ({
+              user:
+                viewing.renter,
+
+              type:
+                "viewing_cancelled",
+
+              title:
+                "Viewing Cancelled",
+
+              message:
+                `${property.title} has been reserved for another renter, so your viewing was cancelled.`,
+
+              resourceType:
+                "viewing",
+
+              resourceId:
+                viewing._id,
+            })
+          )
+        );
+      }
 
       await application.populate([
         {

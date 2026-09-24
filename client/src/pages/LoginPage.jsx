@@ -13,9 +13,10 @@ import VerificationNotice from '../components/VerificationNotice'
 import { clearAuthError, googleSignIn, loginUser } from '../features/auth/authSlice'
 import { useGetMyVerificationQuery } from '../features/verification/verificationApi'
 
+// Messages are translation keys, rendered with t() so they follow the language.
 const loginSchema = z.object({
-  email: z.string().trim().email('Enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
+  email: z.string().trim().email('auth.err.email'),
+  password: z.string().min(1, 'auth.err.passwordRequired'),
 })
 
 const getPostLoginDestination = (user, ownerVerified, requestedPath) => {
@@ -94,13 +95,13 @@ function LoginPage() {
 
   const onSubmit = async (form) => {
     const result = await dispatch(loginUser(form))
-    if (loginUser.fulfilled.match(result)) toast.success('Welcome back')
+    if (loginUser.fulfilled.match(result)) toast.success(t('auth.toast.welcome'))
   }
 
   const onGoogleCredential = useCallback(async (credential) => {
     const result = await dispatch(googleSignIn(credential))
-    if (googleSignIn.fulfilled.match(result)) toast.success('Signed in with Google')
-  }, [dispatch])
+    if (googleSignIn.fulfilled.match(result)) toast.success(t('auth.toast.google'))
+  }, [dispatch, t])
 
   return (
     <AuthLayout eyebrow={t('auth.signInEyebrow')} title={t('auth.signInTitle')} subtitle={t('auth.signInSubtitle')}>
@@ -121,7 +122,7 @@ function LoginPage() {
           <FieldShell error={errors.email} icon={Mail}>
             <input type="email" {...register('email')} autoComplete="email" placeholder={t('auth.emailPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
           </FieldShell>
-          {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.email.message}</p>}
+          {errors.email && <p className="mt-1.5 text-xs font-semibold text-rose-300">{t(errors.email.message)}</p>}
         </label>
 
         <label className="block">
@@ -130,7 +131,7 @@ function LoginPage() {
             <input type={showPassword ? 'text' : 'password'} {...register('password')} autoComplete="current-password" placeholder={t('auth.passwordPlaceholder')} className="h-full w-full bg-transparent pl-11 pr-12 text-sm font-semibold text-white outline-none placeholder:font-medium placeholder:text-white/22" />
             <button type="button" onClick={() => setShowPassword((value) => !value)} className="absolute right-2 grid h-9 w-9 place-items-center rounded-xl text-white/28 transition hover:bg-white/8 hover:text-white" aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}>{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
           </FieldShell>
-          {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-300">{errors.password.message}</p>}
+          {errors.password && <p className="mt-1.5 text-xs font-semibold text-rose-300">{t(errors.password.message)}</p>}
         </label>
 
         <div className="flex items-center justify-between gap-4 rounded-2xl border border-white/8 bg-white/[0.03] px-4 py-3 text-xs text-white/35"><span>{t('auth.sessionNote')}</span><span className="shrink-0 font-black text-cyan-200">{t('auth.protected')}</span></div>

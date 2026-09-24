@@ -50,6 +50,17 @@ const getTransport = () => {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASSWORD,
       },
+
+      /*
+      | Nodemailer's defaults wait up to 2 minutes to connect and 10 minutes
+      | on a stalled socket. Signup awaits this call, and the browser gives
+      | up after 15 seconds — so without these a blocked SMTP port makes
+      | a successful signup look like a failure.
+      */
+
+      connectionTimeout: 8000,
+      greetingTimeout: 8000,
+      socketTimeout: 10000,
     });
 
   return cachedTransport;

@@ -17,7 +17,11 @@
     "exploreAll": "Explore all rentals",
     "currency": "PKR",
     "somethingWrong": "Something went wrong",
-    "restoringSession": "Restoring your session"
+    "restoringSession": "Restoring your session",
+    "closeNamed": "Close {{name}}",
+    "uploadFailed": "Upload failed",
+    "networkError": "Could not reach the server. Check your connection and try again.",
+    "timeout": "The server took too long to answer. Please try again."
   },
   "nav": {
     "explore": "Explore",
@@ -182,7 +186,11 @@
     "emptyText2": "Try a wider rent range, another area, or reset the active filters.",
     "resetFilters": "Reset filters",
     "sortNewest": "Newest",
-    "sortOldest": "Oldest"
+    "sortOldest": "Oldest",
+    "badFilter": "Those filters could not be applied",
+    "previousPage": "Previous",
+    "nextPage": "Next",
+    "pagination": "Result pages"
   },
   "details": {
     "back": "Back to rentals",
@@ -337,7 +345,7 @@
       "backToSignIn": "Back to sign in",
       "needNewTitle": "Need a new link?",
       "needNewText": "We can send another confirmation link to this address.",
-      "needNewTextNoEmail": "Sign in with your email and password and we will offer you a new link.",
+      "needNewTextNoEmail": "Enter the email you signed up with and we will send a fresh confirmation link.",
       "inboxEyebrow": "One last step",
       "inboxTitle": "Confirm your email.",
       "inboxSubtitle": "Your account exists, but it stays locked until you open the link we just sent.",
@@ -347,7 +355,26 @@
       "loginNoticeText": "We sent a confirmation link to this address. Open it once and you can sign in straight away.",
       "resend": "Send the link again",
       "resent": "Sent. Check spam too.",
-      "alreadyConfirmed": "Already confirmed?"
+      "alreadyConfirmed": "Already confirmed?",
+      "resendIn": "Send again in {{seconds}}s",
+      "resendFailed": "Unable to send a new link"
+    },
+    "err": {
+      "email": "Enter a valid email address",
+      "passwordRequired": "Password is required",
+      "nameMin": "Name must contain at least 2 characters",
+      "nameMax": "Name cannot exceed 80 characters",
+      "passwordMin": "Password must contain at least 8 characters",
+      "uppercase": "Add at least one uppercase letter",
+      "lowercase": "Add at least one lowercase letter",
+      "number": "Add at least one number"
+    },
+    "toast": {
+      "welcome": "Welcome back",
+      "google": "Signed in with Google",
+      "googleConnected": "Account connected with Google",
+      "created": "Account created. Check your inbox.",
+      "createdNoEmail": "Account created, but the email could not be sent. Try resending it."
     }
   },
   "enums": {
@@ -389,6 +416,8 @@
     "ended": "Ended",
     "upcoming": "Upcoming",
     "pending_agreement": "Pending Agreement",
+    "pending_signatures": "Pending Signatures",
+    "admin": "Admin",
     "verified": "Verified",
     "resubmission_required": "Resubmission Required",
     "under_review": "Under Review",
@@ -682,7 +711,8 @@
     "toastConfirmed": "Viewing confirmed",
     "toastRejected": "Viewing rejected",
     "toastCompleted": "Viewing completed",
-    "toastCancelled": "Viewing cancelled"
+    "toastCancelled": "Viewing cancelled",
+    "timePassed": "This time has passed — decline it so the renter can pick another."
   },
   "apps": {
     "eyebrowOwner": "Owner inbox",
@@ -887,7 +917,8 @@
     "toastSubmitted": "Property submitted for review",
     "toastDeleted": "Property deleted",
     "emptyTitle": "No properties yet",
-    "emptyText": "Create your first property after owner verification is approved."
+    "emptyText": "Create your first property after owner verification is approved.",
+    "lockedNote": "A renter has been accepted for this listing, so it is locked. It cannot be edited or deleted while the rental is in progress."
   },
   "ver": {
     "eyebrow": "Trust & safety",
@@ -913,7 +944,9 @@
     "waitingNote": "Your documents are waiting for an administrator decision.",
     "toastSubmitted": "Verification submitted",
     "mustBeImage": "{{label}} must be a JPG or PNG image.",
-    "tooLarge": "{{label}} is {{size}}. Please choose an image smaller than 1 MB."
+    "tooLarge": "{{label}} is {{size}}. Please choose an image smaller than 1 MB.",
+    "rejectedTitle": "Verification not approved",
+    "rejectedNote": "An administrator closed this request without allowing a resubmission. Use the reason above, and contact support if you believe this is a mistake."
   },
   "admin": {
     "administration": "Administration",
@@ -998,6 +1031,7 @@
     "verificationRequest": "Verification request",
     "cnicEnding": "{{email}} · CNIC ending {{digits}}",
     "backToQueue": "Verification queue",
+    "backToPropertyQueue": "Review queue",
     "submissionDetails": "Submission details",
     "attempt": "Attempt",
     "submitted": "Submitted",
@@ -1219,7 +1253,9 @@
     "uploadImage": "Upload image",
     "uploadComplete": "Upload complete · saving securely…",
     "uploadingPercent": "Uploading {{percent}}%",
-    "readyToUpload": "{{size}} · ready to upload"
+    "readyToUpload": "{{size}} · ready to upload",
+    "saveAndFinish": "Save and finish",
+    "republishWarning": "Saving these changes sends the listing back to review. It stays hidden from renters until an administrator approves it again."
   },
   "map": {
     "searchPlaceholder": "Search a place, e.g. Jutial, Konodas, Zulfiqarabad",
@@ -1233,7 +1269,7 @@
     "noPlaces": "No places found. Try a nearby landmark or tap the map directly.",
     "searchUnavailable": "Search is unavailable right now. Tap the map to place the pin.",
     "loadFailed": "The map could not load",
-    "loadFailedText": "Check your internet connection and reload the page. The area and city fields are still enough to save a draft.",
+    "loadFailedText": "Check your internet connection and reload the page. A pin is required to continue, so if the map still will not load, use search or \"I'm at the property\" to place it.",
     "yourLocation": "Your current location",
     "dragToAdjust": "Drag to adjust",
     "tapToPin": "Tap or click on the map exactly where the property is to drop the pin.",
@@ -1247,11 +1283,13 @@
   },
   "resultsMap": {
     "viewProperty": "View property",
-    "noCoordinates": "These results do not include coordinates yet. Use grid view for complete listing details."
+    "noCoordinates": "These results do not include coordinates yet. Use grid view for complete listing details.",
+    "openListing": "Open {{title}}"
   },
   "propertyMap": {
     "noLocation": "Exact map location not provided",
-    "noLocationText": "Use the area and landmark details shown on this listing."
+    "noLocationText": "Use the area and landmark details shown on this listing.",
+    "pinTitle": "Property location"
   },
   "hero": {
     "listingTrust": "Listing trust",
@@ -1260,9 +1298,13 @@
     "winterReady": "Winter ready",
     "premiumDiscovery": "Premium discovery",
     "tagline": "Homes that make sense beyond the photos.",
-    "interactive": "Interactive 3D rental experience"
+    "interactive": "Interactive 3D rental experience",
+    "imageAlt": "A bright, modern rental home",
+    "location": "Gilgit · Jutial"
   },
   "authLayout": {
+    "journey": "Local rental journey",
+    "tagline": "A smarter way to rent in Gilgit.",
     "lede": "Discover verified homes, understand practical living conditions, apply, schedule viewings and keep every rental step together.",
     "terms": "By continuing, you agree to use the platform responsibly and provide accurate rental information."
   },

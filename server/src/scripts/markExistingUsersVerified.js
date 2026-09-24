@@ -36,6 +36,15 @@ const markExistingUsersVerified =
             emailVerified: {
               $ne: true,
             },
+
+            /*
+            | Accounts created before email confirmation existed were never
+            | sent a link, so this field is missing on them. Anyone who
+            | signed up since has it set and must confirm for themselves —
+            | this keeps a re-run from waving new, unconfirmed signups in.
+            */
+
+            emailVerificationSentAt: null,
           },
           {
             $set: {

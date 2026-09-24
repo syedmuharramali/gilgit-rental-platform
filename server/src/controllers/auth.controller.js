@@ -114,20 +114,61 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   const normalizedEmail = normalizeEmail(email);
 
-  const existingUser = await findUserByEmail(normalizedEmail);
+  const existingUser = await findUserByEmail(
+    normalizedEmail,
+    "+emailVerificationSentAt"
+  );
 
-  if (existingUser) {
+  /*
+  | An account that was never confirmed does not belong to anyone yet. If it
+  | were kept, a typo'd or forgotten signup (or someone squatting on another
+  | person's address) would block that address forever, because there is no
+  | password reset. Registering again replaces the unconfirmed details and
+  | sends a fresh link; only whoever controls the inbox can finish it.
+  */
+
+  const isUnclaimed =
+    existingUser &&
+    !existingUser.emailVerified &&
+    !existingUser.googleId &&
+    existingUser.authProvider === "local";
+
+  if (existingUser && !isUnclaimed) {
     return next(
       new AppError("An account with this email already exists", 409)
     );
   }
 
-  const user = await User.create({
-    name,
-    email: normalizedEmail,
-    password,
-    authProvider: "local",
-  });
+  let user;
+
+  if (isUnclaimed) {
+    const lastSentAt = existingUser.emailVerificationSentAt;
+
+    if (
+      lastSentAt &&
+      Date.now() - lastSentAt.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      return next(
+        new AppError(
+          "A confirmation email was just sent to this address. Please wait a minute before trying again.",
+          429
+        )
+      );
+    }
+
+    existingUser.name = name;
+    existingUser.password = password;
+    await existingUser.save();
+
+    user = existingUser;
+  } else {
+    user = await User.create({
+      name,
+      email: normalizedEmail,
+      password,
+      authProvider: "local",
+    });
+  }
 
   const delivery = await issueVerificationEmail(user);
 
@@ -164,7 +205,7 @@ exports.login = asyncHandler(async (req, res, next) => {
     return next(new AppError("Invalid email or password", 401));
   }
 
-  if (user.authProvider === "google" && !user.password) {
+  if (!user.password) {
     return next(
       new AppError(
         "This account uses Google Sign-In. Please continue with Google.",
@@ -267,6 +308,19 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
             409
           )
         );
+      }
+
+      /*
+      | If nobody ever proved they own this inbox, the password on the account
+      | was chosen by whoever registered first — possibly not the person now
+      | signing in with Google. Drop it, so it cannot be used to get in.
+      */
+
+      if (!existingEmailUser.emailVerified) {
+        existingEmailUser.password = undefined;
+        existingEmailUser.authProvider = "google";
+        existingEmailUser.emailVerificationTokenHash = null;
+        existingEmailUser.emailVerificationExpires = null;
       }
 
       existingEmailUser.googleId = googleProfile.googleId;
@@ -449,9 +503,16 @@ exports.resendVerification = asyncHandler(async (req, res) => {
     return res.status(200).json(genericResponse);
   }
 
-  await issueVerificationEmail(user);
+  /*
+  | Answer before the SMTP round trip, otherwise the response time alone
+  | would reveal which addresses have an unconfirmed account.
+  */
 
   res.status(200).json(genericResponse);
+
+  issueVerificationEmail(user).catch((error) => {
+    console.error("Resend verification failed:", error.message);
+  });
 });
 
 /*

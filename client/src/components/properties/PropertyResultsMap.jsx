@@ -9,10 +9,13 @@ import { money } from '../workspace/WorkspaceUI'
 const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
 const DEFAULT_GILGIT = { latitude: 35.9208, longitude: 74.3144, zoom: 11 }
 
+// Number(null) is 0, which passed isFinite and plotted unpinned listings at 0,0.
+const hasCoordinate = (value) => value != null && value !== '' && Number.isFinite(Number(value))
+
 export default function PropertyResultsMap({ properties = [] }) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState(null)
-  const mapped = useMemo(() => properties.filter((property) => Number.isFinite(Number(property.address?.latitude)) && Number.isFinite(Number(property.address?.longitude))), [properties])
+  const mapped = useMemo(() => properties.filter((property) => hasCoordinate(property.address?.latitude) && hasCoordinate(property.address?.longitude)), [properties])
   const first = mapped[0]
   const initialViewState = first ? { latitude: Number(first.address.latitude), longitude: Number(first.address.longitude), zoom: 12 } : DEFAULT_GILGIT
 
@@ -22,7 +25,7 @@ export default function PropertyResultsMap({ properties = [] }) {
         <NavigationControl position="top-right" showCompass={false} />
         {mapped.map((property) => (
           <Marker key={property._id} latitude={Number(property.address.latitude)} longitude={Number(property.address.longitude)} anchor="bottom">
-            <button onClick={() => setSelected(property)} className="group grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#102f26] text-white shadow-xl transition hover:-translate-y-1 hover:scale-110" aria-label={`Open ${property.title}`}>
+            <button onClick={() => setSelected(property)} className="group grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-[#102f26] text-white shadow-xl transition hover:-translate-y-1 hover:scale-110" aria-label={t('resultsMap.openListing', { title: property.title })}>
               <MapPin className="h-4 w-4" />
             </button>
           </Marker>

@@ -2,6 +2,7 @@ import { Building2, ChevronLeft, LayoutDashboard, ShieldCheck, Sparkles, Triangl
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet } from 'react-router-dom'
+import LanguageSwitcher from '../components/LanguageSwitcher'
 
 const links = [
   ['/admin', 'overview', 'overview', LayoutDashboard],
@@ -43,7 +44,12 @@ export default function AdminLayout() {
       <div className="relative z-10 lg:pl-72">
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-white/[0.07] bg-[#070b14]/82 px-5 backdrop-blur-2xl sm:px-8 lg:h-20">
           <div><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('admin.protectedWorkspace')}</p><p className="mt-1 text-sm font-black">{t('admin.console')}</p></div>
-          <span className="inline-flex items-center gap-2 rounded-full border border-violet-300/15 bg-violet-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-violet-200"><ShieldCheck className="h-3.5 w-3.5" /> {t('admin.adminAccess')}</span>
+          <div className="flex items-center gap-2">
+            <LanguageSwitcher compact />
+            <span className="hidden items-center gap-2 rounded-full border border-violet-300/15 bg-violet-500/10 px-3 py-2 text-[10px] font-black uppercase tracking-[.12em] text-violet-200 sm:inline-flex"><ShieldCheck className="h-3.5 w-3.5" /> {t('admin.adminAccess')}</span>
+            {/* The sidebar (with the way back) is hidden below lg, so phones had no exit. */}
+            <Link to="/dashboard" className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-bold text-slate-300 lg:hidden"><ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" /> {t('admin.backToAccount')}</Link>
+          </div>
         </header>
         <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
       </div>

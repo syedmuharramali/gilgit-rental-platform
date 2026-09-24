@@ -41,7 +41,13 @@ function RentalAgreementsPage() {
   const [legalName, setLegalName] = useState('')
 
   const agreements = agreementData?.agreements || []
-  const acceptedTerms = (termsData?.terms || []).filter((terms) => terms.status === 'accepted')
+  // The terms list holds both sides of the user's deals. Someone who rents one
+  // home and owns another saw every deal in both workspaces, and "Create
+  // agreement" on one where they are the renter failed with a 404.
+  const partyIdOf = (value) => String(value?._id || value?.id || value || '')
+  const acceptedTerms = (termsData?.terms || []).filter((terms) =>
+    terms.status === 'accepted' &&
+    (ownerMode ? partyIdOf(terms.owner) === String(user?.id) : partyIdOf(terms.renter) === String(user?.id)))
 
   const agreementsByTerms = useMemo(() => {
     const map = new Map()

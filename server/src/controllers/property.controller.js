@@ -1375,14 +1375,17 @@ exports.updateProperty =
       | Editing a published property
       |--------------------------------------------------------------------------
       |
-      | For now, editing a published listing returns it to draft.
+      | Editing a published listing returns it to draft — but only when
+      | something actually changed. Pressing Save with nothing edited used
+      | to take a live listing offline for no reason.
       |
       */
 
-    
-resetPropertyReviewState(
-  property
-);
+      if (property.isModified()) {
+        resetPropertyReviewState(
+          property
+        );
+      }
 
       await property.save();
 
@@ -2137,6 +2140,28 @@ exports.submitPropertyForReview =
         return next(
           new AppError(
             "Select at least one amenity before submitting the property",
+            400
+          )
+        );
+      }
+
+      /*
+      | The editor requires a map pin, but listings created before it did
+      | could still be submitted without one and then showed no map at all.
+      */
+
+      const { latitude, longitude } =
+        property.address || {};
+
+      if (
+        latitude == null ||
+        longitude == null ||
+        !Number.isFinite(Number(latitude)) ||
+        !Number.isFinite(Number(longitude))
+      ) {
+        return next(
+          new AppError(
+            "Drop a pin on the map (Location step) before submitting the property",
             400
           )
         );

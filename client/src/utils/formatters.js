@@ -35,3 +35,10 @@ export const shortDate = (value) =>
         dateStyle: 'medium',
       }).format(new Date(value))
     : '—'
+
+// Today's date as YYYY-MM-DD in the viewer's own timezone. toISOString()
+// alone gives the UTC date, which in Pakistan is yesterday until 5 AM.
+export const localToday = () => {
+  const now = new Date()
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10)
+}

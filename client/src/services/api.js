@@ -18,12 +18,26 @@ api.interceptors.request.use((config) => {
   return config
 })
 
+/*
+| The store imports this module (through authSlice), so this module cannot
+| import the store back. store.js registers the sign-out handler instead.
+*/
+let onSessionEnded = null
+
+export const setSessionEndedHandler = (handler) => {
+  onSessionEnded = handler
+}
+
+export const isSessionEndedError = (status, code) =>
+  status === 401 || (status === 403 && code === 'ACCOUNT_INACTIVE')
+
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('gilgit_rental_token')
-      localStorage.removeItem('gilgit_rental_user')
+    if (isSessionEndedError(error.response?.status, error.response?.data?.code)) {
+      // Clearing localStorage alone left Redux thinking the user was still
+      // signed in, on a dashboard where every request then failed.
+      onSessionEnded?.()
     }
 
     return Promise.reject(error)

@@ -6,6 +6,7 @@ const RentalTerms = require("../models/rentalTerms.model");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 const { safeCreateNotification } = require("../services/notification.service");
+const { isBeforeGilgitToday, startOfGilgitToday } = require("../utils/gilgitDate");
 
 const populateTerms = async (terms) => {
   await terms.populate([
@@ -31,11 +32,25 @@ const populateTerms = async (terms) => {
 };
 
 const parseTermsPayload = ({ body, application, property }) => {
-  const startDateValue = body.startDate || application.preferredMoveInDate || property.availableFrom || new Date();
-  const startDate = new Date(startDateValue);
+  let startDate;
 
-  if (Number.isNaN(startDate.getTime())) {
-    throw new AppError("Rental start date is invalid", 400);
+  if (body.startDate) {
+    startDate = new Date(body.startDate);
+
+    if (Number.isNaN(startDate.getTime())) {
+      throw new AppError("Rental start date is invalid", 400);
+    }
+
+    // A past start date meant the tenancy went live the moment the second
+    // signature landed, already months into the lease on paper.
+    if (isBeforeGilgitToday(startDate)) {
+      throw new AppError("Rental start date cannot be in the past", 400);
+    }
+  } else {
+    // Defaults (preferred move-in, available-from) are often old by now.
+    const fallback = new Date(application.preferredMoveInDate || property.availableFrom || Date.now());
+    const today = startOfGilgitToday();
+    startDate = Number.isNaN(fallback.getTime()) || fallback < today ? today : fallback;
   }
 
   const durationMonths = body.durationMonths !== undefined
@@ -66,8 +81,14 @@ const parseTermsPayload = ({ body, application, property }) => {
     ? Number(body.occupants)
     : application.occupants;
 
-  if (!Number.isInteger(occupants) || occupants < 1 || occupants > property.maxOccupants) {
-    throw new AppError(`Occupants must be between 1 and ${property.maxOccupants}`, 400);
+  // A group application covers the lead applicant plus every roommate; the
+  // agreement must not quietly leave some of them off.
+  const minimumOccupants = application.applicationType === "group"
+    ? 1 + (application.roommates?.length || 0)
+    : 1;
+
+  if (!Number.isInteger(occupants) || occupants < minimumOccupants || occupants > property.maxOccupants) {
+    throw new AppError(`Occupants must be between ${minimumOccupants} and ${property.maxOccupants}`, 400);
   }
 
   return {
@@ -207,6 +228,26 @@ exports.acceptRentalTerms = asyncHandler(async (req, res, next) => {
 
   if (terms.status !== "proposed") {
     return next(new AppError("Only proposed rental terms can be accepted", 400));
+  }
+
+  /*
+  | The owner can revise proposed terms in place. Without this check a renter
+  | clicking Accept on a page that still showed the old rent accepted the new
+  | one sight unseen. The client sends the proposal time it was looking at.
+  */
+
+  const seenProposedAt = req.body?.proposedAt ? new Date(req.body.proposedAt) : null;
+
+  if (
+    seenProposedAt &&
+    terms.proposedAt &&
+    seenProposedAt.getTime() !== new Date(terms.proposedAt).getTime()
+  ) {
+    return next(new AppError("The owner changed these terms while you were viewing them. Please review the updated terms.", 409));
+  }
+
+  if (isBeforeGilgitToday(terms.startDate)) {
+    return next(new AppError("The start date on these terms has passed. Ask the owner to send updated terms.", 409));
   }
 
   terms.status = "accepted";

@@ -42,9 +42,28 @@ function MessagesPage() {
     }
   }, [location.state?.conversationId])
 
+  // Below lg the list and the thread are separate screens; only mark a thread
+  // read when it is actually on screen. Otherwise opening Messages on a phone
+  // silently cleared the top conversation's unread count.
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1024px)').matches)
   useEffect(() => {
-    if (active) markRead(active).catch(() => {})
-  }, [active, markRead])
+    const query = window.matchMedia('(min-width: 1024px)')
+    const update = () => setIsDesktop(query.matches)
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+  const threadVisible = isDesktop || mobileConversationOpen
+
+  // Re-mark when a new message from the other person arrives while the
+  // thread is open; marking only on open left it showing as unread.
+  const newestIncomingId = [...(messageData?.messages || [])].reverse().find((message) => {
+    const senderId = message.sender?._id || message.sender?.id || message.sender
+    return String(senderId) !== String(user?.id)
+  })?._id
+
+  useEffect(() => {
+    if (active && threadVisible) markRead(active).catch(() => {})
+  }, [active, threadVisible, newestIncomingId, markRead])
 
   useEffect(() => {
     const node = scrollRef.current

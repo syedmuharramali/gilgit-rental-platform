@@ -36,6 +36,8 @@ import {
   useUploadPropertyImagesMutation,
 } from '../../features/properties/propertiesApi'
 
+import { localToday } from '../../utils/formatters'
+
 const LocationPicker = lazy(() => import('../../components/properties/LocationPicker'))
 
 const ONE_MB = 1024 * 1024
@@ -47,7 +49,7 @@ const blank = {
   monthlyRent: '',
   securityDeposit: '0',
   negotiable: false,
-  availableFrom: new Date().toISOString().slice(0, 10),
+  availableFrom: '', // filled with the viewer's local today when the page opens
   minimumStayMonths: '1',
   bedrooms: '1',
   bathrooms: '1',
@@ -119,6 +121,45 @@ function StepNotice({ children }) {
   )
 }
 
+// Shape the form into the API payload (also used to tell whether anything
+// changed since the last save).
+const buildPayload = (f) => ({
+    title: f.title.trim(),
+    description: f.description.trim(),
+    propertyType: f.propertyType,
+    monthlyRent: Number(f.monthlyRent),
+    securityDeposit: Number(f.securityDeposit || 0),
+    negotiable: f.negotiable,
+    availableFrom: f.availableFrom,
+    minimumStayMonths: Number(f.minimumStayMonths),
+    bedrooms: Number(f.bedrooms || 0),
+    bathrooms: Number(f.bathrooms || 0),
+    floor: f.floor === '' ? null : Number(f.floor),
+    totalArea: {
+      value: f.totalAreaValue === '' ? null : Number(f.totalAreaValue),
+      unit: f.totalAreaUnit,
+    },
+    furnishedStatus: f.furnishedStatus,
+    maxOccupants: Number(f.maxOccupants || 1),
+    amenities: f.amenities,
+    address: {
+      area: f.area.trim(),
+      street: f.street.trim() || null,
+      city: f.city.trim() || 'Gilgit',
+      landmark: f.landmark.trim() || null,
+      latitude: f.latitude === '' ? null : Number(f.latitude),
+      longitude: f.longitude === '' ? null : Number(f.longitude),
+    },
+    livingInfo: {
+      heatingAvailable: f.heatingAvailable,
+      hotWaterAvailable: f.hotWaterAvailable,
+      electricityBackup: f.electricityBackup,
+      waterAvailability: f.waterAvailability,
+      roadAccess: f.roadAccess,
+      winterAccessible: f.winterAccessible,
+    },
+})
+
 export default function PropertyEditorPage() {
   const { t } = useTranslation()
   const steps = stepKeys.map((key) => ({ key, title: t(`ed.step.${key}`), text: t(`ed.step.${key}Text`) }))
@@ -130,7 +171,7 @@ export default function PropertyEditorPage() {
   const initialStep = Number.isInteger(requestedStep) && requestedStep >= 0 && requestedStep < steps.length ? requestedStep : 0
 
   const [step, setStep] = useState(initialStep)
-  const [form, setForm] = useState(blank)
+  const [form, setForm] = useState(() => ({ ...blank, availableFrom: localToday() }))
   const [newFiles, setNewFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({ percent: 0, loaded: 0, total: 0, saving: false })
   const { data: property, isLoading } = useGetPropertyQuery(id, { skip: !editing })
@@ -164,16 +205,23 @@ export default function PropertyEditorPage() {
     },
   })
 
+  // Fill the form from the server once per listing. Uploading, deleting or
+  // re-ordering photos refetches the property, and re-filling on every
+  // refetch silently threw away whatever the owner had typed but not saved.
+  const hydratedId = useRef(null)
+  const savedPayload = useRef(null)
+
   useEffect(() => {
-    if (!property) return
-    setForm({
+    if (!property || hydratedId.current === property._id) return
+    hydratedId.current = property._id
+    const hydrated = {
       title: property.title || '',
       description: property.description || '',
       propertyType: property.propertyType || 'apartment',
       monthlyRent: String(property.monthlyRent ?? ''),
       securityDeposit: String(property.securityDeposit ?? 0),
       negotiable: Boolean(property.negotiable),
-      availableFrom: property.availableFrom ? property.availableFrom.slice(0, 10) : blank.availableFrom,
+      availableFrom: property.availableFrom ? property.availableFrom.slice(0, 10) : localToday(),
       minimumStayMonths: String(property.minimumStayMonths ?? 1),
       bedrooms: String(property.bedrooms ?? 0),
       bathrooms: String(property.bathrooms ?? 0),
@@ -195,45 +243,16 @@ export default function PropertyEditorPage() {
       waterAvailability: property.livingInfo?.waterAvailability || 'unknown',
       roadAccess: property.livingInfo?.roadAccess || 'unknown',
       winterAccessible: property.livingInfo?.winterAccessible !== false,
-    })
+    }
+    // What the server has, so edit mode knows whether there is anything to save.
+    savedPayload.current = JSON.stringify(buildPayload(hydrated))
+    setForm(hydrated)
   }, [property])
 
-  const payload = useMemo(() => ({
-    title: form.title.trim(),
-    description: form.description.trim(),
-    propertyType: form.propertyType,
-    monthlyRent: Number(form.monthlyRent),
-    securityDeposit: Number(form.securityDeposit || 0),
-    negotiable: form.negotiable,
-    availableFrom: form.availableFrom,
-    minimumStayMonths: Number(form.minimumStayMonths),
-    bedrooms: Number(form.bedrooms || 0),
-    bathrooms: Number(form.bathrooms || 0),
-    floor: form.floor === '' ? null : Number(form.floor),
-    totalArea: {
-      value: form.totalAreaValue === '' ? null : Number(form.totalAreaValue),
-      unit: form.totalAreaUnit,
-    },
-    furnishedStatus: form.furnishedStatus,
-    maxOccupants: Number(form.maxOccupants || 1),
-    amenities: form.amenities,
-    address: {
-      area: form.area.trim(),
-      street: form.street.trim() || null,
-      city: form.city.trim() || 'Gilgit',
-      landmark: form.landmark.trim() || null,
-      latitude: form.latitude === '' ? null : Number(form.latitude),
-      longitude: form.longitude === '' ? null : Number(form.longitude),
-    },
-    livingInfo: {
-      heatingAvailable: form.heatingAvailable,
-      hotWaterAvailable: form.hotWaterAvailable,
-      electricityBackup: form.electricityBackup,
-      waterAvailability: form.waterAvailability,
-      roadAccess: form.roadAccess,
-      winterAccessible: form.winterAccessible,
-    },
-  }), [form])
+  const payload = useMemo(() => buildPayload(form), [form])
+
+  const payloadKey = useMemo(() => JSON.stringify(payload), [payload])
+  const isDirty = editing && savedPayload.current !== null && payloadKey !== savedPayload.current
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
 
@@ -331,6 +350,7 @@ export default function PropertyEditorPage() {
         ? await updateProperty({ id, ...payload }).unwrap()
         : await createProperty(payload).unwrap()
       const propertyId = editing ? id : result?.data?.property?._id || result?.property?._id
+      savedPayload.current = payloadKey
       toast.success(editing ? t('ed.toast.saved') : t('ed.toast.created'))
 
       if (!editing && propertyId) {
@@ -380,7 +400,23 @@ export default function PropertyEditorPage() {
       return
     }
 
+    // In edit mode the details steps end at 5. Moving on used to leave the
+    // changes unsaved, and the review step only offered "Back to properties",
+    // which threw them away.
+    if (editing && step === 5 && isDirty) {
+      const saved = await save()
+      if (!saved) return
+    }
+
     setStep((value) => Math.min(steps.length - 1, value + 1))
+  }
+
+  const finishEditing = async () => {
+    if (isDirty) {
+      const saved = await save()
+      if (!saved) return
+    }
+    navigate('/owner/properties')
   }
 
   const upload = async () => {
@@ -679,11 +715,14 @@ export default function PropertyEditorPage() {
         <div className="mt-8 flex flex-col-reverse gap-3 border-t border-white/[0.07] pt-5 sm:flex-row sm:items-center sm:justify-between">
           <SecondaryButton disabled={step === 0} onClick={() => setStep((value) => Math.max(0, value - 1))}>{t('ed.back')}</SecondaryButton>
           <div className="flex flex-col gap-2 sm:flex-row">
-            {editing && step <= 5 && <SecondaryButton disabled={saving} onClick={() => save()}>{saving ? t('ed.saving') : t('ed.saveChanges')}</SecondaryButton>}
+            {editing && step <= 5 && <SecondaryButton disabled={saving || !isDirty} onClick={() => save()}>{saving ? t('ed.saving') : t('ed.saveChanges')}</SecondaryButton>}
             {step < steps.length - 1 && <PrimaryButton disabled={saving || uploadState.isLoading} onClick={nextStep}>{!editing && step === 5 ? t('ed.saveDraftPhotos') : step === 6 ? t('ed.reviewListing') : t('ed.continue')}</PrimaryButton>}
-            {editing && step === steps.length - 1 && <PrimaryButton onClick={() => navigate('/owner/properties')}>{t('ed.backToProperties')}</PrimaryButton>}
+            {editing && step === steps.length - 1 && <PrimaryButton disabled={saving} onClick={finishEditing}>{isDirty ? t('ed.saveAndFinish') : t('ed.backToProperties')}</PrimaryButton>}
           </div>
         </div>
+        {isDirty && ['published', 'pending_review'].includes(property?.listingStatus) && (
+          <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-xs leading-5 text-amber-100">{t('ed.republishWarning')}</p>
+        )}
       </Panel>
     </>
   )

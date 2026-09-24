@@ -56,6 +56,12 @@ function PropertiesPage() {
     for (const [key, value] of searchParams.entries()) {
       if (value) result[key] = value
     }
+    // While someone is still typing a maximum ("1" on the way to "10000") it
+    // is briefly below the minimum; the API rejects that range, which used to
+    // replace the results with "Unable to reach the property service".
+    if (result.minRent && result.maxRent && Number(result.maxRent) < Number(result.minRent)) {
+      delete result.maxRent
+    }
     return result
   }, [searchParams])
 
@@ -63,12 +69,18 @@ function PropertiesPage() {
   const properties = data?.properties || []
   const selectedAmenities = (searchParams.get('amenities') || '').split(',').filter(Boolean)
 
+  // Always build on the latest URL. The debounced search runs from a timer
+  // created on an older render; copying that render's searchParams wiped any
+  // filter chip tapped in the meantime. Filter edits replace the history
+  // entry so Back leaves the page instead of undoing one keystroke at a time.
   const setParam = (key, value, keepPage = false) => {
-    const next = new URLSearchParams(searchParams)
-    if (value !== '' && value !== null && value !== undefined) next.set(key, String(value))
-    else next.delete(key)
-    if (!keepPage) next.delete('page')
-    setSearchParams(next)
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current)
+      if (value !== '' && value !== null && value !== undefined) next.set(key, String(value))
+      else next.delete(key)
+      if (!keepPage) next.delete('page')
+      return next
+    }, { replace: key !== 'page' })
   }
 
   const toggleAmenity = (slug) => {
@@ -105,7 +117,7 @@ function PropertiesPage() {
     }, 400)
 
     return () => clearTimeout(timer)
-    // setParam reads the latest searchParams on each render.
+    // setParam builds on the latest URL itself, so it is safe to omit here.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchText, urlSearch])
 
@@ -251,8 +263,9 @@ function PropertiesPage() {
                   <div className="flex items-start gap-4">
                     <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-rose-300/10 text-rose-200"><X className="h-5 w-5" /></div>
                     <div>
-                      <p className="font-black text-white">{t('properties.unreachable')}</p>
-                      <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">{t('properties.errorText')}</p>
+                      {/* A 400 is a filter the server rejected, not an outage. */}
+                      <p className="font-black text-white">{error.status === 400 ? t('properties.badFilter') : t('properties.unreachable')}</p>
+                      <p className="mt-2 max-w-2xl text-sm leading-6 text-white/42">{error.status === 400 && error.data?.message ? error.data.message : t('properties.errorText')}</p>
                       <button onClick={refetch} className="mt-4 rounded-full bg-white px-4 py-2.5 text-xs font-black text-[#07101e] transition hover:scale-[1.02]">{t('common.tryAgain')}</button>
                     </div>
                   </div>
@@ -279,15 +292,43 @@ function PropertiesPage() {
               )}
 
               {data?.totalPages > 1 && (
-                <div className="mt-8 flex items-center justify-center gap-2">
-                  {Array.from({ length: data.totalPages }, (_, index) => index + 1).slice(0, 8).map((page) => <motion.button key={page} whileTap={{ scale: 0.94 }} onClick={() => setParam('page', String(page), true)} className={`grid h-10 w-10 place-items-center rounded-full text-sm font-bold ${Number(searchParams.get('page') || 1) === page ? 'bg-white text-[#07101e]' : 'border border-white/10 bg-white/[0.035] text-white/48'}`}>{page}</motion.button>)}
-                </div>
+                <Pager
+                  page={Number(searchParams.get('page') || 1)}
+                  totalPages={data.totalPages}
+                  onChange={(page) => setParam('page', String(page), true)}
+                  labels={{ previous: t('properties.previousPage'), next: t('properties.nextPage'), nav: t('properties.pagination') }}
+                />
               )}
             </div>
           </div>
         </div>
       </section>
     </main>
+  )
+}
+
+// Shows the first and last page, the current one and its neighbours, with
+// gaps between. The old pager showed pages 1–8 only, so page 9 onward
+// (result 97+) could not be reached at all.
+function Pager({ page, totalPages, onChange, labels }) {
+  const wanted = new Set([1, totalPages, page - 1, page, page + 1])
+  const pages = [...wanted].filter((value) => value >= 1 && value <= totalPages).sort((a, b) => a - b)
+  const items = []
+  pages.forEach((value, index) => {
+    if (index > 0 && value - pages[index - 1] > 1) items.push(`gap-${value}`)
+    items.push(value)
+  })
+  const base = 'grid h-10 min-w-10 place-items-center rounded-full px-3 text-sm font-bold'
+  const idle = 'border border-white/10 bg-white/[0.035] text-white/48 disabled:opacity-30'
+
+  return (
+    <nav className="mt-8 flex flex-wrap items-center justify-center gap-2" aria-label={labels.nav}>
+      <button disabled={page <= 1} onClick={() => onChange(page - 1)} className={`${base} ${idle}`}>{labels.previous}</button>
+      {items.map((item) => typeof item === 'string'
+        ? <span key={item} className="px-1 text-white/30">…</span>
+        : <motion.button key={item} whileTap={{ scale: 0.94 }} onClick={() => onChange(item)} aria-current={item === page ? 'page' : undefined} className={`${base} ${item === page ? 'bg-white text-[#07101e]' : idle}`}>{item}</motion.button>)}
+      <button disabled={page >= totalPages} onClick={() => onChange(page + 1)} className={`${base} ${idle}`}>{labels.next}</button>
+    </nav>
   )
 }
 
