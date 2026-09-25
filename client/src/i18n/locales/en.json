@@ -21,7 +21,8 @@
     "closeNamed": "Close {{name}}",
     "uploadFailed": "Upload failed",
     "networkError": "Could not reach the server. Check your connection and try again.",
-    "timeout": "The server took too long to answer. Please try again."
+    "timeout": "The server took too long to answer. Please try again.",
+    "serverUnreachable": "Can't reach the server"
   },
   "nav": {
     "explore": "Explore",

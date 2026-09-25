@@ -27,7 +27,7 @@ function RegisterPage() {
   const { t } = useTranslation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { status, error, token } = useSelector((state) => state.auth)
+  const { status, error, isAuthenticated: token } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const [createdEmail, setCreatedEmail] = useState(null)
   const isLoading = status === 'loading'

@@ -13,6 +13,9 @@ const morgan =
 const cookieParser =
   require("cookie-parser");
 
+const csrfProtection =
+  require("./middleware/csrf.middleware");
+
 const rateLimit =
   require(
     "express-rate-limit"
@@ -222,9 +225,11 @@ app.use(
       "OPTIONS",
     ],
 
+    // Sessions travel in an httpOnly cookie (credentials: true above);
+    // X-CSRF-Token proves a state-changing request came from our own site.
     allowedHeaders: [
       "Content-Type",
-      "Authorization",
+      "X-CSRF-Token",
     ],
   })
 );
@@ -270,6 +275,10 @@ app.use(
 
 app.use(
   cookieParser()
+);
+
+app.use(
+  csrfProtection
 );
 
 /*

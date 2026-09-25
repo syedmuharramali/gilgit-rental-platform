@@ -20,7 +20,7 @@ function navClass(isActive) {
 
 function PublicNavbar() {
   const [open, setOpen] = useState(false)
-  const token = useSelector((state) => state.auth.token)
+  const token = useSelector((state) => state.auth.isAuthenticated)
   const { t } = useTranslation()
   const location = useLocation()
   // Explore, Shops and Stays share /properties; tell them apart by ?category

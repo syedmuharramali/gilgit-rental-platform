@@ -3,18 +3,12 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
+const { getSessionToken } = require("../utils/session");
 
 exports.protect = asyncHandler(async (req, res, next) => {
-  let token;
-
-  const authorization = req.headers.authorization;
-
-  if (
-    authorization &&
-    authorization.startsWith("Bearer ")
-  ) {
-    token = authorization.split(" ")[1];
-  }
+  // The session token only ever arrives in the httpOnly cookie; it is
+  // never handed to page scripts, so there is no header to read.
+  const token = getSessionToken(req);
 
   if (!token) {
     return next(
@@ -90,43 +84,39 @@ exports.authorize = (...roles) => {
 
 exports.optionalAuth = asyncHandler(
   async (req, res, next) => {
-    const authorization =
-      req.headers.authorization;
+    const token =
+      getSessionToken(req);
 
-    if (
-      !authorization ||
-      !authorization.startsWith(
-        "Bearer "
-      )
-    ) {
+    if (!token) {
       return next();
     }
 
-    const token =
-      authorization.split(" ")[1];
+    let decoded;
 
     try {
-      const decoded =
+      decoded =
         jwt.verify(
           token,
           process.env.JWT_SECRET
         );
-
-      const user =
-        await User.findById(
-          decoded.userId
-        );
-
-      if (
-        user &&
-        user.accountStatus ===
-          "active"
-      ) {
-        req.user = user;
-      }
     } catch (error) {
-      // Invalid token is treated as anonymous
-      // for this optional-auth route.
+      // An invalid or expired token is just an anonymous visitor here.
+      return next();
+    }
+
+    // Database errors are NOT treated as "signed out": that would make
+    // /auth/session delete a perfectly good cookie during a DB hiccup.
+    const user =
+      await User.findById(
+        decoded.userId
+      );
+
+    if (
+      user &&
+      user.accountStatus ===
+        "active"
+    ) {
+      req.user = user;
     }
 
     next();

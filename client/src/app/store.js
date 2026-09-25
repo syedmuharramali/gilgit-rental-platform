@@ -1,8 +1,8 @@
 import { configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
-import authReducer, { googleSignIn, loginUser, logout, verifyEmailToken } from '../features/auth/authSlice'
+import authReducer, { googleSignIn, loginUser, logout, logoutUser, verifyEmailToken } from '../features/auth/authSlice'
 import { baseApi } from '../features/api/baseApi'
-import { setSessionEndedHandler } from '../services/api'
+import { setCurrentUserGetter, setSessionEndedHandler } from '../services/api'
 
 const listenerMiddleware = createListenerMiddleware()
 
@@ -30,6 +30,8 @@ export const store = configureStore({
 // API did nothing: coming back to a tab never refreshed it.
 setupListeners(store.dispatch)
 
+setCurrentUserGetter(() => store.getState().auth.user?.id)
+
 setSessionEndedHandler(() => {
-  if (store.getState().auth.token) store.dispatch(logout())
+  if (store.getState().auth.isAuthenticated) store.dispatch(logoutUser())
 })

@@ -10,9 +10,11 @@ const {
   resendVerification,
   getMe,
   updateMe,
+  logout,
+  getSession,
 } = require("../controllers/auth.controller");
 
-const { protect } = require("../middleware/auth.middleware");
+const { protect, optionalAuth } = require("../middleware/auth.middleware");
 const validateRequest = require("../middleware/validate.middleware");
 
 const router = express.Router();
@@ -205,6 +207,11 @@ router.post(
 */
 
 router.get("/me", protect, getMe);
+
+router.get("/session", optionalAuth, getSession);
+
+// No protect: signing out must work even with an expired session.
+router.post("/logout", logout);
 
 router.patch(
   "/me",

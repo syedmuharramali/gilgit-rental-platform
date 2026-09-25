@@ -23,7 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import { logout } from '../features/auth/authSlice'
+import { logoutUser } from '../features/auth/authSlice'
 import {
   useGetUnreadCountQuery,
   useMarkNotificationTypesReadMutation,
@@ -157,7 +157,7 @@ function DashboardLayout({ mode = 'renter' }) {
     // Leave first: otherwise ProtectedRoute redirects to /login carrying this
     // page as "from", and the next person to sign in lands on it.
     navigate('/login', { replace: true })
-    dispatch(logout())
+    dispatch(logoutUser())
   }
 
   const renderNavLink = ([to, key, Icon], mobile = false) => {

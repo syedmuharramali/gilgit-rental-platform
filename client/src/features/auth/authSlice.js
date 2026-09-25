@@ -1,28 +1,21 @@
 import i18n from '../../i18n/config'
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit'
 import api from '../../services/api'
+import { clearLegacyStorage, setCsrfToken } from '../../services/session'
 
-const TOKEN_KEY = 'gilgit_rental_token'
-const USER_KEY = 'gilgit_rental_user'
+/*
+ * Nothing about the session is stored in the browser any more. The server
+ * sets an httpOnly cookie on sign-in; the page only keeps who is signed in
+ * (in Redux) and the CSRF token (in memory, see services/session.js).
+ */
+clearLegacyStorage()
 
-const readStoredUser = () => {
-  try {
-    const raw = localStorage.getItem(USER_KEY)
-    return raw ? JSON.parse(raw) : null
-  } catch {
-    localStorage.removeItem(USER_KEY)
-    return null
-  }
-}
-
-const persistSession = ({ token, user }) => {
-  localStorage.setItem(TOKEN_KEY, token)
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
+const persistSession = ({ csrfToken }) => {
+  setCsrfToken(csrfToken)
 }
 
 const clearSession = () => {
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
+  setCsrfToken(null)
 }
 
 // Server messages first; otherwise a translated reason instead of axios's
@@ -109,43 +102,55 @@ export const googleSignIn = createAsyncThunk(
   },
 )
 
+/*
+ * On every page load: ask the server who (if anyone) the cookie belongs to.
+ * Resolves with the user, or null for a visitor. Rejects only when the
+ * server couldn't be reached, so a cold start isn't mistaken for signing out.
+ */
 export const hydrateCurrentUser = createAsyncThunk(
   'auth/hydrateCurrentUser',
-  async (_, { rejectWithValue }) => {
-    const token = localStorage.getItem(TOKEN_KEY)
-
-    if (!token) {
-      return rejectWithValue('No active session')
-    }
+  async (_, { getState, rejectWithValue }) => {
+    const startedAt = getState().auth.sessionEpoch
 
     try {
-      const { data } = await api.get('/auth/me')
-      const user = data.data.user
-      localStorage.setItem(USER_KEY, JSON.stringify(user))
-      return user
+      const { data } = await api.get('/auth/session')
+
+      // Someone signed in or out while this check was in flight; its answer
+      // describes the old session, so ignore it entirely.
+      if (getState().auth.sessionEpoch !== startedAt) return { stale: true }
+
+      setCsrfToken(data.data?.csrfToken)
+      return { user: data.data?.user || null }
     } catch (error) {
-      const status = error.response?.status
-
-      // Only a real "you are not signed in" answer ends the session. A cold
-      // server, a 500, a timeout or being offline used to log people out too.
-      if (status === 401 || status === 403) {
-        clearSession()
-        return rejectWithValue({ message: getErrorMessage(error, 'Session expired'), endSession: true })
-      }
-
-      return rejectWithValue({ message: getErrorMessage(error, 'Session expired'), endSession: false })
+      return rejectWithValue({ message: getErrorMessage(error, 'Unable to reach the server') })
     }
   },
 )
+
+// The cookie is httpOnly, so only the server can remove it.
+export const logoutUser = createAsyncThunk('auth/logoutUser', async (_, { dispatch }) => {
+  // Clear the page first so nothing still thinks it is signed in while the
+  // request is in flight (the login page would bounce straight back).
+  dispatch(logout())
+
+  // Then have the server delete the cookie. One retry for a flaky network;
+  // if both fail the cookie still expires on its own.
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await api.post('/auth/logout')
+      return
+    } catch {
+      // try again once
+    }
+  }
+})
 
 export const updateProfile = createAsyncThunk(
   'auth/updateProfile',
   async (payload, { rejectWithValue }) => {
     try {
       const { data } = await api.patch('/auth/me', payload)
-      const user = data.data.user
-      localStorage.setItem(USER_KEY, JSON.stringify(user))
-      return user
+      return data.data.user
     } catch (error) {
       return rejectWithValue(getErrorMessage(error, 'Unable to update profile'))
     }
@@ -153,10 +158,17 @@ export const updateProfile = createAsyncThunk(
 )
 
 const initialState = {
-  token: localStorage.getItem(TOKEN_KEY),
-  user: readStoredUser(),
+  // True once the server has confirmed the session cookie (or a sign-in
+  // just succeeded). The token itself is never visible to the page.
+  isAuthenticated: false,
+  user: null,
   status: 'idle',
   sessionChecked: false,
+  // The server couldn't be reached while checking the session.
+  sessionUnavailable: false,
+  // Bumped on every sign-in and sign-out, so a slow session check that
+  // started before one can tell its answer is out of date.
+  sessionEpoch: 0,
   error: null,
   // Set when an account exists but its email address is not confirmed yet.
   pendingVerificationEmail: null,
@@ -168,7 +180,8 @@ const authSlice = createSlice({
   reducers: {
     logout(state) {
       clearSession()
-      state.token = null
+      state.sessionEpoch += 1
+      state.isAuthenticated = false
       state.user = null
       state.status = 'idle'
       state.error = null
@@ -190,9 +203,11 @@ const authSlice = createSlice({
 
     const fulfilled = (state, action) => {
       state.status = 'succeeded'
-      state.token = action.payload.token
+      state.sessionEpoch += 1
+      state.isAuthenticated = true
       state.user = action.payload.user
       state.sessionChecked = true
+      state.sessionUnavailable = false
     }
 
     const rejected = (state, action) => {
@@ -229,22 +244,23 @@ const authSlice = createSlice({
       .addCase(googleSignIn.rejected, rejected)
       .addCase(hydrateCurrentUser.pending, (state) => {
         state.status = 'loading'
+        state.sessionUnavailable = false
       })
       .addCase(hydrateCurrentUser.fulfilled, (state, action) => {
-        state.status = 'succeeded'
-        state.user = action.payload
-        state.sessionChecked = true
-      })
-      .addCase(hydrateCurrentUser.rejected, (state, action) => {
         state.status = 'idle'
         state.sessionChecked = true
-
-        // Keep the stored session if the server was merely unreachable; the
-        // next request will either work or come back 401 and sign out then.
-        if (action.payload?.endSession === false) return
-
-        state.token = null
-        state.user = null
+        state.sessionUnavailable = false
+        if (action.payload.stale) return
+        state.user = action.payload.user
+        state.isAuthenticated = Boolean(action.payload.user)
+        state.sessionChecked = true
+        state.sessionUnavailable = false
+      })
+      .addCase(hydrateCurrentUser.rejected, (state) => {
+        // Server unreachable: we don't know yet. Protected pages offer a
+        // retry instead of sending someone who is signed in to the login page.
+        state.status = 'idle'
+        state.sessionUnavailable = true
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload

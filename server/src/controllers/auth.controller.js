@@ -5,6 +5,22 @@ const AppError = require("../utils/AppError.js");
 const asyncHandler = require("../utils/asyncHandler");
 const generateToken = require("../utils/generateToken");
 const {
+  setSessionCookie,
+  clearSessionCookie,
+  getSessionToken,
+  csrfTokenFor,
+} = require("../utils/session");
+
+/*
+| Signs the user in: the token goes into the httpOnly cookie only, and the
+| response carries the matching CSRF token instead.
+*/
+const startSession = (res, userId) => {
+  const token = generateToken(userId);
+  setSessionCookie(res, token);
+  res.locals.csrfToken = csrfTokenFor(token);
+};
+const {
   normalizeEmail,
   getEmailLookupCandidates,
 } = require("../utils/email");
@@ -251,14 +267,14 @@ exports.login = asyncHandler(async (req, res, next) => {
     validateBeforeSave: false,
   });
 
-  const token = generateToken(user._id);
+  startSession(res, user._id);
 
   res.status(200).json({
     success: true,
     message: "Login successful",
 
     data: {
-      token,
+      csrfToken: res.locals.csrfToken,
       user: formatAuthUser(user),
     },
   });
@@ -379,14 +395,14 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
     validateBeforeSave: false,
   });
 
-  const token = generateToken(user._id);
+  startSession(res, user._id);
 
   res.status(200).json({
     success: true,
     message: "Google sign-in successful",
 
     data: {
-      token,
+      csrfToken: res.locals.csrfToken,
       user: formatAuthUser(user),
     },
   });
@@ -452,14 +468,14 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  const authToken = generateToken(user._id);
+  startSession(res, user._id);
 
   res.status(200).json({
     success: true,
     message: "Email confirmed successfully",
 
     data: {
-      token: authToken,
+      csrfToken: res.locals.csrfToken,
       user: formatAuthUser(user),
     },
   });
@@ -527,6 +543,10 @@ exports.getMe = asyncHandler(async (req, res) => {
     success: true,
 
     data: {
+      // After a page reload the CSRF token is gone from memory; this is
+      // how the client gets it back for the current session cookie.
+      csrfToken: csrfTokenFor(getSessionToken(req)),
+
       user: {
         id: req.user._id,
         name: req.user.name,
@@ -573,6 +593,58 @@ exports.updateMe = asyncHandler(async (req, res) => {
     message: "Profile updated successfully",
     data: {
       user: formatAuthUser(req.user),
+    },
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Sign out
+| POST /api/auth/logout
+|--------------------------------------------------------------------------
+|
+| The cookie is httpOnly, so only the server can remove it.
+*/
+
+exports.logout = asyncHandler(async (req, res) => {
+  clearSessionCookie(res);
+
+  res.status(200).json({
+    success: true,
+    message: "Signed out",
+  });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Current session (signed in or not)
+| GET /api/auth/session
+|--------------------------------------------------------------------------
+|
+| The page can't see the httpOnly cookie, so on every load it asks here.
+| Visitors get { user: null } with 200 rather than a 401 on each page.
+| A cookie that no longer maps to an active account is removed.
+*/
+
+exports.getSession = asyncHandler(async (req, res) => {
+  const sessionToken = getSessionToken(req);
+
+  if (!req.user) {
+    if (sessionToken) {
+      clearSessionCookie(res);
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: { user: null, csrfToken: null },
+    });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: formatAuthUser(req.user),
+      csrfToken: csrfTokenFor(sessionToken),
     },
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
+import { useDispatch } from 'react-redux'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { hydrateCurrentUser } from './features/auth/authSlice'
@@ -46,11 +46,11 @@ const protectedElement = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 
 function App() {
   const dispatch = useDispatch()
-  const { token, sessionChecked } = useSelector((state) => state.auth)
-
+  // The session cookie is invisible to the page, so always ask the server
+  // once on load who is signed in.
   useEffect(() => {
-    if (token && !sessionChecked) dispatch(hydrateCurrentUser())
-  }, [token, sessionChecked, dispatch])
+    dispatch(hydrateCurrentUser())
+  }, [dispatch])
 
   return (
     <Routes>

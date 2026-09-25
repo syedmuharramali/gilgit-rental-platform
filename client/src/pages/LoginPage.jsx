@@ -47,7 +47,7 @@ function LoginPage() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { status, error, token, user, pendingVerificationEmail } = useSelector((state) => state.auth)
+  const { status, error, isAuthenticated: token, user, pendingVerificationEmail } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
   const shouldCheckVerification = Boolean(token && user && user.role !== 'admin')

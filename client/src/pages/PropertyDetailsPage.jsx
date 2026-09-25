@@ -64,7 +64,7 @@ function PropertyDetailsPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const token = useSelector((state) => state.auth.token)
+  const token = useSelector((state) => state.auth.isAuthenticated)
   const user = useSelector((state) => state.auth.user)
   const { data: property, isLoading, error } = useGetPropertyQuery(id)
   const { data: score } = useGetLivingScoreQuery(id)

@@ -13,7 +13,7 @@ import {
 
 function FavoriteButton({ propertyId, className = '', showLabel = false }) {
   const { t } = useTranslation()
-  const token = useSelector((state) => state.auth.token)
+  const token = useSelector((state) => state.auth.isAuthenticated)
   const navigate = useNavigate()
   const location = useLocation()
   // Every card shares this one list. With the app-wide refetch-on-mount, each
