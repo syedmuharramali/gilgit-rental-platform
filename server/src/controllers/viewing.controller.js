@@ -1,3 +1,4 @@
+const { isStayType } = require("../data/propertyTypes");
 const mongoose =
   require("mongoose");
 
@@ -92,6 +93,20 @@ exports.createViewingRequest =
         return next(
           new AppError(
             "You cannot request a viewing for your own property",
+            400
+          )
+        );
+      }
+
+      // A hotel is booked by date; there is no viewing step.
+      if (
+        isStayType(
+          property.propertyType
+        )
+      ) {
+        return next(
+          new AppError(
+            "Hotels and guest houses are booked by date, not by viewing",
             400
           )
         );

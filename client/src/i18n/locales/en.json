@@ -33,7 +33,8 @@
     "searchRentals": "Search rentals",
     "toggle": "Toggle navigation",
     "joinFree": "Join free",
-    "shops": "Shops"
+    "shops": "Shops",
+    "stays": "Stays"
   },
   "footer": {
     "about": "A local-first rental platform for discovering verified homes, comparing practical living conditions and reaching a clear rental agreement in one place.",
@@ -89,7 +90,9 @@
       "portionTitle": "Upper portions",
       "portionText": "A whole floor of a family house, with its own entrance",
       "shopTitle": "Shops",
-      "shopText": "Commercial space for your business, rented by the month"
+      "shopText": "Commercial space for your business, rented by the month",
+      "stayTitle": "Hotels & guest houses",
+      "stayText": "Stay a night or a week, booked by date"
     },
     "scoreEyebrow": "Gilgit Living Score",
     "scoreTitle": "A beautiful room is only half the story.",
@@ -120,7 +123,8 @@
     "ctaTitle": "Ready to find a rental that fits real life?",
     "ctaText": "Create an account to save homes, build your preferences, request viewings and keep every rental step together.",
     "ctaPrimary": "Create free account",
-    "browseShops": "Browse shops"
+    "browseShops": "Browse shops",
+    "browseStays": "Browse stays"
   },
   "properties": {
     "eyebrow": "Curated for Gilgit living",
@@ -146,7 +150,12 @@
       "bathrooms": "Bathrooms",
       "furnishing": "Furnishing",
       "amenities": "Amenities",
-      "sort": "Sort by"
+      "sort": "Sort by",
+      "minNight": "Min / night",
+      "maxNight": "Max / night",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "guests": "Guests"
     },
     "sort": {
       "newest": "Newest first",
@@ -197,7 +206,9 @@
     "pagination": "Result pages",
     "categoryLabel": "What are you looking for?",
     "categoryHomes": "Homes",
-    "categoryShops": "Shops"
+    "categoryShops": "Shops",
+    "categoryStays": "Stays",
+    "staysDatesHint": "Add both dates to see only stays with a free room for your group."
   },
   "details": {
     "back": "Back to rentals",
@@ -310,7 +321,8 @@
     "morePhotos_one": "+{{count}} more photo",
     "morePhotos_other": "+{{count}} more photos",
     "washroomsCount": "{{count}} washrooms",
-    "areaUnknown": "Floor area not given"
+    "areaUnknown": "Floor area not given",
+    "guestReviews": "Guest reviews"
   },
   "auth": {
     "signInEyebrow": "Welcome back",
@@ -461,7 +473,12 @@
     "deactivated": "Deactivated",
     "not_submitted": "Not Submitted",
     "unknown_status": "Unknown",
-    "shop": "Shop"
+    "shop": "Shop",
+    "hotel": "Hotel",
+    "guest_house": "Guest House",
+    "declined": "Declined",
+    "expired": "Expired",
+    "guest": "Guest"
   },
   "amenities": {
     "wifi": "WiFi",
@@ -520,7 +537,9 @@
     "navigationLabel": "{{workspace}} navigation",
     "mobileNavigationLabel": "{{workspace}} mobile navigation",
     "menuLabel": "{{workspace}} menu",
-    "homeAria": "Gilgit Rental home"
+    "homeAria": "Gilgit Rental home",
+    "trips": "My trips",
+    "bookings": "Bookings"
   },
   "card": {
     "photoSoon": "Property photo coming soon",
@@ -530,7 +549,14 @@
     "baths": "{{count}} baths",
     "viewHome": "View home →",
     "viewAria": "View {{title}}",
-    "viewShop": "View shop →"
+    "viewShop": "View shop →",
+    "from": "from",
+    "perNight": "/ night",
+    "perNightFrom": "from {{price}} / night",
+    "roomTypes_one": "{{count}} room type",
+    "roomTypes_other": "{{count}} room types",
+    "checkIn": "Check-in {{time}}",
+    "viewStay": "View stay →"
   },
   "favorite": {
     "removed": "Removed from saved homes",
@@ -704,7 +730,9 @@
     "openReviews": "Open reviews",
     "openProperties": "Open properties",
     "openProperty": "Open property",
-    "browseProperties": "Browse properties"
+    "browseProperties": "Browse properties",
+    "openBookings": "Open bookings",
+    "openTrips": "Open my trips"
   },
   "viewings": {
     "eyebrow": "Visits",
@@ -1125,7 +1153,9 @@
       "images": "Images",
       "imagesText": "Add at least three clear photos and choose one cover image.",
       "review": "Review",
-      "reviewText": "Check the listing before sending it to the admin review queue."
+      "reviewText": "Check the listing before sending it to the admin review queue.",
+      "rooms": "Rooms & prices",
+      "roomsText": "Room types, nightly prices and check-in times"
     },
     "notice": {
       "basics": "Use a specific title and a useful description. Renters should understand what the property is before they open the listing.",
@@ -1134,7 +1164,8 @@
       "location": "Type the area and city, then drop a pin on the map exactly where the property is. The map opens on your current location — search a place or tap anywhere to move the pin.",
       "amenities": "Click a card to select or remove an amenity. At least one amenity is required before the listing can be submitted for review.",
       "living": "These fields power the Gilgit Living Score. Use the real condition of the property—unknown is better than guessing.",
-      "images": "Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically."
+      "images": "Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically.",
+      "rooms": "Add each kind of room you offer. Guests book a room type for their dates, and the number of rooms you enter is what stops double bookings."
     },
     "field": {
       "title": "Property title",
@@ -1185,7 +1216,9 @@
       "chooseType": "Choose a property type",
       "washrooms": "Washrooms",
       "washroomsHint": "Enter 0 if the shop has none.",
-      "shopAreaHint": "Required for shops. Shopkeepers compare shops mainly by floor area."
+      "shopAreaHint": "Required for shops. Shopkeepers compare shops mainly by floor area.",
+      "checkInTime": "Check-in time",
+      "checkOutTime": "Check-out time"
     },
     "availableAmenities": "Available amenities",
     "selectedCount": "{{count}} selected",
@@ -1258,7 +1291,13 @@
       "imageSize": "{{name}} is {{size}}. Property images must be smaller than 1 MB.",
       "imageType": "Choose one JPG or PNG image smaller than 1 MB.",
       "type": "Choose a property type. \"Private room\" and \"Shared room\" are no longer offered.",
-      "shopArea": "Enter the shop's floor area."
+      "shopArea": "Enter the shop's floor area.",
+      "noRooms": "Add at least one room type.",
+      "roomName": "Every room type needs a name.",
+      "roomPrice": "Enter a nightly price for {{name}}.",
+      "roomGuests": "Guests per room for {{name}} must be 1–20.",
+      "roomQuantity": "Number of rooms for {{name}} must be a whole number from 1 to 500.",
+      "times": "Enter check-in and check-out times."
     },
     "toast": {
       "saved": "Property changes saved",
@@ -1273,7 +1312,22 @@
     "uploadingPercent": "Uploading {{percent}}%",
     "readyToUpload": "{{size}} · ready to upload",
     "saveAndFinish": "Save and finish",
-    "republishWarning": "Saving these changes sends the listing back to review. It stays hidden from renters until an administrator approves it again."
+    "republishWarning": "Saving these changes sends the listing back to review. It stays hidden from renters until an administrator approves it again.",
+    "room": {
+      "untitled": "Room type {{number}}",
+      "remove": "Remove room type",
+      "name": "Room name",
+      "nameHint": "e.g. Deluxe double, Family room",
+      "namePlaceholder": "Deluxe double",
+      "price": "Price per night (PKR)",
+      "guests": "Guests per room",
+      "quantity": "Number of rooms",
+      "quantityHint": "How many identical rooms of this type you have.",
+      "description": "Short description",
+      "descriptionPlaceholder": "King bed, mountain view, attached bath",
+      "add": "Add room type",
+      "fromPrice": "Price from"
+    }
   },
   "map": {
     "searchPlaceholder": "Search a place, e.g. Jutial, Konodas, Zulfiqarabad",
@@ -1344,5 +1398,110 @@
     "detailsTitle": "Property Details | Gilgit Rental",
     "detailsDesc": "Review rental details, amenities, location, Living Score, reviews and owner information.",
     "fallbackDesc": "A verified rental marketplace built for Gilgit."
+  },
+  "stay": {
+    "from": "Rooms from",
+    "checkInAt": "Check-in {{time}}",
+    "checkOutAt": "Check-out {{time}}",
+    "ownerNote": "This is your listing. Requests from guests appear on your Bookings page.",
+    "openBookings": "Open bookings →",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "chooseRoom": "Choose a room type",
+    "upToGuests_one": "Up to {{count}} guest",
+    "upToGuests_other": "Up to {{count}} guests",
+    "soldOut": "Sold out",
+    "roomsLeft_one": "{{count}} left",
+    "roomsLeft_other": "{{count}} left",
+    "rooms": "Rooms",
+    "guests": "Guests",
+    "messagePlaceholder": "Anything the hotel should know? (optional)",
+    "priceLine": "{{price}} × {{nights}} nights × {{rooms}} room(s)",
+    "total": "Total",
+    "payAtHotel": "You pay at the hotel. Nothing is charged online.",
+    "pickDates": "Choose check-in and check-out to see free rooms and the total.",
+    "requestCta": "Request to book",
+    "sending": "Sending…",
+    "policy": "The hotel confirms your request. Free cancellation until 24 hours before check-in.",
+    "messageHotel": "Message the hotel",
+    "toastRequested": "Request sent. You'll be notified when the hotel answers.",
+    "err": {
+      "tooLong": "A stay can be at most 30 nights.",
+      "pickRoom": "Choose a room type.",
+      "notEnough": "Only {{count}} of these rooms are free for your dates.",
+      "tooManyGuests": "These rooms fit at most {{count}} guests. Add a room or pick a bigger room type."
+    }
+  },
+  "trips": {
+    "eyebrow": "Stays",
+    "title": "My trips",
+    "text": "Your hotel and guest-house bookings, from request to review.",
+    "findStay": "Find a stay",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "guests_one": "{{count}} guest",
+    "guests_other": "{{count}} guests",
+    "nights_one": "{{count}} night",
+    "nights_other": "{{count}} nights",
+    "hotelSaid": "Hotel: {{message}}",
+    "cancelledByHotel": "Cancelled by the hotel.",
+    "cancelledByYou": "You cancelled this booking.",
+    "expiredNote": "The hotel didn't answer before the check-in date.",
+    "yourRating_one": "Rated {{count}} star",
+    "yourRating_other": "Rated {{count}} stars",
+    "cancelRequest": "Cancel request",
+    "cancelStay": "Cancel booking",
+    "tooLateToCancel": "Less than 24h to check-in — contact the hotel to change it.",
+    "leaveReview": "Leave a review",
+    "confirmCancelRequest": "Cancel this booking request?",
+    "confirmCancelStay": "Cancel this confirmed stay? The hotel will be notified.",
+    "toastCancelled": "Booking cancelled",
+    "toastReviewed": "Thanks for your review",
+    "emptyUpcoming": "No upcoming stays",
+    "emptyPast": "No past stays yet",
+    "emptyText": "Book a hotel or guest house from the Stays tab.",
+    "reviewTitle": "Review {{title}}",
+    "reviewPlaceholder": "How was the room, the staff, the location?",
+    "submitReview": "Submit review",
+    "rating": "Rating",
+    "stars_one": "{{count}} star",
+    "stars_other": "{{count}} stars"
+  },
+  "hotel": {
+    "eyebrow": "Stays",
+    "title": "Bookings",
+    "text": "Requests and guests at your hotels and guest houses.",
+    "requests": "Requests",
+    "upcoming": "Upcoming",
+    "past": "Past",
+    "yourNote": "Your note: {{message}}",
+    "cancelledByGuest": "The guest cancelled.",
+    "cancelledByYou": "You cancelled this stay.",
+    "confirm": "Confirm",
+    "decline": "Decline",
+    "cancel": "Cancel stay",
+    "empty": {
+      "requests": "No requests waiting",
+      "upcoming": "No upcoming guests",
+      "past": "No past bookings yet"
+    },
+    "modal": {
+      "confirm": "Confirm booking",
+      "decline": "Decline request",
+      "cancel": "Cancel confirmed stay"
+    },
+    "modalSummary": "{{name}} · {{rooms}} × {{room}} · {{from}} → {{to}}",
+    "reasonRequired": "Tell the guest why (required)",
+    "noteOptional": "Note to the guest (optional)",
+    "submit": {
+      "confirm": "Confirm booking",
+      "decline": "Decline request",
+      "cancel": "Cancel stay"
+    },
+    "toast": {
+      "confirm": "Booking confirmed",
+      "decline": "Request declined",
+      "cancel": "Stay cancelled"
+    }
   }
 }

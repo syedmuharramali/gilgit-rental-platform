@@ -1,4 +1,4 @@
-const { HOME_TYPES, SHOP_TYPES } = require("../data/propertyTypes");
+const { HOME_TYPES, SHOP_TYPES, STAY_TYPES } = require("../data/propertyTypes");
 const mongoose =
   require("mongoose");
 
@@ -431,10 +431,12 @@ exports.getSmartMatches =
               req.user._id,
           },
 
-          // Smart matches are about homes; shops are searched separately.
+          // Smart matches are about homes; shops and stays are searched separately.
           propertyType: {
-            $nin:
-              SHOP_TYPES,
+            $nin: [
+              ...SHOP_TYPES,
+              ...STAY_TYPES,
+            ],
           },
         })
           .populate(

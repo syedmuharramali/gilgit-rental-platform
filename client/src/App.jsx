@@ -32,6 +32,7 @@ import {
   ReviewsPage,
 } from './pages/workspace/AccountPages'
 import ApplicationsPage from './pages/workspace/ApplicationsPage'
+import { HotelBookingsPage, TripsPage } from './pages/workspace/BookingPages'
 import DashboardOverviewPage from './pages/workspace/DashboardOverviewPage'
 import MessagesPage from './pages/workspace/MessagesPage'
 import NotificationsPage from './pages/workspace/NotificationsPage'
@@ -74,6 +75,7 @@ function App() {
         <Route path="matches" element={<SmartMatchesPage />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="viewings" element={<ViewingsPage />} />
+        <Route path="trips" element={<TripsPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="agreements" element={<RentalAgreementsPage />} />
         <Route path="reviews" element={<ReviewsPage />} />
@@ -91,6 +93,7 @@ function App() {
         <Route path="media" element={<PropertyMediaPage />} />
         <Route path="applications" element={<ApplicationsPage owner />} />
         <Route path="viewings" element={<ViewingsPage owner />} />
+        <Route path="bookings" element={<HotelBookingsPage />} />
         <Route path="messages" element={<MessagesPage />} />
         <Route path="agreements" element={<RentalAgreementsPage />} />
         <Route path="reviews" element={<ReviewsPage owner />} />

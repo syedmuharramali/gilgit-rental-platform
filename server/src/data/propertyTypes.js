@@ -23,6 +23,8 @@ const PROPERTY_TYPES = [
   "lower_portion",
   "studio",
   "shop",
+  "hotel",
+  "guest_house",
 ];
 
 /*
@@ -32,11 +34,21 @@ const PROPERTY_TYPES = [
 */
 const SHOP_TYPES = ["shop"];
 
+/*
+| Stays are booked by the night (hotels and guest houses). They have room
+| types with nightly prices instead of a monthly rent, and use bookings
+| instead of applications, viewings and agreements.
+*/
+const STAY_TYPES = ["hotel", "guest_house"];
+
 const HOME_TYPES = PROPERTY_TYPES.filter(
-  (type) => !SHOP_TYPES.includes(type)
+  (type) =>
+    !SHOP_TYPES.includes(type) &&
+    !STAY_TYPES.includes(type)
 );
 
 const isShopType = (type) => SHOP_TYPES.includes(type);
+const isStayType = (type) => STAY_TYPES.includes(type);
 
 const LEGACY_PROPERTY_TYPES = [
   "shared_room",
@@ -55,7 +67,9 @@ module.exports = {
   PROPERTY_TYPES,
   HOME_TYPES,
   SHOP_TYPES,
+  STAY_TYPES,
   isShopType,
+  isStayType,
   LEGACY_PROPERTY_TYPES,
   ALL_PROPERTY_TYPES,
   isLegacyPropertyType,

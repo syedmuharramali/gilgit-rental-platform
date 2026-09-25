@@ -13,6 +13,8 @@ import {
   MessageCircle,
   Plus,
   Ruler,
+  Clock,
+  DoorOpen,
   ShieldCheck,
   Sparkles,
   Star,
@@ -52,7 +54,8 @@ import { useCreateReportMutation } from '../features/reports/reportsApi'
 import { useGetPropertyReviewsQuery } from '../features/reviews/reviewsApi'
 import i18n from '../i18n/config'
 import { localToday } from '../utils/formatters'
-import { isShopType } from '../utils/propertyTypes'
+import { isShopType, isStayType } from '../utils/propertyTypes'
+import StayBookingPanel from '../components/properties/StayBookingPanel'
 
 const errorMessage = (error) => error?.data?.message || error?.error || i18n.t('common.somethingWrong')
 const blankRoommate = () => ({ name: '', email: '', phone: '' })
@@ -92,6 +95,8 @@ function PropertyDetailsPage() {
   const isReserved = property.reservationStatus === 'reserved'
   // Shops are rented by one business: no bedrooms, occupants or roommates.
   const isShop = isShopType(property.propertyType)
+  // Hotels and guest houses are booked by date instead of applied for.
+  const isStay = isStayType(property.propertyType)
 
   const requireAuth = (next) => {
     if (!token) return navigate('/login', { state: { from: `/properties/${id}` } })
@@ -225,7 +230,9 @@ function PropertyDetailsPage() {
             </div>
 
             <div className={`grid grid-cols-2 gap-3 border-b border-white/[0.08] py-8 ${isShop ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
-              {(isShop
+              {(isStay
+                ? [[DoorOpen, t('card.roomTypes', { count: property.roomTypes?.length || 0 })], [UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })], [Clock, t('stay.checkInAt', { time: property.checkInTime || '14:00' })], [Clock, t('stay.checkOutAt', { time: property.checkOutTime || '12:00' })]]
+                : isShop
                 ? [[Ruler, property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : t('details.areaUnknown')], [Bath, t('details.washroomsCount', { count: property.bathrooms || 0 })], [CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]
                 : [[BedDouble, t('details.bedroomsCount', { count: property.bedrooms || 0 })],[Bath, t('details.bathroomsCount', { count: property.bathrooms || 0 })],[UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })],[CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]).map(([Icon,label]) => <motion.div key={label} whileHover={{ y: -4 }} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-cyan-300" /><p className="mt-3 text-sm font-black">{label}</p></motion.div>)}
             </div>
@@ -240,17 +247,19 @@ function PropertyDetailsPage() {
 
             <div className="border-t border-white/[0.08] py-9"><h2 className="text-2xl font-black tracking-[-0.04em]">{t('details.location')}</h2><p className="mt-2 text-sm text-slate-500">{[property.address?.street, property.address?.area, property.address?.city, property.address?.landmark].filter(Boolean).join(' · ')}</p><div className="mt-5 overflow-hidden rounded-[28px] border border-white/[0.08]"><PropertyMap latitude={property.address?.latitude} longitude={property.address?.longitude} title={property.title} className="h-[360px]" /></div></div>
 
-            <div className="border-t border-white/[0.08] py-9"><div className="flex items-center justify-between"><h2 className="text-2xl font-black tracking-[-0.04em]">{t('details.renterReviews')}</h2><span className="flex items-center gap-1 text-sm font-black"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {reviewData?.averageRating || 0} ({reviewData?.count || 0})</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{reviewData?.reviews?.length ? reviewData.reviews.map((reviewItem) => <div key={reviewItem._id} className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4"><div className="flex items-center justify-between"><strong className="text-sm">{reviewItem.reviewer?.name}</strong><span className="text-amber-400">{'★'.repeat(reviewItem.rating)}</span></div><p className="mt-2 text-sm leading-6 text-slate-400">{reviewItem.comment || t('details.noWrittenComment')}</p></div>) : <p className="text-sm text-slate-500">{t('details.noTenancyReviews')}</p>}</div></div>
+            <div className="border-t border-white/[0.08] py-9"><div className="flex items-center justify-between"><h2 className="text-2xl font-black tracking-[-0.04em]">{isStay ? t('details.guestReviews') : t('details.renterReviews')}</h2><span className="flex items-center gap-1 text-sm font-black"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {reviewData?.averageRating || 0} ({reviewData?.count || 0})</span></div><div className="mt-5 grid gap-3 sm:grid-cols-2">{reviewData?.reviews?.length ? reviewData.reviews.map((reviewItem) => <div key={reviewItem._id} className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-4"><div className="flex items-center justify-between"><strong className="text-sm">{reviewItem.reviewer?.name}</strong><span className="text-amber-400">{'★'.repeat(reviewItem.rating)}</span></div><p className="mt-2 text-sm leading-6 text-slate-400">{reviewItem.comment || t('details.noWrittenComment')}</p></div>) : <p className="text-sm text-slate-500">{t('details.noTenancyReviews')}</p>}</div></div>
           </div>
 
           <aside>
             <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }} className="sticky top-24 overflow-hidden rounded-[30px] border border-white/10 bg-[#0c1220]/95 p-6 shadow-[0_30px_90px_rgba(0,0,0,.34)] backdrop-blur-2xl">
               <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent" />
+              {isStay ? <StayBookingPanel property={property} isOwner={isOwner} requireAuth={requireAuth} onMessageOwner={messageOwner} messageLoading={messageState.isLoading} /> : (<>
               <p className="text-sm text-slate-500">{t('details.monthlyRent')}</p><p className="mt-1 text-3xl font-black tracking-[-0.045em]">{money(property.monthlyRent)}</p>
               {property.negotiable && <span className="mt-2 inline-block rounded-full bg-amber-300/10 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] text-amber-200 ring-1 ring-amber-300/20">{t('details.negotiable')}</span>}
               {isReserved && <div className="mt-4 rounded-[20px] border border-violet-300/15 bg-violet-400/[0.07] p-4"><p className="text-xs font-black uppercase tracking-[.12em] text-violet-200">{t('details.currentlyReserved')}</p><p className="mt-1 text-xs leading-5 text-slate-400">{t('details.reservedText')}</p></div>}
               <div className="mt-6 space-y-3 rounded-[22px] border border-white/[0.07] bg-white/[0.03] p-4 text-sm"><div className="flex justify-between gap-4"><span className="text-slate-500">{t('details.deposit')}</span><strong>{money(property.securityDeposit)}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">{t('details.furnishing')}</span><strong>{pretty(property.furnishedStatus)}</strong></div><div className="flex justify-between gap-4"><span className="text-slate-500">{t('details.availableLabel')}</span><strong>{shortDate(property.availableFrom)}</strong></div></div>
               {!isOwner && <>{!isReserved && <><PrimaryButton disabled={applicationState.isLoading} className="mt-5 w-full" onClick={() => requireAuth(() => setModal('apply'))}>{t('details.applyCta')}</PrimaryButton><SecondaryButton disabled={viewingState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(() => setModal('viewing'))}>{t('details.scheduleViewing')}</SecondaryButton></>}<SecondaryButton disabled={messageState.isLoading} className="mt-2 w-full" onClick={() => requireAuth(messageOwner)}><MessageCircle className="h-4 w-4" /> {t('details.messageOwnerCta')}</SecondaryButton></>}
+              </>)}
               <div className="mt-6 flex items-center gap-3 border-t border-white/[0.07] pt-5">{property.owner?.avatar?.url ? <img src={property.owner.avatar.url} alt="" className="h-11 w-11 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-11 w-11 place-items-center rounded-2xl bg-gradient-to-br from-cyan-300/20 to-violet-500/20 font-black text-cyan-200">{property.owner?.name?.[0] || 'O'}</div>}<div><p className="text-sm font-black">{property.owner?.name || t('details.propertyOwner')}</p><p className="text-xs text-slate-500">{t('details.verifiedOwner')}</p></div></div>
               {!isOwner && <button onClick={() => requireAuth(() => setModal('report'))} className="mt-5 inline-flex items-center gap-2 text-xs font-black text-slate-500 transition hover:text-rose-300"><Flag className="h-3.5 w-3.5" /> {t('details.reportListing')}</button>}
             </motion.div>

@@ -1,4 +1,5 @@
 import {
+  BedDouble,
   Bell,
   Building2,
   ClipboardList,
@@ -37,6 +38,7 @@ const renterGroups = [
       ['/dashboard/matches', 'smartMatches', Sparkles],
       ['/dashboard/applications', 'applications', ClipboardList],
       ['/dashboard/viewings', 'viewings', FileCheck2],
+      ['/dashboard/trips', 'trips', BedDouble],
     ],
   },
   {
@@ -69,6 +71,7 @@ const ownerGroups = [
       ['/owner/media', 'media', Images],
       ['/owner/applications', 'applications', ClipboardList],
       ['/owner/viewings', 'viewings', FileCheck2],
+      ['/owner/bookings', 'bookings', BedDouble],
     ],
   },
   {
@@ -98,6 +101,9 @@ const badgeTypesByKey = {
   viewings: ['viewing', 'viewing_confirmed', 'viewing_rejected', 'viewing_cancelled'],
   messages: ['message'],
   agreements: ['agreement'],
+  // Hotel side and guest side use different types, so each badge is its own.
+  bookings: ['booking_request'],
+  trips: ['booking_update'],
   reviews: ['review'],
   reports: ['report'],
 }

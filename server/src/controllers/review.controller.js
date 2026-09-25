@@ -8,6 +8,41 @@ const Tenancy = require(
   "../models/tenancy.model"
 );
 
+const Booking = require(
+  "../models/booking.model"
+);
+
+/*
+| Hotel and guest-house reviews live on the completed booking. Shape them
+| like rental reviews so every page can show both in one list.
+*/
+const findStayReviews = async (filter) => {
+  const bookings = await Booking.find({
+    ...filter,
+    "review.rating": { $ne: null },
+  })
+    .select("property guest owner review")
+    .populate("property", "title slug")
+    .populate("guest", "name avatar")
+    .populate("owner", "name avatar")
+    .lean();
+
+  return bookings.map((booking) => ({
+    _id: booking._id,
+    booking: booking._id,
+    property: booking.property,
+    reviewer: booking.guest,
+    reviewee: booking.owner,
+    reviewerRole: "guest",
+    rating: booking.review.rating,
+    comment: booking.review.comment,
+    createdAt: booking.review.createdAt,
+  }));
+};
+
+const newestFirst = (a, b) =>
+  new Date(b.createdAt) - new Date(a.createdAt);
+
 const Property = require(
   "../models/property.model"
 );
@@ -336,6 +371,15 @@ exports.getPropertyReviews =
           })
           .lean();
 
+      // Stay (hotel / guest house) reviews count the same as renter reviews.
+      reviews.push(
+        ...(await findStayReviews({
+          property: propertyId,
+        }))
+      );
+
+      reviews.sort(newestFirst);
+
       const count =
         reviews.length;
 
@@ -380,7 +424,7 @@ exports.getPropertyReviews =
 exports.getMyReviews =
   asyncHandler(
     async (req, res) => {
-      const reviews =
+      const rentalReviews =
         await Review.find({
           reviewer:
             req.user._id,
@@ -400,6 +444,11 @@ exports.getMyReviews =
           .sort({
             createdAt: -1,
           });
+
+      const reviews = [
+        ...rentalReviews.map((review) => review.toObject()),
+        ...(await findStayReviews({ guest: req.user._id })),
+      ].sort(newestFirst);
 
       res.status(200).json({
         success: true,
@@ -424,7 +473,7 @@ exports.getMyReviews =
 exports.getReceivedReviews =
   asyncHandler(
     async (req, res) => {
-      const reviews =
+      const rentalReviews =
         await Review.find({
           reviewee:
             req.user._id,
@@ -444,6 +493,11 @@ exports.getReceivedReviews =
           .sort({
             createdAt: -1,
           });
+
+      const reviews = [
+        ...rentalReviews.map((review) => review.toObject()),
+        ...(await findStayReviews({ owner: req.user._id })),
+      ].sort(newestFirst);
 
       res.status(200).json({
         success: true,

@@ -39,6 +39,12 @@ const getNotificationDestination = (notification, ownerMode, t) => {
       return { pathname: `${base}/applications`, label: t('notif.openApplications') }
     case 'viewing':
       return { pathname: `${base}/viewings`, label: t('notif.openViewings') }
+    case 'booking':
+      // The type says whose side it is, whichever workspace is open.
+      if (notification?.type === 'review') return { pathname: '/owner/reviews', label: t('notif.openReviews') }
+      return notification?.type === 'booking_request'
+        ? { pathname: '/owner/bookings', label: t('notif.openBookings') }
+        : { pathname: '/dashboard/trips', label: t('notif.openTrips') }
     case 'tenancy': // older notifications
     case 'agreement':
       return { pathname: `${base}/agreements`, label: t('notif.openAgreement') }

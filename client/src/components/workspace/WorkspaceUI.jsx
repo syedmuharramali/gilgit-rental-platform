@@ -26,7 +26,7 @@ export function Panel({ children, className = '' }) {
 
 export function StatusBadge({ value }) {
   const positive = ['accepted','confirmed','completed','paid','active','published','verified','executed','resolved']
-  const negative = ['rejected','cancelled','withdrawn','ended','dismissed']
+  const negative = ['rejected','cancelled','withdrawn','ended','dismissed','declined','expired']
   const style = positive.includes(value)
     ? 'bg-cyan-300/10 text-cyan-200 ring-cyan-300/20'
     : negative.includes(value)

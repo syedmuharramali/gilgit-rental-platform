@@ -104,6 +104,11 @@ const reviewRoutes =
     "./routes/review.routes"
   );
 
+const bookingRoutes =
+  require(
+    "./routes/booking.routes"
+  );
+
 const reportRoutes =
   require(
     "./routes/report.routes"
@@ -451,6 +456,11 @@ app.use(
 app.use(
   "/api/reviews",
   reviewRoutes
+);
+
+app.use(
+  "/api/bookings",
+  bookingRoutes
 );
 
 app.use(

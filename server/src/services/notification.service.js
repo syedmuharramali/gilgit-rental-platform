@@ -30,11 +30,19 @@ const createNotification =
       return null;
     }
 
+    // Messages often quote user text (a reason, a note). Trim to the
+    // model's limits so a long quote can't make the notification fail
+    // validation and silently disappear.
+    const clip = (text, max) => {
+      const value = String(text);
+      return value.length > max ? `${value.slice(0, max - 1)}…` : value;
+    };
+
     return Notification.create({
       user,
       type,
-      title,
-      message,
+      title: clip(title, 150),
+      message: clip(message, 500),
       resourceType,
       resourceId,
     });

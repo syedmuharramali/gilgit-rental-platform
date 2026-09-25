@@ -8,7 +8,8 @@ import LanguageSwitcher from '../LanguageSwitcher'
 
 const links = [
   { to: '/properties', key: 'nav.explore' },
-  { to: '/properties?category=shops', key: 'nav.shops', shops: true },
+  { to: '/properties?category=shops', key: 'nav.shops', category: 'shops' },
+  { to: '/properties?category=stays', key: 'nav.stays', category: 'stays' },
   { to: '/living-score', key: 'nav.livingScore' },
   { to: '/about', key: 'nav.howItWorks' },
 ]
@@ -22,9 +23,14 @@ function PublicNavbar() {
   const token = useSelector((state) => state.auth.token)
   const { t } = useTranslation()
   const location = useLocation()
-  // Explore and Shops share /properties; tell them apart by ?category.
-  const onShops = new URLSearchParams(location.search).get('category') === 'shops' || new URLSearchParams(location.search).get('propertyType') === 'shop'
-  const linkActive = (link, isActive) => isActive && (link.to.startsWith('/properties') ? Boolean(link.shops) === onShops : true)
+  // Explore, Shops and Stays share /properties; tell them apart by ?category
+  // (or by a type in the URL, as the home page cards link that way).
+  const query = new URLSearchParams(location.search)
+  const urlType = query.get('propertyType')
+  const currentCategory = urlType
+    ? urlType === 'shop' ? 'shops' : ['hotel', 'guest_house'].includes(urlType) ? 'stays' : 'homes'
+    : query.get('category') || 'homes'
+  const linkActive = (link, isActive) => isActive && (link.to.startsWith('/properties') ? (link.category || 'homes') === currentCategory : true)
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/8 bg-[#060914]/88 text-white backdrop-blur-2xl">

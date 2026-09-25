@@ -3,8 +3,10 @@ import {
   CheckCircle2,
   ImagePlus,
   Info,
+  Plus,
   RefreshCw,
   ShieldCheck,
+  Trash2,
   UploadCloud,
 } from 'lucide-react'
 import { motion } from 'motion/react'
@@ -37,7 +39,7 @@ import {
 } from '../../features/properties/propertiesApi'
 
 import { localToday } from '../../utils/formatters'
-import { PROPERTY_TYPES, isLegacyPropertyType } from '../../utils/propertyTypes'
+import { PROPERTY_TYPES, isLegacyPropertyType, isStayType } from '../../utils/propertyTypes'
 
 const LocationPicker = lazy(() => import('../../components/properties/LocationPicker'))
 
@@ -59,6 +61,10 @@ const blank = {
   totalAreaUnit: 'sqft',
   furnishedStatus: 'unfurnished',
   maxOccupants: '1',
+  // Stays (hotels, guest houses)
+  roomTypes: [],
+  checkInTime: '14:00',
+  checkOutTime: '12:00',
   area: '',
   street: '',
   city: 'Gilgit',
@@ -124,7 +130,10 @@ function StepNotice({ children }) {
 
 // Shape the form into the API payload (also used to tell whether anything
 // changed since the last save).
-const buildPayload = (f) => ({
+const buildPayload = (f) => {
+  const stay = isStayType(f.propertyType)
+
+  return {
     title: f.title.trim(),
     description: f.description.trim(),
     propertyType: f.propertyType,
@@ -160,17 +169,36 @@ const buildPayload = (f) => ({
       roadAccess: f.roadAccess,
       winterAccessible: f.winterAccessible,
     },
-})
+    // Stays are priced per room per night; monthly fields are ignored for them.
+    ...(stay && {
+      monthlyRent: 0,
+      securityDeposit: 0,
+      negotiable: false,
+      minimumStayMonths: 1,
+      roomTypes: f.roomTypes.map((room) => ({
+        ...(room._id && { _id: room._id }),
+        name: room.name.trim(),
+        description: room.description.trim() || null,
+        nightlyPrice: Number(room.nightlyPrice),
+        maxGuests: Number(room.maxGuests),
+        quantity: Number(room.quantity),
+      })),
+      checkInTime: f.checkInTime,
+      checkOutTime: f.checkOutTime,
+    }),
+  }
+}
+
+const blankRoomType = () => ({ _id: null, name: '', description: '', nightlyPrice: '', maxGuests: '2', quantity: '1' })
 
 export default function PropertyEditorPage() {
   const { t } = useTranslation()
-  const steps = stepKeys.map((key) => ({ key, title: t(`ed.step.${key}`), text: t(`ed.step.${key}Text`) }))
   const { id } = useParams()
   const editing = Boolean(id)
   const navigate = useNavigate()
   const location = useLocation()
   const requestedStep = Number(new URLSearchParams(location.search).get('step'))
-  const initialStep = Number.isInteger(requestedStep) && requestedStep >= 0 && requestedStep < steps.length ? requestedStep : 0
+  const initialStep = Number.isInteger(requestedStep) && requestedStep >= 0 && requestedStep < stepKeys.length ? requestedStep : 0
 
   const [step, setStep] = useState(initialStep)
   const [form, setForm] = useState(() => ({ ...blank, availableFrom: localToday() }))
@@ -246,6 +274,16 @@ export default function PropertyEditorPage() {
       waterAvailability: property.livingInfo?.waterAvailability || 'unknown',
       roadAccess: property.livingInfo?.roadAccess || 'unknown',
       winterAccessible: property.livingInfo?.winterAccessible !== false,
+      roomTypes: (property.roomTypes || []).map((room) => ({
+        _id: room._id,
+        name: room.name || '',
+        description: room.description || '',
+        nightlyPrice: String(room.nightlyPrice ?? ''),
+        maxGuests: String(room.maxGuests ?? 1),
+        quantity: String(room.quantity ?? 1),
+      })),
+      checkInTime: property.checkInTime || '14:00',
+      checkOutTime: property.checkOutTime || '12:00',
     }
     // What the server has, so edit mode knows whether there is anything to save.
     savedPayload.current = JSON.stringify(buildPayload(hydrated))
@@ -258,6 +296,15 @@ export default function PropertyEditorPage() {
   const isDirty = editing && savedPayload.current !== null && payloadKey !== savedPayload.current
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
+
+  // Hotels and guest houses: room types with nightly prices replace the
+  // monthly rent step, and the home-only details are hidden.
+  const isStay = isStayType(form.propertyType)
+  const stepLabelKey = (key) => (isStay && key === 'pricing' ? 'rooms' : key)
+  const steps = stepKeys.map((key) => ({ key, title: t(`ed.step.${stepLabelKey(key)}`), text: t(`ed.step.${stepLabelKey(key)}Text`) }))
+  const setRoom = (index, key, value) => setForm((current) => ({ ...current, roomTypes: current.roomTypes.map((room, roomIndex) => (roomIndex === index ? { ...room, [key]: value } : room)) }))
+  const addRoom = () => setForm((current) => ({ ...current, roomTypes: [...current.roomTypes, blankRoomType()] }))
+  const removeRoom = (index) => setForm((current) => ({ ...current, roomTypes: current.roomTypes.filter((_, roomIndex) => roomIndex !== index) }))
 
   const setPin = useCallback(({ latitude, longitude }) => {
     setForm((current) => ({
@@ -297,13 +344,28 @@ export default function PropertyEditorPage() {
       if (!PROPERTY_TYPES.includes(form.propertyType)) return t('ed.err.type')
     }
 
-    if (index === 1) {
+    if (index === 1 && isStay) {
+      if (form.roomTypes.length === 0) return t('ed.err.noRooms')
+      for (const room of form.roomTypes) {
+        if (room.name.trim().length < 2) return t('ed.err.roomName')
+        if (room.nightlyPrice === '' || !(Number(room.nightlyPrice) >= 0)) return t('ed.err.roomPrice', { name: room.name.trim() })
+        if (!(Number(room.maxGuests) >= 1 && Number(room.maxGuests) <= 20)) return t('ed.err.roomGuests', { name: room.name.trim() })
+        if (!(Number.isInteger(Number(room.quantity)) && Number(room.quantity) >= 1 && Number(room.quantity) <= 500)) return t('ed.err.roomQuantity', { name: room.name.trim() })
+      }
+      if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(form.checkInTime) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(form.checkOutTime)) return t('ed.err.times')
+    }
+
+    if (index === 1 && !isStay) {
       if (form.monthlyRent === '' || Number(form.monthlyRent) < 0) return t('ed.err.rent')
       if (Number(form.securityDeposit || 0) < 0) return t('ed.err.deposit')
       if (!form.availableFrom) return t('ed.err.availableFrom')
     }
 
-    if (index === 2) {
+    if (index === 2 && isStay) {
+      if (form.totalAreaValue !== '' && Number(form.totalAreaValue) < 0) return t('ed.err.area')
+    }
+
+    if (index === 2 && !isStay) {
       const stay = Number(form.minimumStayMonths)
       if (!Number.isFinite(stay) || stay < 1 || stay > 120) return t('ed.err.stay')
       if (!isShop && (Number(form.bedrooms) < 0 || Number(form.bedrooms) > 100)) return t('ed.err.bedrooms')
@@ -358,6 +420,16 @@ export default function PropertyEditorPage() {
         : await createProperty(payload).unwrap()
       const propertyId = editing ? id : result?.data?.property?._id || result?.property?._id
       savedPayload.current = payloadKey
+
+      // Rooms added in this session get their ids from the server. Keep them,
+      // or the next save would send those rooms as brand-new ones and
+      // bookings pointing at them would look "removed".
+      const savedRooms = result?.data?.property?.roomTypes || result?.property?.roomTypes
+      if (editing && isStay && Array.isArray(savedRooms) && form.roomTypes.some((room) => !room._id)) {
+        const synced = { ...form, roomTypes: form.roomTypes.map((room, index) => ({ ...room, _id: room._id || savedRooms[index]?._id || null })) }
+        savedPayload.current = JSON.stringify(buildPayload(synced))
+        setForm(synced)
+      }
       toast.success(editing ? t('ed.toast.saved') : t('ed.toast.created'))
 
       if (!editing && propertyId) {
@@ -545,7 +617,35 @@ export default function PropertyEditorPage() {
             </div>
           )}
 
-          {step === 1 && (
+          {step === 1 && isStay && (
+            <div>
+              <StepNotice>{t('ed.notice.rooms')}</StepNotice>
+              <div className="space-y-4">
+                {form.roomTypes.map((room, index) => (
+                  <div key={room._id || `new-${index}`} className="rounded-[22px] border border-white/[0.08] bg-white/[0.025] p-4">
+                    <div className="mb-4 flex items-center justify-between gap-3">
+                      <p className="text-sm font-black text-white">{room.name.trim() || t('ed.room.untitled', { number: index + 1 })}</p>
+                      <button type="button" onClick={() => removeRoom(index)} aria-label={t('ed.room.remove')} className="grid h-9 w-9 place-items-center rounded-xl border border-white/10 text-slate-400 transition hover:border-rose-300/30 hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                      <Field className="lg:col-span-2" label={t('ed.room.name')} required hint={t('ed.room.nameHint')}><TextInput maxLength={80} value={room.name} onChange={(event) => setRoom(index, 'name', event.target.value)} placeholder={t('ed.room.namePlaceholder')} /></Field>
+                      <Field label={t('ed.room.price')} required><TextInput type="number" min="0" inputMode="numeric" value={room.nightlyPrice} onChange={(event) => setRoom(index, 'nightlyPrice', event.target.value)} placeholder="8000" /></Field>
+                      <Field label={t('ed.room.guests')} required><TextInput type="number" min="1" max="20" value={room.maxGuests} onChange={(event) => setRoom(index, 'maxGuests', event.target.value)} /></Field>
+                      <Field label={t('ed.room.quantity')} required hint={t('ed.room.quantityHint')}><TextInput type="number" min="1" max="500" value={room.quantity} onChange={(event) => setRoom(index, 'quantity', event.target.value)} /></Field>
+                      <Field className="sm:col-span-2 lg:col-span-3" label={t('ed.room.description')} optional optionalLabel={t('ed.optional')}><TextInput maxLength={300} value={room.description} onChange={(event) => setRoom(index, 'description', event.target.value)} placeholder={t('ed.room.descriptionPlaceholder')} /></Field>
+                    </div>
+                  </div>
+                ))}
+                <SecondaryButton onClick={addRoom} disabled={form.roomTypes.length >= 20}><Plus className="h-4 w-4" /> {t('ed.room.add')}</SecondaryButton>
+              </div>
+              <div className="mt-6 grid gap-5 sm:grid-cols-2">
+                <Field label={t('ed.field.checkInTime')} required><TextInput type="time" value={form.checkInTime} onChange={(event) => set('checkInTime', event.target.value)} /></Field>
+                <Field label={t('ed.field.checkOutTime')} required><TextInput type="time" value={form.checkOutTime} onChange={(event) => set('checkOutTime', event.target.value)} /></Field>
+              </div>
+            </div>
+          )}
+
+          {step === 1 && !isStay && (
             <div>
               <StepNotice>{t('ed.notice.pricing')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2">
@@ -561,14 +661,14 @@ export default function PropertyEditorPage() {
             <div>
               <StepNotice>{t('ed.notice.details')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <Field label={t('ed.field.minimumStay')} required hint={t('ed.field.minimumStayHint')}><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>
-                {!isShop && <Field label={t('ed.field.bedrooms')} required hint={t('ed.field.bedroomsHint')}><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>}
-                <Field label={isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms')} required hint={isShop ? t('ed.field.washroomsHint') : t('ed.field.bathroomsHint')}><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
+                {!isStay && <Field label={t('ed.field.minimumStay')} required hint={t('ed.field.minimumStayHint')}><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>}
+                {!isShop && !isStay && <Field label={t('ed.field.bedrooms')} required hint={t('ed.field.bedroomsHint')}><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>}
+                {!isStay && <Field label={isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms')} required hint={isShop ? t('ed.field.washroomsHint') : t('ed.field.bathroomsHint')}><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>}
                 <Field label={t('ed.field.floor')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.floorHint')}><TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" /></Field>
                 <Field label={t('ed.field.totalArea')} required={isShop} optional={!isShop} optionalLabel={t('ed.optional')} hint={isShop ? t('ed.field.shopAreaHint') : t('ed.field.totalAreaHint')}><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
                 <Field label={t('ed.field.areaUnit')} hint={t('ed.field.areaUnitHint')}><Select aria-label={t('ed.field.areaUnit')} value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}>{['sqft','sqm','kanal','marla'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>
-                {!isShop && <Field label={t('ed.field.furnishing')} hint={t('ed.field.furnishingHint')}><Select aria-label={t('ed.field.furnishing')} value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>}
-                {!isShop && <Field label={t('ed.field.maxOccupants')} required hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>}
+                {!isShop && !isStay && <Field label={t('ed.field.furnishing')} hint={t('ed.field.furnishingHint')}><Select aria-label={t('ed.field.furnishing')} value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>}
+                {!isShop && !isStay && <Field label={t('ed.field.maxOccupants')} required hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>}
               </div>
             </div>
           )}
@@ -693,10 +793,14 @@ export default function PropertyEditorPage() {
                 <p className="mt-2 max-w-2xl text-sm leading-7 text-slate-400">{form.description || t('ed.addDescription')}</p>
                 <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
                   {[
-                    [t('ed.field.rent'), form.monthlyRent ? money(form.monthlyRent) : '—'],
+                    isStay
+                      ? [t('ed.room.fromPrice'), form.roomTypes.length ? t('card.perNightFrom', { price: money(Math.min(...form.roomTypes.map((room) => Number(room.nightlyPrice) || 0))) }) : '—']
+                      : [t('ed.field.rent'), form.monthlyRent ? money(form.monthlyRent) : '—'],
                     [t('ed.field.type'), pretty(form.propertyType)],
                     [t('details.location'), form.area ? `${form.area}, ${form.city}` : '—'],
-                    ...(isShop
+                    ...(isStay
+                      ? [[t('ed.step.rooms'), form.roomTypes.reduce((total, room) => total + (Number(room.quantity) || 0), 0)], [t('ed.field.checkInTime'), `${form.checkInTime} / ${form.checkOutTime}`]]
+                      : isShop
                       ? [[t('ed.field.totalArea'), form.totalAreaValue ? `${form.totalAreaValue} ${pretty(form.totalAreaUnit)}` : '—'], [t('ed.field.washrooms'), form.bathrooms]]
                       : [[t('ed.field.bedrooms'), form.bedrooms], [t('ed.field.bathrooms'), form.bathrooms]]),
                     [t('ed.step.amenities'), form.amenities.length],

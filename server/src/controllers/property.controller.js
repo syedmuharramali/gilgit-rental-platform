@@ -1,5 +1,9 @@
 const mongoose = require("mongoose");
-const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, isLegacyPropertyType, isShopType } = require("../data/propertyTypes");
+const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isLegacyPropertyType, isShopType, isStayType } = require("../data/propertyTypes");
+const Booking = require("../models/booking.model");
+const { startOfGilgitToday } = require("../utils/gilgitDate");
+const { validateStayRange, maxRoomsBookedPerNight } = require("../utils/stayDates");
+const { filterStaysWithRoom } = require("../services/booking.service");
 
 const {
   uploadPublicImage,
@@ -130,6 +134,47 @@ const resetPropertyReviewState = (
 |--------------------------------------------------------------------------
 */
 
+/*
+| Room types arrive from the editor as plain objects. Keep only the known
+| fields (and an existing _id, so bookings keep pointing at the same room).
+*/
+const cleanRoomTypes = (roomTypes) => {
+  if (roomTypes === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(roomTypes)) {
+    throw new AppError("Room types must be a list", 400);
+  }
+
+  if (roomTypes.length > 20) {
+    throw new AppError("A stay can have at most 20 room types", 400);
+  }
+
+  return roomTypes.map((room) => {
+    if (!room || typeof room !== "object") {
+      throw new AppError("Each room type needs a name, price, guests and rooms", 400);
+    }
+
+    const cleaned = {
+      name: typeof room.name === "string" ? room.name.trim() : "",
+      description:
+        typeof room.description === "string" && room.description.trim()
+          ? room.description.trim()
+          : null,
+      nightlyPrice: Number(room.nightlyPrice),
+      maxGuests: Number(room.maxGuests),
+      quantity: Number(room.quantity),
+    };
+
+    if (room._id && mongoose.isValidObjectId(room._id)) {
+      cleaned._id = room._id;
+    }
+
+    return cleaned;
+  });
+};
+
 const validateAmenities = async (amenityIds) => {
   if (
     amenityIds === undefined ||
@@ -258,6 +303,17 @@ exports.createProperty = asyncHandler(
 
         livingInfo:
           req.body.livingInfo,
+
+        roomTypes:
+          cleanRoomTypes(
+            req.body.roomTypes
+          ),
+
+        checkInTime:
+          req.body.checkInTime,
+
+        checkOutTime:
+          req.body.checkOutTime,
 
         listingStatus:
           "draft",
@@ -438,6 +494,13 @@ exports.getPublishedProperties =
           };
         } else if (
           req.query.category ===
+          "stays"
+        ) {
+          filter.propertyType = {
+            $in: STAY_TYPES,
+          };
+        } else if (
+          req.query.category ===
           "homes"
         ) {
           filter.propertyType = {
@@ -446,12 +509,21 @@ exports.getPublishedProperties =
         } else {
           return next(
             new AppError(
-              "Category must be homes or shops",
+              "Category must be homes, shops or stays",
               400
             )
           );
         }
       }
+
+      // A type in the URL wins over the category, as for the type filter.
+      const isStaySearch =
+        req.query.propertyType
+          ? isStayType(
+              req.query.propertyType
+            )
+          : req.query.category ===
+            "stays";
       /*
       |--------------------------------------------------------------------------
       | Furnished status
@@ -653,20 +725,26 @@ exports.getPublishedProperties =
         minRent !== null ||
         maxRent !== null
       ) {
-        filter.monthlyRent =
+        // Stays are priced per night; everything else per month.
+        const priceField =
+          isStaySearch
+            ? "nightlyPriceFrom"
+            : "monthlyRent";
+
+        filter[priceField] =
           {};
 
         if (
           minRent !== null
         ) {
-          filter.monthlyRent.$gte =
+          filter[priceField].$gte =
             minRent;
         }
 
         if (
           maxRent !== null
         ) {
-          filter.monthlyRent.$lte =
+          filter[priceField].$lte =
             maxRent;
         }
       }
@@ -1065,13 +1143,13 @@ exports.getPublishedProperties =
       ) {
         case "rent_low":
           sort = {
-            monthlyRent: 1,
+            [isStaySearch ? "nightlyPriceFrom" : "monthlyRent"]: 1,
           };
           break;
 
         case "rent_high":
           sort = {
-            monthlyRent: -1,
+            [isStaySearch ? "nightlyPriceFrom" : "monthlyRent"]: -1,
           };
           break;
 
@@ -1086,6 +1164,89 @@ exports.getPublishedProperties =
             publishedAt: -1,
           };
           break;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Stays: only those with a free room for the dates and guests
+      |--------------------------------------------------------------------------
+      */
+
+      if (
+        isStaySearch &&
+        (req.query.checkIn ||
+          req.query.checkOut ||
+          req.query.guests)
+      ) {
+        let checkIn = null;
+        let checkOut = null;
+
+        if (
+          req.query.checkIn ||
+          req.query.checkOut
+        ) {
+          const range =
+            validateStayRange(
+              req.query.checkIn,
+              req.query.checkOut,
+              startOfGilgitToday()
+            );
+
+          if (range.error) {
+            return next(
+              new AppError(
+                range.error,
+                400
+              )
+            );
+          }
+
+          checkIn = range.checkIn;
+          checkOut = range.checkOut;
+        }
+
+        const guests =
+          req.query.guests !==
+          undefined
+            ? Number(
+                req.query.guests
+              )
+            : 1;
+
+        if (
+          !Number.isInteger(guests) ||
+          guests < 1 ||
+          guests > 100
+        ) {
+          return next(
+            new AppError(
+              "Guests must be between 1 and 100",
+              400
+            )
+          );
+        }
+
+        // Every stay matching the other filters (a town has at most a few
+        // hundred), then keep the ones with room for this party.
+        const candidates =
+          await Property.find(
+            filter
+          )
+            .select(
+              "_id roomTypes"
+            )
+            .lean();
+
+        filter._id = {
+          $in: await filterStaysWithRoom(
+            candidates,
+            {
+              checkIn,
+              checkOut,
+              guests,
+            }
+          ),
+        };
       }
 
       /*
@@ -1399,7 +1560,172 @@ exports.updateProperty =
         "amenities",
         "address",
         "livingInfo",
+        "checkInTime",
+        "checkOutTime",
       ];
+
+      /*
+      | Bookings pin a stay down: it can't stop being a stay (its rooms would
+      | be wiped) while guests are waiting or booked.
+      */
+
+      const openBookingFilter = {
+        property: property._id,
+        status: {
+          $in: [
+            "requested",
+            "confirmed",
+          ],
+        },
+      };
+
+      if (
+        updates.propertyType !== undefined &&
+        isStayType(property.propertyType) !==
+          isStayType(updates.propertyType) &&
+        (await Booking.exists(openBookingFilter))
+      ) {
+        return next(
+          new AppError(
+            "This stay has open or confirmed bookings, so its type can't change to or from a hotel or guest house.",
+            409
+          )
+        );
+      }
+
+      /*
+      | Room types: a room type with upcoming bookings can't be deleted, or
+      | those bookings would point at a room that no longer exists.
+      */
+
+      const nextRoomTypes =
+        cleanRoomTypes(
+          updates.roomTypes
+        );
+
+      if (
+        nextRoomTypes !==
+        undefined
+      ) {
+        const keptIds = new Set(
+          nextRoomTypes
+            .filter((room) => room._id)
+            .map((room) => String(room._id))
+        );
+
+        const removedIds = (
+          property.roomTypes || []
+        )
+          .map((room) => room._id)
+          .filter(
+            (roomId) =>
+              !keptIds.has(
+                String(roomId)
+              )
+          );
+
+        if (
+          removedIds.length > 0 &&
+          (await Booking.exists({
+            property: property._id,
+            "roomType.id": {
+              $in: removedIds,
+            },
+            status: {
+              $in: [
+                "requested",
+                "confirmed",
+              ],
+            },
+          }))
+        ) {
+          return next(
+            new AppError(
+              "A room type with upcoming bookings can't be removed. Answer or cancel those bookings first.",
+              409
+            )
+          );
+        }
+
+        // Fewer rooms than are already booked on some night would overbook
+        // those guests.
+        const today = startOfGilgitToday();
+
+        for (const nextRoom of nextRoomTypes) {
+          const current = nextRoom._id
+            ? (property.roomTypes || []).find(
+                (room) =>
+                  String(room._id) ===
+                  String(nextRoom._id)
+              )
+            : null;
+
+          if (
+            !current ||
+            !(Number(nextRoom.quantity) < current.quantity)
+          ) {
+            continue;
+          }
+
+          const future = await Booking.find({
+            property: property._id,
+            "roomType.id": current._id,
+            status: "confirmed",
+            checkOut: { $gt: today },
+          })
+            .select("rooms checkIn checkOut")
+            .lean();
+
+          if (future.length === 0) {
+            continue;
+          }
+
+          const lastCheckOut = new Date(
+            Math.max(
+              ...future.map((booking) =>
+                new Date(booking.checkOut).getTime()
+              )
+            )
+          );
+
+          const peak = maxRoomsBookedPerNight(
+            future,
+            today,
+            lastCheckOut
+          );
+
+          if (Number(nextRoom.quantity) < peak) {
+            return next(
+              new AppError(
+                `${current.name} has ${peak} rooms booked on its busiest upcoming night, so it can't be reduced below ${peak}.`,
+                409
+              )
+            );
+          }
+        }
+
+        // Reassigning an identical list would still mark the listing as
+        // changed (and send it back to review), so only assign real edits.
+        const roomKey = (rooms) =>
+          JSON.stringify(
+            rooms.map((room) => [
+              room._id ? String(room._id) : null,
+              room.name,
+              room.description || null,
+              Number(room.nightlyPrice),
+              Number(room.maxGuests),
+              Number(room.quantity),
+            ])
+          );
+
+        if (
+          roomKey(nextRoomTypes) !==
+          roomKey(property.roomTypes || [])
+        ) {
+          property.roomTypes =
+            nextRoomTypes;
+        }
+      }
 
       allowedFields.forEach(
         (field) => {
@@ -2191,6 +2517,24 @@ exports.submitPropertyForReview =
       }
 
       /*
+      | A stay can't be booked without at least one room type.
+      */
+
+      if (
+        isStayType(
+          property.propertyType
+        ) &&
+        !(property.roomTypes?.length > 0)
+      ) {
+        return next(
+          new AppError(
+            "Add at least one room type with a nightly price before submitting",
+            400
+          )
+        );
+      }
+
+      /*
       | Floor area is what a shopkeeper compares shops by.
       */
 
@@ -2307,6 +2651,26 @@ exports.deleteProperty =
           new AppError(
             "Property not found or you do not own this property",
             404
+          )
+        );
+      }
+
+      // A hotel with guests waiting or booked can't just vanish.
+      if (
+        await Booking.exists({
+          property: property._id,
+          status: {
+            $in: [
+              "requested",
+              "confirmed",
+            ],
+          },
+        })
+      ) {
+        return next(
+          new AppError(
+            "This stay has open or confirmed bookings. Decline or cancel them before deleting it.",
+            409
           )
         );
       }

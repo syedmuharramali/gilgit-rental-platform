@@ -27,6 +27,12 @@ const {
   "./services/amenitySeed.service"
 );
 
+const {
+  startBookingSchedule,
+} = require(
+  "./services/booking.service"
+);
+
 const PORT =
   Number(
     process.env.PORT
@@ -137,6 +143,7 @@ const startServer =
       }
 
       startTenancyActivationSchedule();
+      startBookingSchedule();
 
       server =
         app.listen(

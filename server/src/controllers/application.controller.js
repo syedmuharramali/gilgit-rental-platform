@@ -39,6 +39,7 @@ const {
 
 const {
   isShopType,
+  isStayType,
 } = require("../data/propertyTypes");
 
 /*
@@ -147,6 +148,20 @@ exports.createApplication =
         return next(
           new AppError(
             "Application type must be individual or group",
+            400
+          )
+        );
+      }
+
+      // Hotels and guest houses are booked by the night, not applied for.
+      if (
+        isStayType(
+          property.propertyType
+        )
+      ) {
+        return next(
+          new AppError(
+            "Hotels and guest houses are booked by date, not by application",
             400
           )
         );

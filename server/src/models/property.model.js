@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { ALL_PROPERTY_TYPES } = require("../data/propertyTypes");
+const { ALL_PROPERTY_TYPES, isStayType } = require("../data/propertyTypes");
 const slugify = require("slugify");
 
 /*
@@ -225,6 +225,83 @@ const propertySchema =
         min: 1,
 
         default: 1,
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Stays (hotels and guest houses)
+      |--------------------------------------------------------------------------
+      |
+      | Booked by the night per room type. Each room type keeps its _id for
+      | life so bookings can point at it; "quantity" is how many identical
+      | rooms of that type exist, which is what stops overbooking.
+      */
+
+      roomTypes: [
+        {
+          name: {
+            type: String,
+            trim: true,
+            required: [true, "Room type name is required"],
+            minlength: [2, "Room type name is too short"],
+            maxlength: [80, "Room type name is too long"],
+          },
+
+          description: {
+            type: String,
+            trim: true,
+            maxlength: [300, "Room description is too long"],
+            default: null,
+          },
+
+          nightlyPrice: {
+            type: Number,
+            required: [true, "Nightly price is required"],
+            min: [0, "Nightly price cannot be negative"],
+          },
+
+          maxGuests: {
+            type: Number,
+            required: true,
+            min: [1, "A room must allow at least 1 guest"],
+            max: [20, "A room cannot allow more than 20 guests"],
+          },
+
+          quantity: {
+            type: Number,
+            required: true,
+            min: [1, "There must be at least 1 room of this type"],
+            max: [500, "Too many rooms of one type"],
+          },
+        },
+      ],
+
+      checkInTime: {
+        type: String,
+        match: [/^([01]\d|2[0-3]):[0-5]\d$/, "Check-in time must be HH:MM"],
+        default: "14:00",
+      },
+
+      checkOutTime: {
+        type: String,
+        match: [/^([01]\d|2[0-3]):[0-5]\d$/, "Check-out time must be HH:MM"],
+        default: "12:00",
+      },
+
+      // Cheapest room, kept in sync on save; used for "from PKR X / night",
+      // price filters and sorting of stays.
+      nightlyPriceFrom: {
+        type: Number,
+        default: null,
+      },
+
+      // Bumped inside every booking confirmation transaction so that two
+      // confirmations for the same stay conflict instead of both passing
+      // the availability check.
+      bookingRevision: {
+        type: Number,
+        default: 0,
+        select: false,
       },
 
       /*
@@ -694,6 +771,25 @@ propertySchema.pre(
     if (this.propertyType === "shop") {
       this.bedrooms = 0;
       this.maxOccupants = 1;
+    }
+
+    if (isStayType(this.propertyType)) {
+      const rooms = this.roomTypes || [];
+
+      // Stays are priced per night per room; monthly fields don't apply.
+      this.monthlyRent = 0;
+      this.securityDeposit = 0;
+      this.minimumStayMonths = 1;
+      this.bedrooms = 0;
+      this.nightlyPriceFrom = rooms.length
+        ? Math.min(...rooms.map((room) => Number(room.nightlyPrice) || 0))
+        : null;
+      this.maxOccupants = rooms.length
+        ? Math.max(1, ...rooms.map((room) => Number(room.maxGuests) || 1))
+        : 1;
+    } else if (this.roomTypes?.length || this.nightlyPriceFrom != null) {
+      this.roomTypes = [];
+      this.nightlyPriceFrom = null;
     }
   }
 );

@@ -29,6 +29,10 @@ const notificationSchema =
 
           "agreement",
 
+          // Stays: booking_request goes to the hotel, booking_update to the guest.
+          "booking_request",
+          "booking_update",
+
           "review",
 
           "report",
@@ -62,6 +66,7 @@ const notificationSchema =
           "viewing",
           "property",
           "agreement",
+          "booking",
           "report",
           "review",
           "system",
