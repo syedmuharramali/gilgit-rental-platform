@@ -6,6 +6,7 @@
     "start": "node src/server.js",
     "seed:amenities": "node src/scripts/seedAmenities.js",
     "verify:existing-users": "node src/scripts/markExistingUsersVerified.js",
+    "retire:room-types": "node src/scripts/retireRoomTypes.js",
     "diagnose:storage": "node src/scripts/diagnoseAppwriteStorage.js"
   },
   "dependencies": {

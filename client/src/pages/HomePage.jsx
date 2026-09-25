@@ -26,14 +26,14 @@ import { useGetPropertiesQuery } from '../features/properties/propertiesApi'
 const AREAS = ['Jutial', 'Konodas', 'Danyor', 'Baseen', 'Kashrote']
 const CATEGORY_IMAGE = {
   apartment: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=84',
-  private_room: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=1200&q=84',
+  upper_portion: 'https://images.unsplash.com/photo-1615529182904-14819c35db37?auto=format&fit=crop&w=1200&q=84',
   hostel: 'https://images.unsplash.com/photo-1595576508898-0ad5c879a061?auto=format&fit=crop&w=1200&q=84',
   house: 'https://images.unsplash.com/photo-1600585152915-d208bec867a1?auto=format&fit=crop&w=1200&q=84',
 }
 
 const categories = [
   ['apartment', 'apartment'],
-  ['private_room', 'room'],
+  ['upper_portion', 'portion'],
   ['hostel', 'hostel'],
   ['house', 'house'],
 ]

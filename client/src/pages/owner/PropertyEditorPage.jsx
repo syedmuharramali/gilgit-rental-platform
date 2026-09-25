@@ -37,6 +37,7 @@ import {
 } from '../../features/properties/propertiesApi'
 
 import { localToday } from '../../utils/formatters'
+import { PROPERTY_TYPES, isLegacyPropertyType } from '../../utils/propertyTypes'
 
 const LocationPicker = lazy(() => import('../../components/properties/LocationPicker'))
 
@@ -217,7 +218,8 @@ export default function PropertyEditorPage() {
     const hydrated = {
       title: property.title || '',
       description: property.description || '',
-      propertyType: property.propertyType || 'apartment',
+      // A retired type (private/shared room) starts empty so the owner must choose.
+      propertyType: isLegacyPropertyType(property.propertyType) ? '' : property.propertyType || 'apartment',
       monthlyRent: String(property.monthlyRent ?? ''),
       securityDeposit: String(property.securityDeposit ?? 0),
       negotiable: Boolean(property.negotiable),
@@ -289,6 +291,7 @@ export default function PropertyEditorPage() {
     if (index === 0) {
       if (form.title.trim().length < 5) return t('ed.err.title')
       if (form.description.trim().length < 20) return t('ed.err.description')
+      if (!PROPERTY_TYPES.includes(form.propertyType)) return t('ed.err.type')
     }
 
     if (index === 1) {
@@ -530,7 +533,8 @@ export default function PropertyEditorPage() {
                 </Field>
                 <Field label={t('ed.field.type')} required hint={t('ed.field.typeHint')}>
                   <Select aria-label={t('ed.field.type')} value={form.propertyType} onChange={(event) => set('propertyType', event.target.value)}>
-                    {['hostel','hostel_bed','shared_room','private_room','apartment','house','upper_portion','lower_portion','studio'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
+                    {form.propertyType === '' && <option value="" disabled>{t('ed.field.chooseType')}</option>}
+                    {PROPERTY_TYPES.map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
                   </Select>
                 </Field>
               </div>

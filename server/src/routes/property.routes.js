@@ -1,3 +1,4 @@
+const { PROPERTY_TYPES } = require("../data/propertyTypes");
 const express = require(
   "express"
 );
@@ -85,17 +86,7 @@ const propertyValidation = [
     }),
 
   body("propertyType")
-    .isIn([
-      "hostel",
-      "hostel_bed",
-      "shared_room",
-      "private_room",
-      "apartment",
-      "house",
-      "upper_portion",
-      "lower_portion",
-      "studio",
-    ])
+    .isIn(PROPERTY_TYPES)
     .withMessage(
       "Invalid property type"
     ),

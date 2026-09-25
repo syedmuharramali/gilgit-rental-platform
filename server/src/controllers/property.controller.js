@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { PROPERTY_TYPES, isLegacyPropertyType } = require("../data/propertyTypes");
 
 const {
   uploadPublicImage,
@@ -400,17 +401,7 @@ exports.getPublishedProperties =
       if (
         req.query.propertyType
       ) {
-        const allowedPropertyTypes = [
-          "hostel",
-          "hostel_bed",
-          "shared_room",
-          "private_room",
-          "apartment",
-          "house",
-          "upper_portion",
-          "lower_portion",
-          "studio",
-        ];
+        const allowedPropertyTypes = PROPERTY_TYPES;
 
         if (
           !allowedPropertyTypes.includes(
@@ -1315,6 +1306,27 @@ exports.updateProperty =
       }
 
       /*
+      | Retired types stay on old listings but cannot be chosen again.
+      */
+
+      if (
+        updates.propertyType !==
+          undefined &&
+        updates.propertyType !==
+          property.propertyType &&
+        !PROPERTY_TYPES.includes(
+          updates.propertyType
+        )
+      ) {
+        return next(
+          new AppError(
+            "Invalid property type",
+            400
+          )
+        );
+      }
+
+      /*
       |--------------------------------------------------------------------------
       | Amenities
       |--------------------------------------------------------------------------
@@ -2140,6 +2152,24 @@ exports.submitPropertyForReview =
         return next(
           new AppError(
             "Select at least one amenity before submitting the property",
+            400
+          )
+        );
+      }
+
+      /*
+      | "Private room" and "Shared room" were retired. A listing still using
+      | one must pick a current type before it can go back to review.
+      */
+
+      if (
+        isLegacyPropertyType(
+          property.propertyType
+        )
+      ) {
+        return next(
+          new AppError(
+            "This property type is no longer offered. Edit the listing and choose a new type before submitting.",
             400
           )
         );

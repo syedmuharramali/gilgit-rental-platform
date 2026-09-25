@@ -81,12 +81,12 @@
     "category": {
       "apartmentTitle": "Apartments",
       "apartmentText": "Private, polished spaces for longer stays",
-      "roomTitle": "Private rooms",
-      "roomText": "Flexible rentals with your own space",
       "hostelTitle": "Hostels",
       "hostelText": "Practical stays for students and newcomers",
       "houseTitle": "Houses",
-      "houseText": "Extra space for families and groups"
+      "houseText": "Extra space for families and groups",
+      "portionTitle": "Upper portions",
+      "portionText": "A whole floor of a family house, with its own entrance"
     },
     "scoreEyebrow": "Gilgit Living Score",
     "scoreTitle": "A beautiful room is only half the story.",
@@ -918,7 +918,8 @@
     "toastDeleted": "Property deleted",
     "emptyTitle": "No properties yet",
     "emptyText": "Create your first property after owner verification is approved.",
-    "lockedNote": "A renter has been accepted for this listing, so it is locked. It cannot be edited or deleted while the rental is in progress."
+    "lockedNote": "A renter has been accepted for this listing, so it is locked. It cannot be edited or deleted while the rental is in progress.",
+    "retiredTypeNote": "\"Private room\" and \"Shared room\" are no longer offered, so this listing is hidden from search. Edit it, choose the type that fits best and submit it for review again."
   },
   "ver": {
     "eyebrow": "Trust & safety",
@@ -1169,7 +1170,8 @@
       "water": "Water availability",
       "waterHint": "Rate the normal reliability of running water at the property.",
       "road": "Road access",
-      "roadHint": "Rate how easily renters can normally reach the property by road."
+      "roadHint": "Rate how easily renters can normally reach the property by road.",
+      "chooseType": "Choose a property type"
     },
     "availableAmenities": "Available amenities",
     "selectedCount": "{{count}} selected",
@@ -1240,7 +1242,8 @@
       "images": "Upload at least 3 property images before reviewing the listing.",
       "saveFirst": "Complete the listing details and save the draft before adding photos.",
       "imageSize": "{{name}} is {{size}}. Property images must be smaller than 1 MB.",
-      "imageType": "Choose one JPG or PNG image smaller than 1 MB."
+      "imageType": "Choose one JPG or PNG image smaller than 1 MB.",
+      "type": "Choose a property type. \"Private room\" and \"Shared room\" are no longer offered."
     },
     "toast": {
       "saved": "Property changes saved",

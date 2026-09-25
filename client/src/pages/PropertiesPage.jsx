@@ -23,18 +23,9 @@ import PropertyResultsMap from '../components/properties/PropertyResultsMap'
 import { useGetAmenitiesQuery } from '../features/amenities/amenitiesApi'
 import { useGetPropertiesQuery } from '../features/properties/propertiesApi'
 import { amenityLabel, pretty } from '../components/workspace/WorkspaceUI'
+import { PROPERTY_TYPES } from '../utils/propertyTypes'
 
-const types = [
-  'hostel',
-  'hostel_bed',
-  'shared_room',
-  'private_room',
-  'apartment',
-  'house',
-  'upper_portion',
-  'lower_portion',
-  'studio',
-]
+const types = PROPERTY_TYPES
 
 const quickFilters = [
   ['heating', Flame],

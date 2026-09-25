@@ -1,3 +1,4 @@
+const { PROPERTY_TYPES } = require("../data/propertyTypes");
 const mongoose =
   require("mongoose");
 
@@ -125,17 +126,7 @@ exports.savePreferences =
         );
       }
 
-      const allowedTypes = [
-        "hostel",
-        "hostel_bed",
-        "shared_room",
-        "private_room",
-        "apartment",
-        "house",
-        "upper_portion",
-        "lower_portion",
-        "studio",
-      ];
+      const allowedTypes = PROPERTY_TYPES;
 
       const allowedFurnished =
         [

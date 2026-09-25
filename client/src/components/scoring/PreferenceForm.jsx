@@ -5,18 +5,9 @@ import { Controller, useForm } from 'react-hook-form'
 import { useTranslation } from 'react-i18next'
 import { z } from 'zod'
 import { amenityLabel, pretty } from '../../utils/formatters'
+import { PROPERTY_TYPES } from '../../utils/propertyTypes'
 
-const propertyTypes = [
-  'hostel',
-  'hostel_bed',
-  'shared_room',
-  'private_room',
-  'apartment',
-  'house',
-  'upper_portion',
-  'lower_portion',
-  'studio',
-]
+const propertyTypes = PROPERTY_TYPES
 
 const furnishing = ['furnished', 'semi_furnished', 'unfurnished']
 
@@ -39,7 +30,8 @@ const normalize = (preferences) => ({
   maxRent: preferences?.maxRent ?? '',
   minimumBedrooms: preferences?.minimumBedrooms ?? '',
   preferredAreas: preferences?.preferredAreas?.join(', ') || '',
-  propertyTypes: preferences?.propertyTypes || [],
+  // Drop retired types from older saved preferences so saving doesn't fail.
+  propertyTypes: (preferences?.propertyTypes || []).filter((type) => PROPERTY_TYPES.includes(type)),
   furnishedStatuses: preferences?.furnishedStatuses || [],
   amenities: (preferences?.amenities || []).map((amenity) => amenity._id || amenity),
   prioritizeWinterReadiness: preferences?.prioritizeWinterReadiness ?? true,

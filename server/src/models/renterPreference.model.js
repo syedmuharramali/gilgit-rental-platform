@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { PROPERTY_TYPES } = require("../data/propertyTypes");
 
 const renterPreferenceSchema =
   new mongoose.Schema(
@@ -25,17 +26,7 @@ const renterPreferenceSchema =
       propertyTypes: [
         {
           type: String,
-          enum: [
-            "hostel",
-            "hostel_bed",
-            "shared_room",
-            "private_room",
-            "apartment",
-            "house",
-            "upper_portion",
-            "lower_portion",
-            "studio",
-          ],
+          enum: PROPERTY_TYPES,
         },
       ],
 

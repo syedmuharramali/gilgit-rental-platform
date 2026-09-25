@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { ALL_PROPERTY_TYPES } = require("../data/propertyTypes");
 const slugify = require("slugify");
 
 /*
@@ -85,17 +86,7 @@ const propertySchema =
 
         required: true,
 
-        enum: [
-          "hostel",
-          "hostel_bed",
-          "shared_room",
-          "private_room",
-          "apartment",
-          "house",
-          "upper_portion",
-          "lower_portion",
-          "studio",
-        ],
+        enum: ALL_PROPERTY_TYPES,
       },
 
       /*
