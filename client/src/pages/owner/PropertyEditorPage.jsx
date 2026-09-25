@@ -133,15 +133,16 @@ const buildPayload = (f) => ({
     negotiable: f.negotiable,
     availableFrom: f.availableFrom,
     minimumStayMonths: Number(f.minimumStayMonths),
-    bedrooms: Number(f.bedrooms || 0),
+    // A shop has no bedrooms and one tenant; the server enforces the same.
+    bedrooms: f.propertyType === 'shop' ? 0 : Number(f.bedrooms || 0),
     bathrooms: Number(f.bathrooms || 0),
     floor: f.floor === '' ? null : Number(f.floor),
     totalArea: {
       value: f.totalAreaValue === '' ? null : Number(f.totalAreaValue),
       unit: f.totalAreaUnit,
     },
-    furnishedStatus: f.furnishedStatus,
-    maxOccupants: Number(f.maxOccupants || 1),
+    furnishedStatus: f.propertyType === 'shop' ? 'unfurnished' : f.furnishedStatus,
+    maxOccupants: f.propertyType === 'shop' ? 1 : Number(f.maxOccupants || 1),
     amenities: f.amenities,
     address: {
       area: f.area.trim(),
@@ -287,6 +288,8 @@ export default function PropertyEditorPage() {
       : [...form.amenities, amenityId],
   )
 
+  const isShop = form.propertyType === 'shop'
+
   const getStepError = (index) => {
     if (index === 0) {
       if (form.title.trim().length < 5) return t('ed.err.title')
@@ -303,10 +306,11 @@ export default function PropertyEditorPage() {
     if (index === 2) {
       const stay = Number(form.minimumStayMonths)
       if (!Number.isFinite(stay) || stay < 1 || stay > 120) return t('ed.err.stay')
-      if (Number(form.bedrooms) < 0 || Number(form.bedrooms) > 100) return t('ed.err.bedrooms')
+      if (!isShop && (Number(form.bedrooms) < 0 || Number(form.bedrooms) > 100)) return t('ed.err.bedrooms')
       if (Number(form.bathrooms) < 0 || Number(form.bathrooms) > 100) return t('ed.err.bathrooms')
-      if (Number(form.maxOccupants) < 1) return t('ed.err.occupants')
+      if (!isShop && Number(form.maxOccupants) < 1) return t('ed.err.occupants')
       if (form.totalAreaValue !== '' && Number(form.totalAreaValue) < 0) return t('ed.err.area')
+      if (isShop && !(Number(form.totalAreaValue) > 0)) return t('ed.err.shopArea')
     }
 
     if (index === 3) {
@@ -558,13 +562,13 @@ export default function PropertyEditorPage() {
               <StepNotice>{t('ed.notice.details')}</StepNotice>
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 <Field label={t('ed.field.minimumStay')} required hint={t('ed.field.minimumStayHint')}><TextInput type="number" min="1" max="120" value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} placeholder="6" /></Field>
-                <Field label={t('ed.field.bedrooms')} required hint={t('ed.field.bedroomsHint')}><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>
-                <Field label={t('ed.field.bathrooms')} required hint={t('ed.field.bathroomsHint')}><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
+                {!isShop && <Field label={t('ed.field.bedrooms')} required hint={t('ed.field.bedroomsHint')}><TextInput type="number" min="0" max="100" value={form.bedrooms} onChange={(event) => set('bedrooms', event.target.value)} placeholder="2" /></Field>}
+                <Field label={isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms')} required hint={isShop ? t('ed.field.washroomsHint') : t('ed.field.bathroomsHint')}><TextInput type="number" min="0" max="100" value={form.bathrooms} onChange={(event) => set('bathrooms', event.target.value)} placeholder="2" /></Field>
                 <Field label={t('ed.field.floor')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.floorHint')}><TextInput type="number" value={form.floor} onChange={(event) => set('floor', event.target.value)} placeholder="1" /></Field>
-                <Field label={t('ed.field.totalArea')} optional optionalLabel={t('ed.optional')} hint={t('ed.field.totalAreaHint')}><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
+                <Field label={t('ed.field.totalArea')} required={isShop} optional={!isShop} optionalLabel={t('ed.optional')} hint={isShop ? t('ed.field.shopAreaHint') : t('ed.field.totalAreaHint')}><TextInput type="number" min="0" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder="1200" /></Field>
                 <Field label={t('ed.field.areaUnit')} hint={t('ed.field.areaUnitHint')}><Select aria-label={t('ed.field.areaUnit')} value={form.totalAreaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}>{['sqft','sqm','kanal','marla'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>
-                <Field label={t('ed.field.furnishing')} hint={t('ed.field.furnishingHint')}><Select aria-label={t('ed.field.furnishing')} value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>
-                <Field label={t('ed.field.maxOccupants')} required hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>
+                {!isShop && <Field label={t('ed.field.furnishing')} hint={t('ed.field.furnishingHint')}><Select aria-label={t('ed.field.furnishing')} value={form.furnishedStatus} onChange={(event) => set('furnishedStatus', event.target.value)}>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</Select></Field>}
+                {!isShop && <Field label={t('ed.field.maxOccupants')} required hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder="4" /></Field>}
               </div>
             </div>
           )}
@@ -692,8 +696,9 @@ export default function PropertyEditorPage() {
                     [t('ed.field.rent'), form.monthlyRent ? money(form.monthlyRent) : '—'],
                     [t('ed.field.type'), pretty(form.propertyType)],
                     [t('details.location'), form.area ? `${form.area}, ${form.city}` : '—'],
-                    [t('ed.field.bedrooms'), form.bedrooms],
-                    [t('ed.field.bathrooms'), form.bathrooms],
+                    ...(isShop
+                      ? [[t('ed.field.totalArea'), form.totalAreaValue ? `${form.totalAreaValue} ${pretty(form.totalAreaUnit)}` : '—'], [t('ed.field.washrooms'), form.bathrooms]]
+                      : [[t('ed.field.bedrooms'), form.bedrooms], [t('ed.field.bathrooms'), form.bathrooms]]),
                     [t('ed.step.amenities'), form.amenities.length],
                   ].map(([label, value]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.03] p-4"><p className="text-[10px] font-bold text-slate-500">{label}</p><p className="mt-1 text-sm font-black text-white">{value}</p></div>)}
                 </div>

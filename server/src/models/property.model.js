@@ -680,6 +680,26 @@ propertySchema.index({
 
 /*
 |--------------------------------------------------------------------------
+| Shops
+|--------------------------------------------------------------------------
+|
+| A shop is rented as a single commercial unit: no bedrooms, and one tenant
+| (the business), however the form was filled in.
+*/
+
+propertySchema.pre(
+  "validate",
+
+  function () {
+    if (this.propertyType === "shop") {
+      this.bedrooms = 0;
+      this.maxOccupants = 1;
+    }
+  }
+);
+
+/*
+|--------------------------------------------------------------------------
 | Generate unique slug
 |--------------------------------------------------------------------------
 */

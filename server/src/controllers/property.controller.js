@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { PROPERTY_TYPES, isLegacyPropertyType } = require("../data/propertyTypes");
+const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, isLegacyPropertyType, isShopType } = require("../data/propertyTypes");
 
 const {
   uploadPublicImage,
@@ -418,6 +418,39 @@ exports.getPublishedProperties =
 
         filter.propertyType =
           req.query.propertyType;
+      }
+
+      /*
+      | category=homes | shops narrows the list without naming a type. A
+      | specific propertyType above always wins.
+      */
+
+      if (
+        req.query.category &&
+        !req.query.propertyType
+      ) {
+        if (
+          req.query.category ===
+          "shops"
+        ) {
+          filter.propertyType = {
+            $in: SHOP_TYPES,
+          };
+        } else if (
+          req.query.category ===
+          "homes"
+        ) {
+          filter.propertyType = {
+            $in: HOME_TYPES,
+          };
+        } else {
+          return next(
+            new AppError(
+              "Category must be homes or shops",
+              400
+            )
+          );
+        }
       }
       /*
       |--------------------------------------------------------------------------
@@ -2152,6 +2185,29 @@ exports.submitPropertyForReview =
         return next(
           new AppError(
             "Select at least one amenity before submitting the property",
+            400
+          )
+        );
+      }
+
+      /*
+      | Floor area is what a shopkeeper compares shops by.
+      */
+
+      if (
+        isShopType(
+          property.propertyType
+        ) &&
+        !(
+          Number(
+            property.totalArea
+              ?.value
+          ) > 0
+        )
+      ) {
+        return next(
+          new AppError(
+            "Add the shop's floor area before submitting it for review",
             400
           )
         );

@@ -12,6 +12,7 @@ import {
   MapPin,
   MessageCircle,
   Plus,
+  Ruler,
   ShieldCheck,
   Sparkles,
   Star,
@@ -51,6 +52,7 @@ import { useCreateReportMutation } from '../features/reports/reportsApi'
 import { useGetPropertyReviewsQuery } from '../features/reviews/reviewsApi'
 import i18n from '../i18n/config'
 import { localToday } from '../utils/formatters'
+import { isShopType } from '../utils/propertyTypes'
 
 const errorMessage = (error) => error?.data?.message || error?.error || i18n.t('common.somethingWrong')
 const blankRoommate = () => ({ name: '', email: '', phone: '' })
@@ -88,6 +90,8 @@ function PropertyDetailsPage() {
   const ownerId = property.owner?._id || property.owner?.id || property.owner
   const isOwner = String(ownerId) === String(user?.id)
   const isReserved = property.reservationStatus === 'reserved'
+  // Shops are rented by one business: no bedrooms, occupants or roommates.
+  const isShop = isShopType(property.propertyType)
 
   const requireAuth = (next) => {
     if (!token) return navigate('/login', { state: { from: `/properties/${id}` } })
@@ -220,8 +224,10 @@ function PropertyDetailsPage() {
               <FavoriteButton propertyId={property._id} showLabel className="min-h-12 shrink-0 border border-white/10 bg-white/[0.05] px-4 text-sm font-black text-white shadow-sm backdrop-blur-xl" />
             </div>
 
-            <div className="grid grid-cols-2 gap-3 border-b border-white/[0.08] py-8 sm:grid-cols-4">
-              {[[BedDouble, t('details.bedroomsCount', { count: property.bedrooms || 0 })],[Bath, t('details.bathroomsCount', { count: property.bathrooms || 0 })],[UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })],[CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]].map(([Icon,label]) => <motion.div key={label} whileHover={{ y: -4 }} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-cyan-300" /><p className="mt-3 text-sm font-black">{label}</p></motion.div>)}
+            <div className={`grid grid-cols-2 gap-3 border-b border-white/[0.08] py-8 ${isShop ? 'sm:grid-cols-3' : 'sm:grid-cols-4'}`}>
+              {(isShop
+                ? [[Ruler, property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : t('details.areaUnknown')], [Bath, t('details.washroomsCount', { count: property.bathrooms || 0 })], [CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]
+                : [[BedDouble, t('details.bedroomsCount', { count: property.bedrooms || 0 })],[Bath, t('details.bathroomsCount', { count: property.bathrooms || 0 })],[UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })],[CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]).map(([Icon,label]) => <motion.div key={label} whileHover={{ y: -4 }} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-cyan-300" /><p className="mt-3 text-sm font-black">{label}</p></motion.div>)}
             </div>
 
             <div className="py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('details.theProperty')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.aboutThisPlace')}</h2><p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-400">{property.description}</p></div>
@@ -278,14 +284,14 @@ function PropertyDetailsPage() {
             <p className="mt-1 text-xs leading-5 text-slate-400">{t('details.applyIntroText')}</p>
           </div>
 
-          <div>
+          {!isShop && <div>
             <p className="mb-2 text-xs font-black text-slate-200">{t('details.whoApplying')}</p>
             <div className="grid grid-cols-2 gap-2 rounded-2xl bg-white/[0.04] p-1">
               <button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'individual', roommates: [] }))} className={`rounded-xl px-3 py-2.5 text-xs font-black transition ${application.applicationType === 'individual' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>{t('details.individual')}</button>
               <button type="button" onClick={() => setApplication((current) => ({ ...current, applicationType: 'group', roommates: current.roommates.length ? current.roommates : [blankRoommate()] }))} className={`rounded-xl px-3 py-2.5 text-xs font-black transition ${application.applicationType === 'group' ? 'bg-white/10 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}>{t('details.groupRoommates')}</button>
             </div>
             <p className="mt-2 text-[11px] leading-5 text-slate-500">{t('details.whoApplyingHint')}</p>
-          </div>
+          </div>}
 
           <label className="block">
             <span className="mb-2 block text-xs font-black text-slate-200">{t('details.messageToOwner')} <span className="font-semibold text-slate-600">{t('details.optional')}</span></span>
@@ -299,14 +305,14 @@ function PropertyDetailsPage() {
             <span className="mt-2 block text-[11px] leading-5 text-slate-500">{t('details.preferredMoveInHint')}</span>
           </label>
 
-          <div className={`grid gap-4 ${application.applicationType === 'individual' ? 'sm:grid-cols-2' : ''}`}>
+          <div className={`grid gap-4 ${application.applicationType === 'individual' && !isShop ? 'sm:grid-cols-2' : ''}`}>
             <label className="block">
               <span className="mb-2 block text-xs font-black text-slate-200">{t('details.expectedStay')}</span>
               <TextInput aria-label={t('details.expectedStayAria')} type="number" min="1" max="120" value={application.expectedStayMonths} onChange={(event) => setApplication((current) => ({ ...current, expectedStayMonths: event.target.value }))} placeholder="6" />
               <span className="mt-2 block text-[11px] leading-5 text-slate-500">{t('details.expectedStayHint')}</span>
             </label>
 
-            {application.applicationType === 'individual' && (
+            {application.applicationType === 'individual' && !isShop && (
               <label className="block">
                 <span className="mb-2 block text-xs font-black text-slate-200">{t('details.occupantsLabel')}</span>
                 <TextInput aria-label={t('details.occupantsLabel')} type="number" min="1" max={property.maxOccupants || 20} value={application.occupants} onChange={(event) => setApplication((current) => ({ ...current, occupants: event.target.value }))} placeholder="1" />

@@ -32,7 +32,8 @@
     "notifications": "Notifications",
     "searchRentals": "Search rentals",
     "toggle": "Toggle navigation",
-    "joinFree": "Join free"
+    "joinFree": "Join free",
+    "shops": "Shops"
   },
   "footer": {
     "about": "A local-first rental platform for discovering verified homes, comparing practical living conditions and reaching a clear rental agreement in one place.",
@@ -86,7 +87,9 @@
       "houseTitle": "Houses",
       "houseText": "Extra space for families and groups",
       "portionTitle": "Upper portions",
-      "portionText": "A whole floor of a family house, with its own entrance"
+      "portionText": "A whole floor of a family house, with its own entrance",
+      "shopTitle": "Shops",
+      "shopText": "Commercial space for your business, rented by the month"
     },
     "scoreEyebrow": "Gilgit Living Score",
     "scoreTitle": "A beautiful room is only half the story.",
@@ -116,7 +119,8 @@
     },
     "ctaTitle": "Ready to find a rental that fits real life?",
     "ctaText": "Create an account to save homes, build your preferences, request viewings and keep every rental step together.",
-    "ctaPrimary": "Create free account"
+    "ctaPrimary": "Create free account",
+    "browseShops": "Browse shops"
   },
   "properties": {
     "eyebrow": "Curated for Gilgit living",
@@ -190,7 +194,10 @@
     "badFilter": "Those filters could not be applied",
     "previousPage": "Previous",
     "nextPage": "Next",
-    "pagination": "Result pages"
+    "pagination": "Result pages",
+    "categoryLabel": "What are you looking for?",
+    "categoryHomes": "Homes",
+    "categoryShops": "Shops"
   },
   "details": {
     "back": "Back to rentals",
@@ -301,7 +308,9 @@
     "openPhotoOf": "Open photo {{index}} of {{total}}",
     "showPhotoOf": "Show photo {{index}} of {{total}}",
     "morePhotos_one": "+{{count}} more photo",
-    "morePhotos_other": "+{{count}} more photos"
+    "morePhotos_other": "+{{count}} more photos",
+    "washroomsCount": "{{count}} washrooms",
+    "areaUnknown": "Floor area not given"
   },
   "auth": {
     "signInEyebrow": "Welcome back",
@@ -451,7 +460,8 @@
     "banned": "Banned",
     "deactivated": "Deactivated",
     "not_submitted": "Not Submitted",
-    "unknown_status": "Unknown"
+    "unknown_status": "Unknown",
+    "shop": "Shop"
   },
   "amenities": {
     "wifi": "WiFi",
@@ -519,7 +529,8 @@
     "beds": "{{count}} beds",
     "baths": "{{count}} baths",
     "viewHome": "View home →",
-    "viewAria": "View {{title}}"
+    "viewAria": "View {{title}}",
+    "viewShop": "View shop →"
   },
   "favorite": {
     "removed": "Removed from saved homes",
@@ -1171,7 +1182,10 @@
       "waterHint": "Rate the normal reliability of running water at the property.",
       "road": "Road access",
       "roadHint": "Rate how easily renters can normally reach the property by road.",
-      "chooseType": "Choose a property type"
+      "chooseType": "Choose a property type",
+      "washrooms": "Washrooms",
+      "washroomsHint": "Enter 0 if the shop has none.",
+      "shopAreaHint": "Required for shops. Shopkeepers compare shops mainly by floor area."
     },
     "availableAmenities": "Available amenities",
     "selectedCount": "{{count}} selected",
@@ -1243,7 +1257,8 @@
       "saveFirst": "Complete the listing details and save the draft before adding photos.",
       "imageSize": "{{name}} is {{size}}. Property images must be smaller than 1 MB.",
       "imageType": "Choose one JPG or PNG image smaller than 1 MB.",
-      "type": "Choose a property type. \"Private room\" and \"Shared room\" are no longer offered."
+      "type": "Choose a property type. \"Private room\" and \"Shared room\" are no longer offered.",
+      "shopArea": "Enter the shop's floor area."
     },
     "toast": {
       "saved": "Property changes saved",

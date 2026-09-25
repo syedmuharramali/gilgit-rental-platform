@@ -3,11 +3,12 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSelector } from 'react-redux'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import LanguageSwitcher from '../LanguageSwitcher'
 
 const links = [
   { to: '/properties', key: 'nav.explore' },
+  { to: '/properties?category=shops', key: 'nav.shops', shops: true },
   { to: '/living-score', key: 'nav.livingScore' },
   { to: '/about', key: 'nav.howItWorks' },
 ]
@@ -20,6 +21,10 @@ function PublicNavbar() {
   const [open, setOpen] = useState(false)
   const token = useSelector((state) => state.auth.token)
   const { t } = useTranslation()
+  const location = useLocation()
+  // Explore and Shops share /properties; tell them apart by ?category.
+  const onShops = new URLSearchParams(location.search).get('category') === 'shops' || new URLSearchParams(location.search).get('propertyType') === 'shop'
+  const linkActive = (link, isActive) => isActive && (link.to.startsWith('/properties') ? Boolean(link.shops) === onShops : true)
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/8 bg-[#060914]/88 text-white backdrop-blur-2xl">
@@ -35,7 +40,7 @@ function PublicNavbar() {
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
-          {links.map((link) => <NavLink key={link.to} to={link.to} className={({ isActive }) => navClass(isActive)}>{t(link.key)}</NavLink>)}
+          {links.map((link) => <NavLink key={link.to} to={link.to} className={({ isActive }) => navClass(linkActive(link, isActive))}>{t(link.key)}</NavLink>)}
           {token && <NavLink to="/matches" className={({ isActive }) => navClass(isActive)}>{t('nav.smartMatches')}</NavLink>}
         </nav>
 

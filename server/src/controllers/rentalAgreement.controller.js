@@ -37,6 +37,8 @@ const {
   "../services/tenancyActivation.service"
 );
 
+const { isShopType } = require("../data/propertyTypes");
+
 const DEFAULT_CLAUSES = [
   "The renter shall pay the agreed monthly rent on time.",
   "The property shall be used only for residential purposes.",
@@ -46,9 +48,16 @@ const DEFAULT_CLAUSES = [
   "Both parties shall communicate regarding termination or major rental changes.",
 ];
 
-const cleanClauses = (clauses) => {
+// Same agreement for a shop, but the use clause is commercial.
+const DEFAULT_SHOP_CLAUSES = DEFAULT_CLAUSES.map((clause) =>
+  clause === "The property shall be used only for residential purposes."
+    ? "The shop shall be used only for the lawful business agreed with the owner, and not as a residence."
+    : clause
+);
+
+const cleanClauses = (clauses, defaults = DEFAULT_CLAUSES) => {
   if (clauses === undefined) {
-    return DEFAULT_CLAUSES;
+    return defaults;
   }
 
   if (!Array.isArray(clauses)) {
@@ -168,7 +177,11 @@ exports.createAgreementFromTerms = asyncHandler(
       });
     }
 
-    const clauses = cleanClauses(req.body.clauses);
+    const rentedProperty = await Property.findById(terms.property).select("propertyType");
+    const clauses = cleanClauses(
+      req.body.clauses,
+      isShopType(rentedProperty?.propertyType) ? DEFAULT_SHOP_CLAUSES : DEFAULT_CLAUSES
+    );
     const session = await mongoose.startSession();
     let agreement;
 

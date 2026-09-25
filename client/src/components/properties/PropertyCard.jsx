@@ -1,8 +1,9 @@
-import { Bath, BedDouble, MapPin, ShieldCheck } from 'lucide-react'
+import { Bath, BedDouble, MapPin, Ruler, ShieldCheck } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { money, pretty } from '../../utils/formatters'
+import { isShopType } from '../../utils/propertyTypes'
 import FavoriteButton from './FavoriteButton'
 
 function PropertyCard({ property }) {
@@ -72,13 +73,20 @@ function PropertyCard({ property }) {
           </div>
 
           <div className="mt-4 flex items-center gap-4 border-t border-white/8 pt-4 text-xs font-semibold text-white/42">
-            <span className="flex items-center gap-1.5">
-              <BedDouble className="h-4 w-4 text-white/28" /> {t('card.beds', { count: property.bedrooms || 0 })}
-            </span>
+            {/* A shop is compared by floor area, not bedrooms. */}
+            {isShopType(property.propertyType) ? (
+              <span className="flex items-center gap-1.5">
+                <Ruler className="h-4 w-4 text-white/28" /> {property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : '—'}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1.5">
+                <BedDouble className="h-4 w-4 text-white/28" /> {t('card.beds', { count: property.bedrooms || 0 })}
+              </span>
+            )}
             <span className="flex items-center gap-1.5">
               <Bath className="h-4 w-4 text-white/28" /> {t('card.baths', { count: property.bathrooms || 0 })}
             </span>
-            <span className="ms-auto text-cyan-200">{t('card.viewHome')}</span>
+            <span className="ms-auto text-cyan-200">{isShopType(property.propertyType) ? t('card.viewShop') : t('card.viewHome')}</span>
           </div>
         </div>
       </Link>

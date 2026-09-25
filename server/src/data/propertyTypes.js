@@ -22,7 +22,21 @@ const PROPERTY_TYPES = [
   "upper_portion",
   "lower_portion",
   "studio",
+  "shop",
 ];
+
+/*
+| Homes are lived in; shops are commercial space rented by the month. They
+| share the same rental flow, but shops have no bedrooms, occupants or
+| roommates and are never offered as a home match.
+*/
+const SHOP_TYPES = ["shop"];
+
+const HOME_TYPES = PROPERTY_TYPES.filter(
+  (type) => !SHOP_TYPES.includes(type)
+);
+
+const isShopType = (type) => SHOP_TYPES.includes(type);
 
 const LEGACY_PROPERTY_TYPES = [
   "shared_room",
@@ -39,6 +53,9 @@ const isLegacyPropertyType = (type) =>
 
 module.exports = {
   PROPERTY_TYPES,
+  HOME_TYPES,
+  SHOP_TYPES,
+  isShopType,
   LEGACY_PROPERTY_TYPES,
   ALL_PROPERTY_TYPES,
   isLegacyPropertyType,

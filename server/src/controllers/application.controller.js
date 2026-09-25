@@ -37,6 +37,10 @@ const {
   isBeforeGilgitToday,
 } = require("../utils/gilgitDate");
 
+const {
+  isShopType,
+} = require("../data/propertyTypes");
+
 /*
 |--------------------------------------------------------------------------
 | Apply for property
@@ -143,6 +147,25 @@ exports.createApplication =
         return next(
           new AppError(
             "Application type must be individual or group",
+            400
+          )
+        );
+      }
+
+      // A shop is rented by one business, not a group of roommates.
+      const isShop =
+        isShopType(
+          property.propertyType
+        );
+
+      if (
+        isShop &&
+        applicationType ===
+          "group"
+      ) {
+        return next(
+          new AppError(
+            "Shops take individual applications only",
             400
           )
         );
@@ -411,7 +434,9 @@ exports.createApplication =
       */
 
       const occupants =
-        applicationType ===
+        isShop
+          ? 1
+          : applicationType ===
         "group"
           ? 1 +
             roommates.length

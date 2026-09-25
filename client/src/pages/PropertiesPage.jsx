@@ -23,9 +23,8 @@ import PropertyResultsMap from '../components/properties/PropertyResultsMap'
 import { useGetAmenitiesQuery } from '../features/amenities/amenitiesApi'
 import { useGetPropertiesQuery } from '../features/properties/propertiesApi'
 import { amenityLabel, pretty } from '../components/workspace/WorkspaceUI'
-import { PROPERTY_TYPES } from '../utils/propertyTypes'
+import { HOME_TYPES, SHOP_TYPES, isShopType } from '../utils/propertyTypes'
 
-const types = PROPERTY_TYPES
 
 const quickFilters = [
   ['heating', Flame],
@@ -42,6 +41,12 @@ function PropertiesPage() {
   const [view, setView] = useState('grid')
   const { data: amenityData } = useGetAmenitiesQuery()
 
+  // Homes and shops are searched separately. A type in the URL decides the
+  // category (a link to ?propertyType=shop opens Shops); otherwise ?category.
+  const urlType = searchParams.get('propertyType')
+  const category = urlType ? (isShopType(urlType) ? 'shops' : 'homes') : searchParams.get('category') === 'shops' ? 'shops' : 'homes'
+  const types = category === 'shops' ? SHOP_TYPES : HOME_TYPES
+
   const params = useMemo(() => {
     const result = {}
     for (const [key, value] of searchParams.entries()) {
@@ -53,8 +58,9 @@ function PropertiesPage() {
     if (result.minRent && result.maxRent && Number(result.maxRent) < Number(result.minRent)) {
       delete result.maxRent
     }
+    if (!result.propertyType) result.category = category
     return result
-  }, [searchParams])
+  }, [searchParams, category])
 
   const { data, isLoading, isFetching, error, refetch } = useGetPropertiesQuery(params)
   const properties = data?.properties || []
@@ -81,9 +87,22 @@ function PropertiesPage() {
     setParam('amenities', nextValues.join(','))
   }
 
+  // Switching category drops filters that only make sense for the other one.
+  const switchCategory = (next) => {
+    if (next === category) return
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current)
+      ;['propertyType', 'bedrooms', 'bathrooms', 'furnishedStatus', 'page'].forEach((key) => params.delete(key))
+      if (next === 'shops') params.set('category', 'shops')
+      else params.delete('category')
+      return params
+    }, { replace: true })
+  }
+
   const clearFilters = () => {
     setSearchText('')
-    setSearchParams({})
+    // Reset filters, but stay on the category the person is browsing.
+    setSearchParams(category === 'shops' ? { category: 'shops' } : {})
   }
   const toggleBoolean = (key) => setParam(key, searchParams.get(key) === 'true' ? '' : 'true')
 
@@ -181,6 +200,12 @@ function PropertiesPage() {
 
       <section className="px-5 py-8 sm:px-8 lg:px-10 lg:py-10">
         <div className="mx-auto max-w-[1440px]">
+          <div className="mb-5 inline-flex rounded-full border border-white/10 bg-white/[0.04] p-1" role="tablist" aria-label={t('properties.categoryLabel')}>
+            {[['homes', t('properties.categoryHomes')], ['shops', t('properties.categoryShops')]].map(([value, label]) => (
+              <button key={value} type="button" role="tab" aria-selected={category === value} onClick={() => switchCategory(value)} className={`rounded-full px-5 py-2 text-xs font-black transition ${category === value ? 'bg-white text-[#07101e]' : 'text-white/45 hover:text-white/75'}`}>{label}</button>
+            ))}
+          </div>
+
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs font-black uppercase tracking-[.16em] text-white/28">{t('properties.marketplace')}</p>
@@ -215,9 +240,9 @@ function PropertiesPage() {
                       <FilterField label={t('properties.field.propertyType')}><select value={searchParams.get('propertyType') || ''} onChange={(event) => setParam('propertyType', event.target.value)} className="filter-control"><option value="">{t('properties.anyType')}</option>{types.map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></FilterField>
 
                       <div className="grid grid-cols-2 gap-2"><FilterField label={t('properties.field.minRent')}><input type="number" min="0" value={searchParams.get('minRent') || ''} onChange={(event) => setParam('minRent', event.target.value)} className="filter-control" /></FilterField><FilterField label={t('properties.field.maxRent')}><input type="number" min="0" value={searchParams.get('maxRent') || ''} onChange={(event) => setParam('maxRent', event.target.value)} className="filter-control" /></FilterField></div>
-                      <div className="grid grid-cols-2 gap-2"><FilterField label={t('properties.field.bedrooms')}><input type="number" min="0" value={searchParams.get('bedrooms') || ''} onChange={(event) => setParam('bedrooms', event.target.value)} className="filter-control" /></FilterField><FilterField label={t('properties.field.bathrooms')}><input type="number" min="0" value={searchParams.get('bathrooms') || ''} onChange={(event) => setParam('bathrooms', event.target.value)} className="filter-control" /></FilterField></div>
+                      {category === 'homes' && <div className="grid grid-cols-2 gap-2"><FilterField label={t('properties.field.bedrooms')}><input type="number" min="0" value={searchParams.get('bedrooms') || ''} onChange={(event) => setParam('bedrooms', event.target.value)} className="filter-control" /></FilterField><FilterField label={t('properties.field.bathrooms')}><input type="number" min="0" value={searchParams.get('bathrooms') || ''} onChange={(event) => setParam('bathrooms', event.target.value)} className="filter-control" /></FilterField></div>}
 
-                      <FilterField label={t('properties.field.furnishing')}><select value={searchParams.get('furnishedStatus') || ''} onChange={(event) => setParam('furnishedStatus', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></FilterField>
+                      {category === 'homes' && <FilterField label={t('properties.field.furnishing')}><select value={searchParams.get('furnishedStatus') || ''} onChange={(event) => setParam('furnishedStatus', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></FilterField>}
                       <FilterField label={t('properties.availableBy')}><input type="date" value={searchParams.get('availableFrom') || ''} onChange={(event) => setParam('availableFrom', event.target.value)} className="filter-control" /></FilterField>
 
                       <div>

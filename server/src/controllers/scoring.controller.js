@@ -1,4 +1,4 @@
-const { PROPERTY_TYPES } = require("../data/propertyTypes");
+const { HOME_TYPES, SHOP_TYPES } = require("../data/propertyTypes");
 const mongoose =
   require("mongoose");
 
@@ -126,7 +126,7 @@ exports.savePreferences =
         );
       }
 
-      const allowedTypes = PROPERTY_TYPES;
+      const allowedTypes = HOME_TYPES;
 
       const allowedFurnished =
         [
@@ -429,6 +429,12 @@ exports.getSmartMatches =
           owner: {
             $ne:
               req.user._id,
+          },
+
+          // Smart matches are about homes; shops are searched separately.
+          propertyType: {
+            $nin:
+              SHOP_TYPES,
           },
         })
           .populate(
