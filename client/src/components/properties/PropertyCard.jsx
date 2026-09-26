@@ -3,12 +3,14 @@ import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import { money, pretty } from '../../utils/formatters'
-import { isShopType, isStayType } from '../../utils/propertyTypes'
+import { isHostelType, isShopType, isStayType } from '../../utils/propertyTypes'
+import { hostelIsFull, seaterRange } from '../../utils/listingFacts'
 import FavoriteButton from './FavoriteButton'
 
 function PropertyCard({ property }) {
   const { t } = useTranslation()
-  const isHostel = property.propertyType === 'hostel' || property.propertyType === 'hostel_bed'
+  const isHostel = isHostelType(property.propertyType)
+  const full = isHostel && hostelIsFull(property)
   const cover = property?.images?.find((image) => image.isCover) || property?.images?.[0]
 
   return (
@@ -49,6 +51,7 @@ function PropertyCard({ property }) {
             <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-[#080c18]/68 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white shadow-sm backdrop-blur-2xl">
               <ShieldCheck className="h-3.5 w-3.5 text-cyan-300" /> {t('card.verified')}
             </span>
+            {full && <span className="ms-2 inline-flex rounded-full bg-rose-500/85 px-3 py-1.5 text-[10px] font-black uppercase tracking-[.12em] text-white backdrop-blur-2xl">{t('hostel.full')}</span>}
           </div>
 
           <div className="absolute inset-x-0 bottom-0 p-5 text-white">
@@ -57,6 +60,12 @@ function PropertyCard({ property }) {
                 <span className="text-xs font-semibold text-white/55">{t('card.from')} </span>
                 {money(property.nightlyPriceFrom)}
                 <span className="text-xs font-semibold text-white/55"> {t('card.perNight')}</span>
+              </p>
+            ) : isHostel ? (
+              <p className="text-xl font-black tracking-[-0.035em]">
+                <span className="text-xs font-semibold text-white/55">{t('card.from')} </span>
+                {money(property.monthlyRent)}
+                <span className="text-xs font-semibold text-white/55"> {t('card.perPersonMonth')}</span>
               </p>
             ) : (
               <p className="text-xl font-black tracking-[-0.035em]">
@@ -97,9 +106,12 @@ function PropertyCard({ property }) {
                 <Ruler className="h-4 w-4 text-white/28" /> {property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : '—'}
               </span>
             ) : isHostel ? (
-              <span className="flex items-center gap-1.5">
-                <BedDouble className="h-4 w-4 text-white/28" /> {property.hostelFor ? t(`details.hostelFor.${property.hostelFor}`) : pretty(property.propertyType)}
-              </span>
+              <>
+                <span className="flex items-center gap-1.5">
+                  <BedDouble className="h-4 w-4 text-white/28" /> {property.hostelFor ? t(`details.hostelFor.${property.hostelFor}`) : pretty(property.propertyType)}
+                </span>
+                {seaterRange(property) && <span className="flex items-center gap-1.5">{t('hostel.seaterRange', { range: seaterRange(property) })}</span>}
+              </>
             ) : (
               <span className="flex items-center gap-1.5">
                 <BedDouble className="h-4 w-4 text-white/28" /> {property.bedrooms ? t('card.beds', { count: property.bedrooms }) : pretty(property.propertyType)}

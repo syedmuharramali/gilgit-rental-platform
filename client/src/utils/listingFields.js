@@ -14,7 +14,6 @@
 const ALL_UTILITIES = ['heating', 'hotWater', 'power', 'waterSources', 'waterReliability', 'roadAccess', 'winterAccess']
 
 const home = (about, required) => ({ about, required, areaUnits: ['marla', 'kanal', 'sqft'], utilities: ALL_UTILITIES })
-const hostel = (about) => ({ about, required: ['hostelFor'], areaUnits: [], utilities: ALL_UTILITIES })
 const stay = { about: [], required: [], areaUnits: [], utilities: ['heating', 'hotWater', 'power', 'waterReliability', 'roadAccess', 'winterAccess'] }
 
 export const LISTING_FIELDS = {
@@ -23,8 +22,8 @@ export const LISTING_FIELDS = {
   lower_portion: home(['bedrooms', 'bathrooms', 'size', 'furnishing', 'separateEntrance', 'separateMeters', 'tenantTypes', 'maxOccupants'], ['bedrooms', 'bathrooms']),
   apartment: { ...home(['bedrooms', 'bathrooms', 'floor', 'size', 'furnishing', 'tenantTypes', 'maxOccupants'], ['bedrooms', 'bathrooms']), areaUnits: ['sqft', 'marla'] },
   studio: { ...home(['bathrooms', 'floor', 'size', 'furnishing', 'tenantTypes', 'maxOccupants'], []), areaUnits: ['sqft', 'marla'] },
-  hostel: hostel(['hostelFor', 'maxOccupants', 'mealsIncluded']),
-  hostel_bed: hostel(['hostelFor', 'bedsPerRoom', 'mealsIncluded']),
+  // Seater options, prices and mess have their own sections (HOSTEL_* below).
+  hostel: { about: ['hostelFor', 'gateClosesAt'], required: ['hostelFor'], areaUnits: [], utilities: ALL_UTILITIES },
   shop: { about: ['size', 'floor', 'marketName', 'bathrooms'], required: ['size'], areaUnits: ['sqft', 'marla'], utilities: ['power', 'waterReliability', 'roadAccess', 'winterAccess'] },
   hotel: stay,
   guest_house: stay,
@@ -36,7 +35,7 @@ export const fieldsFor = (type) => LISTING_FIELDS[type] || NONE
 // The type cards on the first step, grouped the way renters search.
 export const TYPE_GROUPS = [
   { key: 'homes', types: ['house', 'upper_portion', 'lower_portion', 'apartment', 'studio'] },
-  { key: 'hostels', types: ['hostel', 'hostel_bed'] },
+  { key: 'hostels', types: ['hostel'] },
   { key: 'shops', types: ['shop'] },
   { key: 'stays', types: ['hotel', 'guest_house'] },
 ]
@@ -46,6 +45,17 @@ export const HOSTEL_FOR = ['boys', 'girls']
 export const HEATING_TYPES = ['gas_heater', 'wood_stove', 'electric_heater', 'central', 'other']
 export const POWER_BACKUPS = ['ups', 'solar', 'generator', 'other']
 export const WATER_SOURCES = ['municipal', 'boring', 'tanker', 'spring']
+
+// Hostels: seater options priced per person or per whole room, and a mess.
+export const HOSTEL_PRICING = ['per_person', 'per_room']
+export const MAX_SEATER = 8
+export const MESS_PLANS = ['included', 'optional', 'none']
+export const MEALS = ['breakfast', 'lunch', 'dinner']
+export const WEEK_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']
+
+// Price of one person's place in a seater option.
+export const pricePerPerson = (pricing, room) =>
+  pricing === 'per_room' ? Math.round(Number(room.price) / Math.max(1, Number(room.seater) || 1)) : Number(room.price) || 0
 
 /*
  * Amenities the form already asks about as a question (heating, furnishing,

@@ -38,9 +38,144 @@ const {
 } = require("../utils/gilgitDate");
 
 const {
+  isHostelType,
   isShopType,
   isStayType,
 } = require("../data/propertyTypes");
+
+const {
+  holdSeats,
+  unitsFor,
+} = require("../services/hostelSeats.service");
+
+/*
+|--------------------------------------------------------------------------
+| Accept a hostel application
+|--------------------------------------------------------------------------
+*/
+
+const acceptHostelApplication = async ({
+  application: pendingApplication,
+  property,
+  res,
+  next,
+}) => {
+  let application = pendingApplication;
+  const option = application.hostelRoom;
+  const units = application.units || 1;
+
+  if (!option?.id) {
+    return next(
+      new AppError(
+        "This application doesn't say which seater room it is for. Ask the student to apply again.",
+        409
+      )
+    );
+  }
+
+  /*
+  | Claim the application first (only one request can move it out of
+  | "pending"), then take the places. A double click or a second tab can't
+  | hold the same student's seats twice.
+  */
+  let claimed;
+
+  try {
+    claimed = await Application.findOneAndUpdate(
+      { _id: application._id, status: "pending" },
+      {
+        $set: {
+          status: "accepted",
+          reviewedAt: new Date(),
+          rejectionReason: null,
+          slotKey: application._id,
+        },
+      },
+      { returnDocument: "after" }
+    );
+  } catch (error) {
+    // The old one-per-property index is still there: the hostel
+    // migration hasn't been run on this database yet.
+    if (error?.code === 11000) {
+      return next(
+        new AppError(
+          "This hostel already has an accepted student and the database hasn't been updated for hostels yet. Run `npm run migrate:hostels` on the server.",
+          409
+        )
+      );
+    }
+    throw error;
+  }
+
+  if (!claimed) {
+    return next(
+      new AppError(
+        "This application has already been answered",
+        409
+      )
+    );
+  }
+
+  const backToPending = () =>
+    Application.updateOne(
+      { _id: application._id, status: "accepted" },
+      { $set: { status: "pending", reviewedAt: null, slotKey: null } }
+    );
+
+  let held;
+
+  try {
+    held = await holdSeats(
+      property._id,
+      option.id,
+      units
+    );
+  } catch (error) {
+    await backToPending();
+    throw error;
+  }
+
+  if (!held) {
+    await backToPending();
+
+    return next(
+      new AppError(
+        `No free places left in the ${option.seater} seater rooms. Update your free places, or reject this application.`,
+        409
+      )
+    );
+  }
+
+  application = claimed;
+
+  await safeCreateNotification({
+    user: application.applicant,
+    type: "application_accepted",
+    title: "Application Accepted",
+    message: `Your application for a ${option.seater} seater room at ${property.title} has been accepted.`,
+    resourceType: "application",
+    resourceId: application._id,
+  });
+
+  await application.populate([
+    {
+      path: "property",
+      select: "title slug monthlyRent propertyType address",
+    },
+    {
+      path: "applicant",
+      select: "name email phone avatar",
+    },
+  ]);
+
+  return res.status(200).json({
+    success: true,
+    message: "Application accepted successfully",
+    data: {
+      application,
+    },
+  });
+};
 
 /*
 |--------------------------------------------------------------------------
@@ -493,6 +628,70 @@ exports.createApplication =
         );
       }
 
+      /*
+      | Hostels: the student picks a seater option. A group must fit in one
+      | room of that size, and there must be enough free places right now
+      | (they're only held when the owner accepts).
+      */
+
+      let hostelRoom = null;
+      let units = null;
+
+      if (
+        isHostelType(
+          property.propertyType
+        )
+      ) {
+        const option = (property.hostelRooms || []).find(
+          (room) =>
+            String(room._id) ===
+            String(req.body.hostelRoomId || "")
+        );
+
+        if (!option) {
+          return next(
+            new AppError(
+              "Choose which seater room you are applying for",
+              400
+            )
+          );
+        }
+
+        if (occupants > option.seater) {
+          return next(
+            new AppError(
+              `A ${option.seater} seater room holds at most ${option.seater} ${option.seater === 1 ? "person" : "people"}`,
+              400
+            )
+          );
+        }
+
+        const pricing =
+          property.hostelPricing ||
+          "per_person";
+
+        units = unitsFor(
+          pricing,
+          occupants
+        );
+
+        if (option.available < units) {
+          return next(
+            new AppError(
+              `Not enough free places in the ${option.seater} seater rooms right now`,
+              409
+            )
+          );
+        }
+
+        hostelRoom = {
+          id: option._id,
+          seater: option.seater,
+          price: option.price,
+          pricing,
+        };
+      }
+
       const applicationValues = {
         property:
           property._id,
@@ -516,6 +715,12 @@ exports.createApplication =
         expectedStayMonths,
 
         occupants,
+
+        hostelRoom,
+
+        units,
+
+        slotKey: null,
       };
 
       let application;
@@ -837,6 +1042,24 @@ exports.acceptApplication =
             400
           )
         );
+      }
+
+      /*
+      | Hostels: hold this student's places and leave everyone else's
+      | application open. Places go back if saving the acceptance fails.
+      */
+
+      if (
+        isHostelType(
+          property.propertyType
+        )
+      ) {
+        return acceptHostelApplication({
+          application,
+          property,
+          res,
+          next,
+        });
       }
 
       /*

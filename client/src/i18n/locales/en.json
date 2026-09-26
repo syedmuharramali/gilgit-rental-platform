@@ -328,12 +328,7 @@
       "boys": "Boys hostel",
       "girls": "Girls hostel"
     },
-    "bedsPerRoom_one": "{{count}} bed in the room",
-    "bedsPerRoom_other": "{{count}} beds in the room",
     "noOccupantLimit": "No occupant limit",
-    "mealsIncluded": "Meals included",
-    "noMeals": "No meals",
-    "mealsNotSaid": "Meals not stated",
     "winterEyebrow": "Winter & utilities",
     "winterTitle": "How it copes with winter"
   },
@@ -413,7 +408,7 @@
     "trustWinter": "Winter & utility facts"
   },
   "enums": {
-    "hostel": "Hostel room",
+    "hostel": "Hostel",
     "hostel_bed": "Hostel Bed",
     "shared_room": "Shared Room",
     "private_room": "Private Room",
@@ -569,7 +564,9 @@
     "roomTypes_one": "{{count}} room type",
     "roomTypes_other": "{{count}} room types",
     "checkIn": "Check-in {{time}}",
-    "viewStay": "View stay →"
+    "viewStay": "View stay →",
+    "perPersonMonth": "/ person / month",
+    "perPersonFrom": "from {{price}} / person"
   },
   "favorite": {
     "removed": "Removed from saved homes",
@@ -744,7 +741,10 @@
     "changeLabel": "Requested changes",
     "changePlaceholder": "Example: Could we reduce the security deposit?",
     "sendingRequest": "Sending request…",
-    "sendChangeRequest": "Send change request"
+    "sendChangeRequest": "Send change request",
+    "hostelRoom_one": "{{count}} seater room · {{rent}} / month",
+    "hostelRoom_other": "{{count}} seater room · {{rent}} / month",
+    "confirmAcceptHostel": "Accept {{applicant}} for a {{count}} seater room at {{property}}?\n\nTheir places come off your free count. Other students' applications stay open."
   },
   "msg": {
     "eyebrow": "Communication",
@@ -874,7 +874,12 @@
     "emptyTitle": "No properties yet",
     "emptyText": "Create your first property after owner verification is approved.",
     "lockedNote": "A renter has been accepted for this listing, so it is locked. It cannot be edited or deleted while the rental is in progress.",
-    "retiredTypeNote": "\"Private room\" and \"Shared room\" are no longer offered, so this listing is hidden from search. Edit it, choose the type that fits best and submit it for review again."
+    "retiredTypeNote": "\"Private room\" and \"Shared room\" are no longer offered, so this listing is hidden from search. Edit it, choose the type that fits best and submit it for review again.",
+    "seatsInvalid": "Free places must be whole numbers from 0 to 1000.",
+    "seatsSaved": "Free places updated",
+    "freeBeds": "Free beds",
+    "freeRooms": "Free rooms",
+    "saveSeats": "Update"
   },
   "ver": {
     "eyebrow": "Trust & safety",
@@ -1067,7 +1072,8 @@
       "location": "Type the area and city, then drop a pin on the map exactly where the property is. The map opens on your current location — search a place or tap anywhere to move the pin.",
       "living": "Renters filter by these facts. Skip anything you're not sure about — \"not said\" is better than a guess.",
       "images": "Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically.",
-      "rooms": "Add each kind of room you offer. Guests book a room type for their dates, and the number of rooms you enter is what stops double bookings."
+      "rooms": "Add each kind of room you offer. Guests book a room type for their dates, and the number of rooms you enter is what stops double bookings.",
+      "hostelPrices": "Add each room size you offer. Choose whether prices are per person or for the whole room, and how many places are free. Accepting a student takes their places automatically; add them back when someone leaves."
     },
     "field": {
       "title": "Property title",
@@ -1110,8 +1116,6 @@
       "checkOutTime": "Check-out time",
       "titleTip": "Say what it is and where. 5–120 characters.",
       "hostelFor": "Hostel for",
-      "bedsPerRoom": "Beds in the room",
-      "bedsPerRoomHint": "Including this one.",
       "shopFloor": "Floor",
       "shopArea": "Floor area",
       "size": "Size",
@@ -1124,7 +1128,6 @@
       "separateEntrance": "Separate entrance",
       "separateMeters": "Separate gas / electricity meters",
       "separateMetersHint": "So the tenant pays only their own bills.",
-      "mealsIncluded": "Meals included",
       "heating": "Heating",
       "power": "Backup during load-shedding",
       "powerHint": "Pick all that apply.",
@@ -1132,7 +1135,8 @@
       "waterSources": "Water supply",
       "winterAccess": "Reachable in winter",
       "winterAccessHint": "Can a car reach it after snow?",
-      "rentPerBed": "Rent per bed per month (PKR)"
+      "gateClosesAt": "Gate closes at",
+      "gateClosesAtHint": "Leave empty if there is no gate time."
     },
     "amenitiesError": "Amenities could not be loaded",
     "amenitiesEmpty": "No amenities are available yet",
@@ -1197,8 +1201,13 @@
       "bedroomsRequired": "Add the number of bedrooms.",
       "bathroomsRequired": "Add the number of bathrooms.",
       "hostelFor": "Choose whether the hostel is for boys or girls.",
-      "bedsPerRoom": "Beds in the room must be 1–20.",
-      "floor": "Enter a valid floor."
+      "floor": "Enter a valid floor.",
+      "gateTime": "Enter a valid gate time.",
+      "messCharge": "Enter a valid mess charge.",
+      "mealTime": "Enter valid meal times.",
+      "noSeaters": "Add at least one room option (1 seater, 2 seater…).",
+      "seaterPrice": "Enter a monthly price for the {{count}} seater rooms.",
+      "seaterFree": "Free places for the {{count}} seater rooms must be a whole number from 0 to 1000."
     },
     "toast": {
       "saved": "Property changes saved",
@@ -1241,8 +1250,7 @@
       "lower_portion": "The ground floor of a house",
       "apartment": "A flat in a building",
       "studio": "One room with a kitchen and bath",
-      "hostel": "A room in a hostel, rented by the month",
-      "hostel_bed": "One bed in a shared hostel room",
+      "hostel": "Rooms or beds by the month: 1, 2, 3, 4 seater",
       "shop": "Shop or commercial space, by the month",
       "hotel": "Rooms booked by the night",
       "guest_house": "A smaller place with rooms by the night"
@@ -1295,6 +1303,62 @@
       "boring": "Boring / well",
       "tanker": "Tanker",
       "spring": "Spring / channel"
+    },
+    "mess": {
+      "title": "Mess & food",
+      "plan": "Mess",
+      "planHint": "Tap again to clear.",
+      "plans": {
+        "included": "Included in rent",
+        "optional": "Optional, extra charge",
+        "none": "No mess"
+      },
+      "charge": "Mess charge per month (PKR)",
+      "timings": "Meal times",
+      "menu": "Weekly menu",
+      "menuHint": "Fill what you know; empty days are left out.",
+      "copyMonday": "Use Monday's menu for every day",
+      "notes": "Mess notes",
+      "notesPlaceholder": "e.g. Special dinner on Sundays, tea twice a day",
+      "meals": {
+        "breakfast": "Breakfast",
+        "lunch": "Lunch",
+        "dinner": "Dinner"
+      },
+      "placeholder": {
+        "breakfast": "Paratha, egg, tea",
+        "lunch": "Daal, rice",
+        "dinner": "Chicken curry, roti"
+      }
+    },
+    "days": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    },
+    "hostel": {
+      "pricing": "Prices are",
+      "pricingOptions": {
+        "per_person": "Per person",
+        "per_room": "Per whole room"
+      },
+      "roomSize": "Room size",
+      "seater_one": "{{count}} seater",
+      "seater_other": "{{count}} seater",
+      "pricePerPerson": "Price per person / month (PKR)",
+      "pricePerRoom": "Price per room / month (PKR)",
+      "freeBeds": "Free beds",
+      "freeRooms": "Free rooms",
+      "freeBedsHint": "Free beds = beds nobody has taken yet across all rooms of that size.",
+      "freeRoomsHint": "Free rooms = rooms of that size nobody has taken yet.",
+      "remove": "Remove {{count}} seater",
+      "add": "Add room size",
+      "fromPrice": "Price from",
+      "options": "Rooms"
     }
   },
   "map": {
@@ -1469,5 +1533,36 @@
       "decline": "Request declined",
       "cancel": "Stay cancelled"
     }
+  },
+  "hostel": {
+    "noOptions": "No room options listed yet",
+    "chooseRoom": "Which room?",
+    "perRoomMonth": "per room / month",
+    "perPersonMonth": "per person / month",
+    "full": "Full",
+    "fullText": "No beds are free right now. Message the owner to be told when one opens up.",
+    "freeBeds_one": "{{count}} bed free",
+    "freeBeds_other": "{{count}} beds free",
+    "freeRooms_one": "{{count}} room free",
+    "freeRooms_other": "{{count}} rooms free",
+    "messNotSaid": "Mess not stated",
+    "messCharge": "{{price}} / month extra",
+    "messPlan": {
+      "included": "Mess included in rent",
+      "optional": "Mess optional",
+      "none": "No mess"
+    },
+    "day": "Day",
+    "seaterRange": "{{range}} seater rooms",
+    "roomSize": "Room size",
+    "pickRoomFirst": "Choose which room you are applying for.",
+    "roomsEyebrow": "Rooms",
+    "roomsTitle": "Rooms & prices",
+    "perPersonNote": "Prices are per person per month.",
+    "perRoomNote": "Prices are for the whole room per month, shared by its occupants.",
+    "messEyebrow": "Food",
+    "messTitle": "Mess & menu",
+    "fromPerPerson": "From, per person / month",
+    "estimate": "Your monthly rent would be {{rent}}."
   }
 }

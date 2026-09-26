@@ -13,9 +13,10 @@ import {
   useDeletePropertyMutation,
   useGetMyPropertiesQuery,
   useSubmitPropertyMutation,
+  useUpdateHostelSeatsMutation,
 } from '../../features/properties/propertiesApi'
 import { updateProfile } from '../../features/auth/authSlice'
-import { isLegacyPropertyType, isStayType } from '../../utils/propertyTypes'
+import { isHostelType, isLegacyPropertyType, isStayType } from '../../utils/propertyTypes'
 import {
   EmptyState,
   LoadingState,
@@ -127,6 +128,51 @@ export function ReportsPage() {
   )
 }
 
+/*
+ * A hostel owner's everyday job: a student left, so a bed is free again.
+ * Saving only the counts keeps a live hostel live (no re-review).
+ */
+function HostelSeatsEditor({ property }) {
+  const { t } = useTranslation()
+  const [updateSeats, { isLoading }] = useUpdateHostelSeatsMutation()
+  const saved = Object.fromEntries((property.hostelRooms || []).map((room) => [room._id, String(room.available ?? 0)]))
+  const [counts, setCounts] = useState(saved)
+  const changed = Object.keys(saved).some((roomId) => counts[roomId] !== saved[roomId])
+  const perRoom = property.hostelPricing === 'per_room'
+
+  if (!property.hostelRooms?.length) return null
+
+  const save = async () => {
+    // `was` lets the server refuse if a student was accepted meanwhile.
+    const rooms = property.hostelRooms.map((room) => ({ _id: room._id, available: Number(counts[room._id]), was: room.available }))
+    if (rooms.some((room) => !Number.isInteger(room.available) || room.available < 0 || room.available > 1000)) {
+      toast.error(t('own.seatsInvalid'))
+      return
+    }
+    try {
+      await updateSeats({ id: property._id, rooms }).unwrap()
+      toast.success(t('own.seatsSaved'))
+    } catch (error) {
+      toast.error(error?.data?.message || error?.error || t('common.somethingWrong'))
+    }
+  }
+
+  return (
+    <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.025] p-3">
+      <p className="text-xs font-black text-slate-200">{perRoom ? t('own.freeRooms') : t('own.freeBeds')}</p>
+      <div className="mt-2 flex flex-wrap items-end gap-2">
+        {property.hostelRooms.map((room) => (
+          <label key={room._id} className="block w-24">
+            <span className="mb-1 block text-[10px] font-bold text-slate-500">{t('ed.hostel.seater', { count: room.seater })}</span>
+            <TextInput type="number" min="0" max="1000" inputMode="numeric" value={counts[room._id] ?? ''} onChange={(event) => setCounts((current) => ({ ...current, [room._id]: event.target.value }))} className="!h-10" />
+          </label>
+        ))}
+        <SecondaryButton disabled={!changed || isLoading} onClick={save} className="!min-h-10">{isLoading ? t('ed.saving') : t('own.saveSeats')}</SecondaryButton>
+      </div>
+    </div>
+  )
+}
+
 export function OwnerPropertiesPage() {
   const { t } = useTranslation()
   const errorMessage = (error) => error?.data?.message || error?.error || t('common.somethingWrong')
@@ -140,7 +186,7 @@ export function OwnerPropertiesPage() {
     <>
       <PageHeader eyebrow={t('own.eyebrow')} title={t('own.title')} text={t('own.text')} action={<Link to="/owner/properties/new" className="inline-flex min-h-11 items-center gap-2 rounded-2xl bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-4 text-sm font-black text-[#07101e]"><Plus className="h-4 w-4" /> {t('own.add')}</Link>} />
       <div className="grid gap-4 xl:grid-cols-2">
-        {properties.length ? properties.map((property, index) => <motion.div key={property._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .04 }}><Panel className="h-full"><div className="flex gap-4">{property.images?.[0]?.url ? <img src={property.images.find((image) => image.isCover)?.url || property.images[0].url} alt="" className="h-24 w-28 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-24 w-28 place-items-center rounded-2xl bg-white/[0.04]"><FileCheck2 className="h-5 w-5 text-slate-600" /></div>}<div className="min-w-0 flex-1"><StatusBadge value={property.listingStatus} /><h2 className="mt-2 truncate font-black text-white">{property.title}</h2><p className="mt-1 text-sm text-slate-400">{property.address?.area} · {(isStayType(property.propertyType) ? t('card.perNightFrom', { price: money(property.nightlyPriceFrom) }) : money(property.monthlyRent))}</p></div></div>{property.rejectionReason && <p className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-400/[0.06] p-3 text-sm text-rose-300">{property.rejectionReason}</p>}{isLegacyPropertyType(property.propertyType) && property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <p className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-xs leading-5 text-amber-100">{t('own.retiredTypeNote')}</p>}{/* Reserved and rented listings are locked by the server; offering Edit/Delete only led to a 409 after walking through all eight steps. */}{(property.listingStatus === 'rented' || property.reservationStatus === 'reserved') && <p className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-xs leading-5 text-amber-100">{t('own.lockedNote')}</p>}<div className="mt-5 flex flex-wrap gap-2">{property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <Link to={`/owner/properties/${property._id}/edit`} className="inline-flex min-h-11 items-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/25">{t('own.edit')}</Link>}{['draft','rejected'].includes(property.listingStatus) && <PrimaryButton onClick={async () => { try { await submit(property._id).unwrap(); toast.success(t('own.toastSubmitted')) } catch (error) { toast.error(errorMessage(error)) } }}>{t('own.submitReview')}</PrimaryButton>}{property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <SecondaryButton onClick={async () => { if (!window.confirm(t('own.confirmDelete'))) return; try { await remove(property._id).unwrap(); toast.success(t('own.toastDeleted')) } catch (error) { toast.error(errorMessage(error)) } }}>{t('own.delete')}</SecondaryButton>}</div></Panel></motion.div>) : <EmptyState title={t('own.emptyTitle')} text={t('own.emptyText')} />}
+        {properties.length ? properties.map((property, index) => <motion.div key={property._id} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * .04 }}><Panel className="h-full"><div className="flex gap-4">{property.images?.[0]?.url ? <img src={property.images.find((image) => image.isCover)?.url || property.images[0].url} alt="" className="h-24 w-28 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-24 w-28 place-items-center rounded-2xl bg-white/[0.04]"><FileCheck2 className="h-5 w-5 text-slate-600" /></div>}<div className="min-w-0 flex-1"><StatusBadge value={property.listingStatus} /><h2 className="mt-2 truncate font-black text-white">{property.title}</h2><p className="mt-1 text-sm text-slate-400">{property.address?.area} · {(isStayType(property.propertyType) ? t('card.perNightFrom', { price: money(property.nightlyPriceFrom) }) : isHostelType(property.propertyType) ? t('card.perPersonFrom', { price: money(property.monthlyRent) }) : money(property.monthlyRent))}</p></div></div>{isHostelType(property.propertyType) && <HostelSeatsEditor key={JSON.stringify(property.hostelRooms || [])} property={property} />}{property.rejectionReason && <p className="mt-4 rounded-2xl border border-rose-400/15 bg-rose-400/[0.06] p-3 text-sm text-rose-300">{property.rejectionReason}</p>}{isLegacyPropertyType(property.propertyType) && property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <p className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-xs leading-5 text-amber-100">{t('own.retiredTypeNote')}</p>}{/* Reserved and rented listings are locked by the server; offering Edit/Delete only led to a 409 after walking through all eight steps. */}{(property.listingStatus === 'rented' || property.reservationStatus === 'reserved') && <p className="mt-4 rounded-2xl border border-amber-300/15 bg-amber-300/[0.05] p-3 text-xs leading-5 text-amber-100">{t('own.lockedNote')}</p>}<div className="mt-5 flex flex-wrap gap-2">{property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <Link to={`/owner/properties/${property._id}/edit`} className="inline-flex min-h-11 items-center rounded-2xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black text-slate-200 transition hover:border-cyan-300/25">{t('own.edit')}</Link>}{['draft','rejected'].includes(property.listingStatus) && <PrimaryButton onClick={async () => { try { await submit(property._id).unwrap(); toast.success(t('own.toastSubmitted')) } catch (error) { toast.error(errorMessage(error)) } }}>{t('own.submitReview')}</PrimaryButton>}{property.listingStatus !== 'rented' && property.reservationStatus !== 'reserved' && <SecondaryButton onClick={async () => { if (!window.confirm(t('own.confirmDelete'))) return; try { await remove(property._id).unwrap(); toast.success(t('own.toastDeleted')) } catch (error) { toast.error(errorMessage(error)) } }}>{t('own.delete')}</SecondaryButton>}</div></Panel></motion.div>) : <EmptyState title={t('own.emptyTitle')} text={t('own.emptyText')} />}
       </div>
     </>
   )

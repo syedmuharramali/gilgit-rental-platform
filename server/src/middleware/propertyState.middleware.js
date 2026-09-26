@@ -10,6 +10,10 @@ const Application = require(
   "../models/application.model"
 );
 
+const { isHostelType } = require(
+  "../data/propertyTypes"
+);
+
 const AppError = require(
   "../utils/AppError"
 );
@@ -46,7 +50,7 @@ exports.requireMutableOwnedProperty =
             $ne: true,
           },
         }).select(
-          "listingStatus reservationStatus"
+          "listingStatus reservationStatus propertyType"
         );
 
       if (!property) {
@@ -81,6 +85,17 @@ exports.requireMutableOwnedProperty =
       | rent the renter applied for.
       |--------------------------------------------------------------------------
       */
+
+      /*
+      | Hostels always have accepted students (one per seat), so this lock
+      | would freeze them for good. Their rental steps don't need the
+      | listing to stay published, and the editor refuses to remove a
+      | seater option that applications point at.
+      */
+
+      if (isHostelType(property.propertyType)) {
+        return next();
+      }
 
       const hasAcceptedApplication =
         property.reservationStatus ===

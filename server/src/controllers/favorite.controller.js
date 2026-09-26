@@ -29,7 +29,7 @@ const asyncHandler = require(
 */
 
 const favoritePropertySelect =
-  "title slug monthlyRent securityDeposit propertyType furnishedStatus address listingStatus availableFrom bedrooms bathrooms maxOccupants hostelFor totalArea roomTypes checkInTime nightlyPriceFrom images";
+  "title slug monthlyRent securityDeposit propertyType furnishedStatus address listingStatus availableFrom bedrooms bathrooms maxOccupants hostelFor hostelRooms hostelPricing totalArea roomTypes checkInTime nightlyPriceFrom images";
 
 const formatPropertyImages = (
   images = []

@@ -20,7 +20,8 @@ const {
   uploadPropertyImages,
   setPropertyCoverImage,
   reorderPropertyImages,
-  submitPropertyForReview
+  submitPropertyForReview,
+  updateHostelSeats,
 } = require(
   "../controllers/property.controller"
 );
@@ -161,6 +162,13 @@ router.post(
   validateRequest,
   createProperty
 );
+router.patch(
+  "/:id/seats",
+  protect,
+  requireVerifiedOwner,
+  updateHostelSeats
+);
+
 router.patch(
   "/:id/submit",
 

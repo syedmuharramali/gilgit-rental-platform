@@ -40,6 +40,15 @@ export const propertiesApi = baseApi.injectEndpoints({
       query: (id) => ({ url: `/properties/${id}`, method: 'DELETE' }),
       invalidatesTags: [{ type: 'Property', id: 'MINE' }, { type: 'Property', id: 'LIST' }],
     }),
+    // Hostels: change free places without sending the listing to review.
+    updateHostelSeats: builder.mutation({
+      query: ({ id, rooms }) => ({ url: `/properties/${id}/seats`, method: 'PATCH', body: { rooms } }),
+      invalidatesTags: (_result, _error, { id }) => [
+        { type: 'Property', id },
+        { type: 'Property', id: 'MINE' },
+        { type: 'Property', id: 'LIST' },
+      ],
+    }),
     submitProperty: builder.mutation({
       query: (id) => ({ url: `/properties/${id}/submit`, method: 'PATCH' }),
       invalidatesTags: (_result, _error, id) => [
@@ -108,6 +117,7 @@ export const propertiesApi = baseApi.injectEndpoints({
 })
 
 export const {
+  useUpdateHostelSeatsMutation,
   useGetPropertiesQuery,
   useGetPropertyQuery,
   useGetMyPropertiesQuery,

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { isHostelType } = require("../data/propertyTypes");
 
 const {
   safeCreateNotification,
@@ -151,23 +152,32 @@ exports.startConversation =
         );
       }
 
-      const property =
+      const listed =
         await Property.findOne({
           _id: propertyId,
 
           isDeleted: {
             $ne: true,
           },
-
-          listingStatus: {
-            $in: [
-              "published",
-              "rented",
-            ],
-          },
         }).select(
           "owner title slug listingStatus propertyType monthlyRent address"
         );
+
+      /*
+      | Published or rented listings, plus a hostel that is back in review
+      | after an edit, for the students already accepted there.
+      */
+      const property =
+        listed &&
+        (["published", "rented"].includes(listed.listingStatus) ||
+          (isHostelType(listed.propertyType) &&
+            (await Application.exists({
+              property: listed._id,
+              applicant: req.user._id,
+              status: "accepted",
+            }))))
+          ? listed
+          : null;
 
       if (!property) {
         return next(

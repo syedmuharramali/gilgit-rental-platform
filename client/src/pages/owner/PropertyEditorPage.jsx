@@ -2,7 +2,6 @@ import {
   ArrowDownToLine,
   ArrowUpToLine,
   BedDouble,
-  BedSingle,
   Building2,
   Check,
   CheckCircle2,
@@ -52,6 +51,12 @@ import { localToday } from '../../utils/formatters'
 import {
   HEATING_TYPES,
   HOSTEL_FOR,
+  HOSTEL_PRICING,
+  MAX_SEATER,
+  MEALS,
+  MESS_PLANS,
+  WEEK_DAYS,
+  pricePerPerson,
   POWER_BACKUPS,
   TENANT_TYPES,
   TYPE_GROUPS,
@@ -59,7 +64,7 @@ import {
   amenityFitsType,
   fieldsFor,
 } from '../../utils/listingFields'
-import { PROPERTY_TYPES, isLegacyPropertyType, isStayType } from '../../utils/propertyTypes'
+import { PROPERTY_TYPES, isHostelType, isLegacyPropertyType, isStayType } from '../../utils/propertyTypes'
 
 const LocationPicker = lazy(() => import('../../components/properties/LocationPicker'))
 
@@ -91,7 +96,6 @@ const TYPE_ICONS = {
   apartment: Building2,
   studio: Sofa,
   hostel: BedDouble,
-  hostel_bed: BedSingle,
   shop: Store,
   hotel: Hotel,
   guest_house: DoorOpen,
@@ -120,8 +124,15 @@ const blank = {
   separateEntrance: null, // null = not said
   separateMeters: null,
   hostelFor: null,
-  bedsPerRoom: '',
-  mealsIncluded: null,
+  gateClosesAt: '',
+  // Hostels: seater options and mess (see utils/listingFields.js)
+  hostelPricing: 'per_person',
+  hostelRooms: [],
+  messPlan: null, // null = not said
+  messCharge: '',
+  messTimings: Object.fromEntries(MEALS.map((meal) => [meal, ''])),
+  messMenu: Object.fromEntries(WEEK_DAYS.map((day) => [day, Object.fromEntries(MEALS.map((meal) => [meal, '']))])),
+  messNotes: '',
   marketName: '',
   amenities: [],
   // Winter & utilities: empty / null = not said
@@ -150,7 +161,34 @@ const chipClass = (active) => `inline-flex min-h-10 items-center gap-2 rounded-f
 const formatBytes = (bytes = 0) => bytes < ONE_MB ? `${Math.max(1, Math.round(bytes / 1024))} KB` : `${(bytes / ONE_MB).toFixed(2)} MB`
 const numberOrNull = (value) => (value === '' || value == null ? null : Number(value))
 const toggleIn = (list, value) => (list.includes(value) ? list.filter((item) => item !== value) : [...list, value])
-const isHostel = (type) => type === 'hostel' || type === 'hostel_bed'
+const isHostel = isHostelType
+const hasMess = (plan) => plan === 'included' || plan === 'optional'
+
+const hostelPayload = (f) => {
+  const mess = hasMess(f.messPlan)
+  return {
+    hostelPricing: f.hostelPricing,
+    // Free places go only when the owner changed them: students accepted
+    // since this page loaded have already taken some, and resending the old
+    // count would hand those places out again.
+    hostelRooms: f.hostelRooms.map((room) => ({
+      ...(room._id && { _id: room._id }),
+      seater: Number(room.seater),
+      price: Number(room.price),
+      ...(!(room._id && room.available === room.loadedAvailable) && { available: Number(room.available) }),
+    })),
+    mess: {
+      plan: f.messPlan,
+      monthlyCharge: f.messPlan === 'optional' ? numberOrNull(f.messCharge) : null,
+      timings: Object.fromEntries(MEALS.map((meal) => [meal, (mess && f.messTimings[meal]) || null])),
+      menu: mess
+        ? WEEK_DAYS.map((day) => ({ day, ...Object.fromEntries(MEALS.map((meal) => [meal, f.messMenu[day][meal].trim()])) }))
+            .filter((row) => MEALS.some((meal) => row[meal]))
+        : [],
+      notes: (mess && f.messNotes.trim()) || null,
+    },
+  }
+}
 
 // Shape the form into the API payload (also used to tell whether anything
 // changed since the last save). Questions the type doesn't ask are sent
@@ -167,7 +205,9 @@ const buildPayload = (f) => {
     title: f.title.trim(),
     description: f.description.trim(),
     propertyType: f.propertyType,
-    monthlyRent: stay ? 0 : Number(f.monthlyRent),
+    // A hostel's rent comes from its seater options: the server keeps the
+    // cheapest price per person and ignores this (0 only satisfies create).
+    monthlyRent: stay || isHostel(f.propertyType) ? 0 : Number(f.monthlyRent),
     securityDeposit: stay ? 0 : Number(f.securityDeposit || 0),
     negotiable: stay ? false : f.negotiable,
     availableFrom: f.availableFrom,
@@ -180,13 +220,13 @@ const buildPayload = (f) => {
       unit: f.totalAreaUnit || fields.areaUnits[0] || 'sqft',
     },
     furnishedStatus: asks('furnishing') ? f.furnishedStatus : isHostel(f.propertyType) ? 'furnished' : 'unfurnished',
-    maxOccupants: asks('maxOccupants') ? numberOrNull(f.maxOccupants) : f.propertyType === 'hostel_bed' || f.propertyType === 'shop' ? 1 : null,
+    maxOccupants: asks('maxOccupants') ? numberOrNull(f.maxOccupants) : f.propertyType === 'shop' ? 1 : null,
     tenantTypes: asks('tenantTypes') ? f.tenantTypes : [],
     separateEntrance: asks('separateEntrance') ? f.separateEntrance : null,
     separateMeters: asks('separateMeters') ? f.separateMeters : null,
     hostelFor: asks('hostelFor') ? f.hostelFor : null,
-    bedsPerRoom: asks('bedsPerRoom') ? numberOrNull(f.bedsPerRoom) : null,
-    mealsIncluded: asks('mealsIncluded') ? f.mealsIncluded : null,
+    gateClosesAt: asks('gateClosesAt') ? f.gateClosesAt || null : null,
+    ...(isHostel(f.propertyType) && hostelPayload(f)),
     marketName: asks('marketName') ? f.marketName.trim() || null : null,
     amenities: f.amenities,
     address: {
@@ -231,8 +271,9 @@ const fromServer = (property) => {
   const text = (value) => (value == null ? '' : String(value))
 
   return {
-    // A retired type (private/shared room) starts empty so the owner must choose.
-    propertyType: isLegacyPropertyType(property.propertyType) ? '' : property.propertyType || '',
+    // "Hostel bed" is now a Hostel (with a seater option). Other retired
+    // types (private/shared room) start empty so the owner must choose.
+    propertyType: property.propertyType === 'hostel_bed' ? 'hostel' : isLegacyPropertyType(property.propertyType) ? '' : property.propertyType || '',
     title: property.title || '',
     description: property.description || '',
     area: property.address?.area || '',
@@ -252,8 +293,23 @@ const fromServer = (property) => {
     separateEntrance: property.separateEntrance ?? null,
     separateMeters: property.separateMeters ?? null,
     hostelFor: property.hostelFor ?? null,
-    bedsPerRoom: text(property.bedsPerRoom),
-    mealsIncluded: property.mealsIncluded ?? null,
+    gateClosesAt: property.gateClosesAt || '',
+    hostelPricing: property.hostelPricing || 'per_person',
+    hostelRooms: (property.hostelRooms || []).map((room) => ({
+      _id: room._id,
+      seater: String(room.seater ?? 1),
+      price: text(room.price),
+      available: String(room.available ?? 0),
+      loadedAvailable: String(room.available ?? 0),
+    })),
+    messPlan: property.mess?.plan ?? null,
+    messCharge: text(property.mess?.monthlyCharge),
+    messTimings: Object.fromEntries(MEALS.map((meal) => [meal, property.mess?.timings?.[meal] || ''])),
+    messMenu: Object.fromEntries(WEEK_DAYS.map((day) => {
+      const row = (property.mess?.menu || []).find((item) => item.day === day) || {}
+      return [day, Object.fromEntries(MEALS.map((meal) => [meal, row[meal] || '']))]
+    })),
+    messNotes: property.mess?.notes || '',
     marketName: property.marketName || '',
     amenities: (property.amenities || []).map((amenity) => amenity._id || amenity),
     heatingTypes: legacyList(living.heatingTypes, living.heatingAvailable),
@@ -435,6 +491,9 @@ export default function PropertyEditorPage() {
   const payload = useMemo(() => buildPayload(form), [form])
   const payloadKey = useMemo(() => JSON.stringify(payload), [payload])
   const isDirty = editing && savedPayload.current !== null && payloadKey !== savedPayload.current
+  // Changing only a hostel's free places keeps it live (no re-review).
+  const withoutSeats = (value) => JSON.stringify({ ...value, hostelRooms: value.hostelRooms?.map((room) => ({ ...room, available: 0 })) })
+  const seatsOnlyChange = isDirty && withoutSeats(JSON.parse(savedPayload.current)) === withoutSeats(payload)
 
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }))
   const toggle = (key, value) => setForm((current) => ({ ...current, [key]: toggleIn(current[key], value) }))
@@ -471,6 +530,15 @@ export default function PropertyEditorPage() {
 
   const setRoom = (index, key, value) => setForm((current) => ({ ...current, roomTypes: current.roomTypes.map((room, roomIndex) => (roomIndex === index ? { ...room, [key]: value } : room)) }))
   const addRoom = () => setForm((current) => ({ ...current, roomTypes: [...current.roomTypes, blankRoomType()] }))
+  // Hostel seater options: the next size not listed yet.
+  const usedSeaters = form.hostelRooms.map((room) => Number(room.seater))
+  const nextSeater = Array.from({ length: MAX_SEATER }, (_, index) => index + 1).find((size) => !usedSeaters.includes(size))
+  const setHostelRoom = (index, key, value) => setForm((current) => ({ ...current, hostelRooms: current.hostelRooms.map((room, roomIndex) => (roomIndex === index ? { ...room, [key]: value } : room)) }))
+  const addHostelRoom = () => nextSeater && setForm((current) => ({ ...current, hostelRooms: [...current.hostelRooms, { _id: null, seater: String(nextSeater), price: '', available: '1' }] }))
+  const removeHostelRoom = (index) => setForm((current) => ({ ...current, hostelRooms: current.hostelRooms.filter((_, roomIndex) => roomIndex !== index) }))
+  const setMeal = (day, meal, value) => setForm((current) => ({ ...current, messMenu: { ...current.messMenu, [day]: { ...current.messMenu[day], [meal]: value } } }))
+  const copyMondayToAll = () => setForm((current) => ({ ...current, messMenu: Object.fromEntries(WEEK_DAYS.map((day) => [day, { ...current.messMenu.mon }])) }))
+
   const removeRoom = (index) => setForm((current) => ({ ...current, roomTypes: current.roomTypes.filter((_, roomIndex) => roomIndex !== index) }))
 
   // "No heating" / "No backup" can't be picked together with a kind.
@@ -527,7 +595,9 @@ export default function PropertyEditorPage() {
       if (requires('hostelFor') && !form.hostelFor) return t('ed.err.hostelFor')
       if (requires('size') && !(Number(form.totalAreaValue) > 0)) return t('ed.err.shopArea')
       if (asks('size') && !inRange(form.totalAreaValue, 0, 1000000)) return t('ed.err.area')
-      if (asks('bedsPerRoom') && !inRange(form.bedsPerRoom, 1, 20)) return t('ed.err.bedsPerRoom')
+      if (asks('gateClosesAt') && form.gateClosesAt && !TIME.test(form.gateClosesAt)) return t('ed.err.gateTime')
+      if (isHostel(type) && form.messPlan === 'optional' && form.messCharge !== '' && !(Number(form.messCharge) >= 0)) return t('ed.err.messCharge')
+      if (isHostel(type) && hasMess(form.messPlan) && MEALS.some((meal) => form.messTimings[meal] && !TIME.test(form.messTimings[meal]))) return t('ed.err.mealTime')
       if (asks('maxOccupants') && !(inRange(form.maxOccupants, 1, 100) && (form.maxOccupants === '' || Number.isInteger(Number(form.maxOccupants))))) return t('ed.err.occupants')
       if (asks('floor') && !inRange(form.floor, -2, 50)) return t('ed.err.floor')
     }
@@ -543,8 +613,16 @@ export default function PropertyEditorPage() {
       if (!TIME.test(form.checkInTime) || !TIME.test(form.checkOutTime)) return t('ed.err.times')
     }
 
+    if (index === STEP.price && isHostel(type)) {
+      if (form.hostelRooms.length === 0) return t('ed.err.noSeaters')
+      for (const room of form.hostelRooms) {
+        if (room.price === '' || !(Number(room.price) >= 0)) return t('ed.err.seaterPrice', { count: Number(room.seater) })
+        if (!(Number.isInteger(Number(room.available)) && Number(room.available) >= 0 && Number(room.available) <= 1000)) return t('ed.err.seaterFree', { count: Number(room.seater) })
+      }
+    }
+
     if (index === STEP.price && !isStay) {
-      if (form.monthlyRent === '' || !(Number(form.monthlyRent) >= 0)) return t('ed.err.rent')
+      if (!isHostel(type) && (form.monthlyRent === '' || !(Number(form.monthlyRent) >= 0))) return t('ed.err.rent')
       if (!(Number(form.securityDeposit || 0) >= 0)) return t('ed.err.deposit')
       if (!form.availableFrom) return t('ed.err.availableFrom')
       const months = Number(form.minimumStayMonths)
@@ -590,9 +668,19 @@ export default function PropertyEditorPage() {
       // Rooms added in this session get their ids from the server. Keep them,
       // or the next save would send those rooms as brand-new ones and
       // bookings pointing at them would look "removed".
-      const savedRooms = result?.data?.property?.roomTypes || result?.property?.roomTypes
-      if (editing && isStay && Array.isArray(savedRooms) && form.roomTypes.some((room) => !room._id)) {
-        const synced = { ...form, roomTypes: form.roomTypes.map((room, index) => ({ ...room, _id: room._id || savedRooms[index]?._id || null })) }
+      // Same for hostel seater options (applications point at them), which
+      // also take the saved free places as their new starting point.
+      const saved = result?.data?.property || result?.property || {}
+      const listKey = isStay ? 'roomTypes' : isHostel(type) ? 'hostelRooms' : null
+      if (editing && listKey && Array.isArray(saved[listKey]) && (isHostel(type) || form[listKey].some((room) => !room._id))) {
+        const synced = {
+          ...form,
+          [listKey]: form[listKey].map((room, index) => ({
+            ...room,
+            _id: room._id || saved[listKey][index]?._id || null,
+            ...(isHostel(type) && { available: String(saved[listKey][index]?.available ?? room.available), loadedAvailable: String(saved[listKey][index]?.available ?? room.available) }),
+          })),
+        }
         savedPayload.current = JSON.stringify(buildPayload(synced))
         setForm(synced)
       }
@@ -710,7 +798,10 @@ export default function PropertyEditorPage() {
   const hasCover = images.some((image) => image.isCover)
   const saving = createState.isLoading || updateState.isLoading
   const optional = { optional: true, optionalLabel: t('ed.optional') }
-  const rent = Number(form.monthlyRent) || 0
+  // For a hostel the advance shortcuts use the cheapest price per person.
+  const hostelPrices = form.hostelRooms.filter((room) => room.price !== '').map((room) => pricePerPerson(form.hostelPricing, room))
+  const rent = isHostel(type) ? (hostelPrices.length ? Math.min(...hostelPrices) : 0) : Number(form.monthlyRent) || 0
+  const perRoom = form.hostelPricing === 'per_room'
 
   return (
     <>
@@ -828,7 +919,7 @@ export default function PropertyEditorPage() {
                 )}
                 {asks('bedrooms') && <Field group label={t('ed.field.bedrooms')} required={requires('bedrooms')}><Counter label={t('ed.field.bedrooms')} value={form.bedrooms} min={1} max={30} onChange={(value) => set('bedrooms', value)} /></Field>}
                 {asks('bathrooms') && <Field group label={isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms')} required={requires('bathrooms')} {...(requires('bathrooms') ? {} : optional)}><Counter label={isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms')} value={form.bathrooms} min={1} max={20} emptyLabel={requires('bathrooms') ? null : t('ed.notSaid')} onChange={(value) => set('bathrooms', value)} /></Field>}
-                {asks('bedsPerRoom') && <Field group label={t('ed.field.bedsPerRoom')} {...optional} hint={t('ed.field.bedsPerRoomHint')}><Counter label={t('ed.field.bedsPerRoom')} value={form.bedsPerRoom} min={1} max={20} emptyLabel={t('ed.notSaid')} onChange={(value) => set('bedsPerRoom', value)} /></Field>}
+                {asks('gateClosesAt') && <Field label={t('ed.field.gateClosesAt')} {...optional} hint={t('ed.field.gateClosesAtHint')}><TextInput type="time" value={form.gateClosesAt} onChange={(event) => set('gateClosesAt', event.target.value)} /></Field>}
                 {asks('maxOccupants') && <Field label={t('ed.field.maxOccupants')} {...optional} hint={t('ed.field.maxOccupantsHint')}><TextInput type="number" min="1" max="100" inputMode="numeric" value={form.maxOccupants} onChange={(event) => set('maxOccupants', event.target.value)} placeholder={t('ed.noLimit')} /></Field>}
                 {asks('floor') && <Field group label={isShop ? t('ed.field.shopFloor') : t('ed.field.floor')} {...optional}><Counter label={t('ed.field.floor')} value={form.floor} min={0} start={0} max={50} emptyLabel={t('ed.notSaid')} format={(number) => (number === 0 ? t('ed.floorGround') : number)} onChange={(value) => set('floor', value)} /></Field>}
                 {asks('size') && (
@@ -854,8 +945,41 @@ export default function PropertyEditorPage() {
                 )}
                 {asks('separateEntrance') && <Field group label={t('ed.field.separateEntrance')} {...optional}><YesNo value={form.separateEntrance} onChange={(value) => set('separateEntrance', value)} yes={t('ed.yes')} no={t('ed.no')} /></Field>}
                 {asks('separateMeters') && <Field group label={t('ed.field.separateMeters')} {...optional} hint={t('ed.field.separateMetersHint')}><YesNo value={form.separateMeters} onChange={(value) => set('separateMeters', value)} yes={t('ed.yes')} no={t('ed.no')} /></Field>}
-                {asks('mealsIncluded') && <Field group label={t('ed.field.mealsIncluded')} {...optional}><YesNo value={form.mealsIncluded} onChange={(value) => set('mealsIncluded', value)} yes={t('ed.yes')} no={t('ed.no')} /></Field>}
               </div>
+
+              {isHostel(type) && (
+                <>
+                  <SectionTitle>{t('ed.mess.title')}</SectionTitle>
+                  <div className="grid gap-5">
+                    <Field group label={t('ed.mess.plan')} {...optional} hint={t('ed.mess.planHint')}>
+                      <div className="flex flex-wrap gap-2">{MESS_PLANS.map((plan) => <button key={plan} type="button" aria-pressed={form.messPlan === plan} onClick={() => set('messPlan', form.messPlan === plan ? null : plan)} className={chipClass(form.messPlan === plan)}>{form.messPlan === plan && <Check className="h-3.5 w-3.5" />}{t(`ed.mess.plans.${plan}`)}</button>)}</div>
+                    </Field>
+                    {form.messPlan === 'optional' && <Field label={t('ed.mess.charge')} {...optional} className="sm:max-w-xs"><TextInput type="number" min="0" inputMode="numeric" value={form.messCharge} onChange={(event) => set('messCharge', event.target.value)} placeholder="6000" /></Field>}
+                    {hasMess(form.messPlan) && (
+                      <>
+                        <Field group label={t('ed.mess.timings')} {...optional}>
+                          <div className="grid gap-3 sm:grid-cols-3">
+                            {MEALS.map((meal) => <label key={meal} className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-400">{t(`ed.mess.meals.${meal}`)}</span><TextInput type="time" value={form.messTimings[meal]} onChange={(event) => set('messTimings', { ...form.messTimings, [meal]: event.target.value })} /></label>)}
+                          </div>
+                        </Field>
+                        <Field group label={t('ed.mess.menu')} {...optional} hint={t('ed.mess.menuHint')}>
+                          <div className="space-y-2">
+                            <div className="hidden grid-cols-[84px_1fr_1fr_1fr] gap-2 px-1 text-[10px] font-black uppercase tracking-[.12em] text-slate-500 sm:grid"><span />{MEALS.map((meal) => <span key={meal}>{t(`ed.mess.meals.${meal}`)}</span>)}</div>
+                            {WEEK_DAYS.map((day) => (
+                              <div key={day} className="grid gap-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-2 sm:grid-cols-[84px_1fr_1fr_1fr] sm:items-center sm:border-0 sm:bg-transparent sm:p-0">
+                                <span className="px-1 text-xs font-black text-slate-300">{t(`ed.days.${day}`)}</span>
+                                {MEALS.map((meal) => <TextInput key={meal} maxLength={120} aria-label={`${t(`ed.days.${day}`)} ${t(`ed.mess.meals.${meal}`)}`} value={form.messMenu[day][meal]} onChange={(event) => setMeal(day, meal, event.target.value)} placeholder={t(`ed.mess.placeholder.${meal}`)} className="!h-10 text-xs" />)}
+                              </div>
+                            ))}
+                            <SecondaryButton onClick={copyMondayToAll} disabled={!MEALS.some((meal) => form.messMenu.mon[meal].trim())}>{t('ed.mess.copyMonday')}</SecondaryButton>
+                          </div>
+                        </Field>
+                        <Field label={t('ed.mess.notes')} {...optional}><TextInput maxLength={300} value={form.messNotes} onChange={(event) => set('messNotes', event.target.value)} placeholder={t('ed.mess.notesPlaceholder')} /></Field>
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
 
               <SectionTitle>{t('ed.alsoHas')}</SectionTitle>
               {amenitiesLoading ? (
@@ -934,9 +1058,32 @@ export default function PropertyEditorPage() {
 
           {step === STEP.price && !isStay && (
             <div>
-              <StepNotice>{t('ed.notice.pricing')}</StepNotice>
+              <StepNotice>{isHostel(type) ? t('ed.notice.hostelPrices') : t('ed.notice.pricing')}</StepNotice>
+              {isHostel(type) && (
+                <div className="mb-8">
+                  <Field group label={t('ed.hostel.pricing')}>
+                    <div className="flex flex-wrap gap-2">{HOSTEL_PRICING.map((value) => <button key={value} type="button" aria-pressed={form.hostelPricing === value} onClick={() => set('hostelPricing', value)} className={chipClass(form.hostelPricing === value)}>{form.hostelPricing === value && <Check className="h-3.5 w-3.5" />}{t(`ed.hostel.pricingOptions.${value}`)}</button>)}</div>
+                  </Field>
+                  <div className="mt-5 space-y-3">
+                    {form.hostelRooms.map((room, index) => (
+                      <div key={room._id || `new-${index}`} className="grid items-end gap-3 rounded-[22px] border border-white/[0.08] bg-white/[0.025] p-4 sm:grid-cols-[150px_1fr_1fr_auto]">
+                        <Field label={t('ed.hostel.roomSize')}>
+                          <Select value={room.seater} onChange={(event) => setHostelRoom(index, 'seater', event.target.value)}>
+                            {Array.from({ length: MAX_SEATER }, (_, size) => String(size + 1)).filter((size) => size === room.seater || !usedSeaters.includes(Number(size))).map((size) => <option key={size} value={size}>{t('ed.hostel.seater', { count: Number(size) })}</option>)}
+                          </Select>
+                        </Field>
+                        <Field label={perRoom ? t('ed.hostel.pricePerRoom') : t('ed.hostel.pricePerPerson')} required><TextInput type="number" min="0" inputMode="numeric" value={room.price} onChange={(event) => setHostelRoom(index, 'price', event.target.value)} placeholder={perRoom ? '24000' : '12000'} /></Field>
+                        <Field label={perRoom ? t('ed.hostel.freeRooms') : t('ed.hostel.freeBeds')} required><TextInput type="number" min="0" max="1000" inputMode="numeric" value={room.available} onChange={(event) => setHostelRoom(index, 'available', event.target.value)} /></Field>
+                        <button type="button" onClick={() => removeHostelRoom(index)} aria-label={t('ed.hostel.remove', { count: Number(room.seater) })} className="grid h-12 w-12 place-items-center rounded-2xl border border-white/10 text-slate-400 transition hover:border-rose-300/30 hover:text-rose-300"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                    ))}
+                    <SecondaryButton onClick={addHostelRoom} disabled={!nextSeater}><Plus className="h-4 w-4" /> {t('ed.hostel.add')}</SecondaryButton>
+                    <p className="text-[11px] leading-5 text-slate-500">{perRoom ? t('ed.hostel.freeRoomsHint') : t('ed.hostel.freeBedsHint')}</p>
+                  </div>
+                </div>
+              )}
               <div className="grid gap-6 sm:grid-cols-2">
-                <Field label={type === 'hostel_bed' ? t('ed.field.rentPerBed') : t('ed.field.rent')} required hint={t('ed.field.rentHint')}><TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder={isHostel(type) ? '12000' : '45000'} /></Field>
+                {!isHostel(type) && <Field label={t('ed.field.rent')} required hint={t('ed.field.rentHint')}><TextInput type="number" min="0" inputMode="numeric" value={form.monthlyRent} onChange={(event) => set('monthlyRent', event.target.value)} placeholder="45000" /></Field>}
                 <Field group label={t('ed.field.deposit')} hint={t('ed.field.depositHint')}>
                   <TextInput type="number" min="0" inputMode="numeric" aria-label={t('ed.field.deposit')} value={form.securityDeposit} onChange={(event) => set('securityDeposit', event.target.value)} placeholder="0" />
                   {rent > 0 && (
@@ -1023,6 +1170,8 @@ export default function PropertyEditorPage() {
                   {[
                     isStay
                       ? [t('ed.room.fromPrice'), form.roomTypes.length ? t('card.perNightFrom', { price: money(Math.min(...form.roomTypes.map((room) => Number(room.nightlyPrice) || 0))) }) : '—']
+                      : isHostel(type)
+                      ? [t('ed.hostel.fromPrice'), rent ? t('card.perPersonFrom', { price: money(rent) }) : '—']
                       : [t('ed.field.rent'), form.monthlyRent ? money(form.monthlyRent) : '—'],
                     [t('ed.field.type'), pretty(type)],
                     [t('details.location'), form.area ? `${form.area}, ${form.city}` : '—'],
@@ -1030,6 +1179,7 @@ export default function PropertyEditorPage() {
                       ? [[t('ed.step.rooms'), form.roomTypes.reduce((total, room) => total + (Number(room.quantity) || 0), 0)], [t('ed.field.checkInTime'), `${form.checkInTime} / ${form.checkOutTime}`]]
                       : []),
                     ...(asks('hostelFor') ? [[t('ed.field.hostelFor'), form.hostelFor ? t(`ed.hostelFor.${form.hostelFor}`) : '—']] : []),
+                    ...(isHostel(type) ? [[t('ed.hostel.options'), form.hostelRooms.map((room) => t('ed.hostel.seater', { count: Number(room.seater) })).join(', ') || '—'], [t('ed.mess.title'), form.messPlan ? t(`ed.mess.plans.${form.messPlan}`) : '—']] : []),
                     ...(asks('bedrooms') ? [[t('ed.field.bedrooms'), form.bedrooms || '—']] : []),
                     ...(asks('bathrooms') ? [[isShop ? t('ed.field.washrooms') : t('ed.field.bathrooms'), form.bathrooms || '—']] : []),
                     ...(asks('size') ? [[isShop ? t('ed.field.shopArea') : t('ed.field.size'), form.totalAreaValue ? `${form.totalAreaValue} ${pretty(areaUnit)}` : '—']] : []),
@@ -1062,7 +1212,7 @@ export default function PropertyEditorPage() {
             {editing && step === steps.length - 1 && <PrimaryButton disabled={saving} onClick={finishEditing}>{isDirty ? t('ed.saveAndFinish') : t('ed.backToProperties')}</PrimaryButton>}
           </div>
         </div>
-        {isDirty && ['published', 'pending_review'].includes(property?.listingStatus) && (
+        {isDirty && !seatsOnlyChange && ['published', 'pending_review'].includes(property?.listingStatus) && (
           <p className="mt-3 rounded-2xl border border-amber-300/20 bg-amber-300/[0.06] px-4 py-3 text-xs leading-5 text-amber-100">{t('ed.republishWarning')}</p>
         )}
       </Panel>

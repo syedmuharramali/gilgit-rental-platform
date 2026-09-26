@@ -100,6 +100,42 @@ const applicationSchema =
         default: 1,
       },
 
+      /*
+      | Hostels: the seater option applied for, copied at the time so a later
+      | price change doesn't rewrite the application. `units` is what an
+      | acceptance holds from that option's free places: one bed per person
+      | (per-person pricing) or one room (per-room pricing).
+      */
+      hostelRoom: {
+        type: new mongoose.Schema(
+          {
+            id: { type: mongoose.Schema.Types.ObjectId, required: true },
+            seater: { type: Number, required: true },
+            price: { type: Number, required: true },
+            pricing: { type: String, enum: ["per_person", "per_room"], required: true },
+          },
+          { _id: false }
+        ),
+        default: null,
+      },
+
+      units: {
+        type: Number,
+        min: 1,
+        default: null,
+      },
+
+      /*
+      | Accepted applications must be unique per property for homes and
+      | shops (one tenant). Hostels take many: their accepted applications
+      | get a slotKey (their own id), so the unique index below treats each
+      | one as its own slot. Homes leave it null, which keeps the old rule.
+      */
+      slotKey: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+
       status: {
         type: String,
         enum: [
@@ -147,6 +183,7 @@ applicationSchema.index(
 applicationSchema.index(
   {
     property: 1,
+    slotKey: 1,
   },
   {
     unique: true,
@@ -185,7 +222,8 @@ applicationSchema.index({
 |--------------------------------------------------------------------------
 */
 applicationSchema.post("save", async function (application) {
-  if (application.status !== "accepted") return;
+  // Hostels are never reserved as a whole: other seats stay open.
+  if (application.status !== "accepted" || application.slotKey) return;
 
   const Property = mongoose.model("Property");
 

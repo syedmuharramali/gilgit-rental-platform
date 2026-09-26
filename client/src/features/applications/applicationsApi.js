@@ -27,12 +27,12 @@ export const applicationsApi = baseApi.injectEndpoints({
     }),
     acceptApplication: builder.mutation({
       query: (id) => ({ url: `/applications/${id}/accept`, method: 'PATCH' }),
-      // Accepting reserves the property, so listing views need refreshing too.
+      // Accepting reserves a home, or takes a hostel's free places, so
+      // every property view (including an open editor) needs refreshing.
       invalidatesTags: [
         { type: 'Application', id: 'RECEIVED' },
         { type: 'Application', id: 'MINE' },
-        { type: 'Property', id: 'MINE' },
-        { type: 'Property', id: 'LIST' },
+        'Property',
       ],
     }),
     rejectApplication: builder.mutation({

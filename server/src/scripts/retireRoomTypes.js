@@ -5,7 +5,8 @@ const mongoose = require("mongoose");
 const connectDB = require("../config/db");
 const Property = require("../models/property.model");
 const { safeCreateNotifications } = require("../services/notification.service");
-const { LEGACY_PROPERTY_TYPES } = require("../data/propertyTypes");
+// Only these two: "hostel_bed" is converted by migrate:hostels instead.
+const RETIRED_ROOM_TYPES = ["shared_room", "private_room"];
 
 /*
 |--------------------------------------------------------------------------
@@ -31,7 +32,7 @@ const retireRoomTypes = async () => {
     await connectDB();
 
     const affected = await Property.find({
-      propertyType: { $in: LEGACY_PROPERTY_TYPES },
+      propertyType: { $in: RETIRED_ROOM_TYPES },
       isDeleted: { $ne: true },
       listingStatus: { $ne: "rented" },
       reservationStatus: { $ne: "reserved" },

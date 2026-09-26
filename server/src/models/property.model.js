@@ -1,12 +1,17 @@
 const mongoose = require("mongoose");
-const { ALL_PROPERTY_TYPES, isStayType } = require("../data/propertyTypes");
+const { ALL_PROPERTY_TYPES, isHostelType, isStayType } = require("../data/propertyTypes");
 const {
   CLEARED,
   FIXED,
   FIELD_PATHS,
   HEATING_TYPES,
   HOSTEL_FOR,
+  HOSTEL_PRICING,
+  MAX_SEATER,
+  MEALS,
+  MESS_PLANS,
   POWER_BACKUPS,
+  WEEK_DAYS,
   TENANT_TYPES,
   WATER_SOURCES,
   fieldsFor,
@@ -258,15 +263,76 @@ const propertySchema =
       separateEntrance: { type: Boolean, default: null },
       separateMeters: { type: Boolean, default: null },
 
-      // Hostels
+      /*
+      |--------------------------------------------------------------------------
+      | Hostels (see HOSTEL_* in data/listingFields.js)
+      |--------------------------------------------------------------------------
+      |
+      | A hostel is rented by the seat. It lists seater options (1 seater,
+      | 2 seater...) each with a monthly price, quoted per person or per whole
+      | room, and how many beds / rooms of that kind are free. Accepting a
+      | student holds seats from `available`; the owner adds them back when
+      | someone leaves. monthlyRent is kept as the cheapest price per person
+      | so search, sorting and cards work like any other listing.
+      */
+
       hostelFor: { type: String, enum: [...HOSTEL_FOR, null], default: null },
-      bedsPerRoom: {
-        type: Number,
-        min: [1, "Beds per room must be at least 1"],
-        max: [20, "Beds per room cannot exceed 20"],
+
+      // Gate / curfew time, e.g. "22:00". null = not said.
+      gateClosesAt: {
+        type: String,
+        match: [/^([01]\d|2[0-3]):[0-5]\d$/, "Gate time must be HH:MM"],
         default: null,
       },
-      mealsIncluded: { type: Boolean, default: null },
+
+      hostelPricing: { type: String, enum: [...HOSTEL_PRICING, null], default: null },
+
+      hostelRooms: [
+        {
+          seater: {
+            type: Number,
+            required: [true, "Choose how many people share the room"],
+            min: [1, "A room holds at least 1 person"],
+            max: [MAX_SEATER, `A room can hold at most ${MAX_SEATER} people`],
+          },
+          price: {
+            type: Number,
+            required: [true, "Monthly price is required"],
+            min: [0, "Price cannot be negative"],
+          },
+          // Free beds (per person) or free rooms (per room).
+          available: {
+            type: Number,
+            required: true,
+            min: [0, "Free places cannot be negative"],
+            max: [1000, "Too many free places"],
+          },
+        },
+      ],
+
+      mess: {
+        plan: { type: String, enum: [...MESS_PLANS, null], default: null },
+        // Only for an optional mess: what it costs per month.
+        monthlyCharge: { type: Number, min: [0, "Mess charge cannot be negative"], default: null },
+        timings: Object.fromEntries(
+          MEALS.map((meal) => [
+            meal,
+            { type: String, match: [/^([01]\d|2[0-3]):[0-5]\d$/, "Meal times must be HH:MM"], default: null },
+          ])
+        ),
+        menu: [
+          new mongoose.Schema(
+            {
+              day: { type: String, enum: WEEK_DAYS, required: true },
+              ...Object.fromEntries(
+                MEALS.map((meal) => [meal, { type: String, trim: true, maxlength: [120, "Menu item is too long"], default: "" }])
+              ),
+            },
+            { _id: false }
+          ),
+        ],
+        notes: { type: String, trim: true, maxlength: [300, "Mess notes are too long"], default: null },
+      },
 
       // Shops: the market or bazaar, e.g. "Rahim Market, NLI Chowk".
       marketName: {
@@ -894,6 +960,42 @@ const syncUtilityFlags = (property) => {
   sync("livingInfo.powerBackups", "livingInfo.electricityBackup");
 };
 
+// Price of one person's place in a seater option.
+const pricePerPerson = (property, room) =>
+  property.hostelPricing === "per_room"
+    ? Math.round(Number(room.price) / Math.max(1, Number(room.seater) || 1))
+    : Number(room.price) || 0;
+
+const applyHostelRules = (property) => {
+  const rooms = property.hostelRooms || [];
+
+  // Hostels saved before seater options existed have none yet; leave their
+  // rent and pricing for `npm run migrate:hostels` to convert.
+  if (rooms.length > 0) {
+    if (!property.hostelPricing) {
+      property.hostelPricing = "per_person";
+    }
+
+    property.monthlyRent = Math.min(
+      ...rooms.map((room) => pricePerPerson(property, room))
+    );
+
+    // Each application picks a seater option; no whole-hostel cap.
+    property.maxOccupants = null;
+  }
+
+  const plan = property.mess?.plan || null;
+
+  if (plan !== "optional" && property.mess?.monthlyCharge != null) {
+    property.set("mess.monthlyCharge", null);
+  }
+
+  if (plan === "none" && (property.mess?.menu?.length || MEALS.some((meal) => property.mess?.timings?.[meal]))) {
+    property.set("mess.menu", []);
+    MEALS.forEach((meal) => property.set(`mess.timings.${meal}`, null));
+  }
+};
+
 propertySchema.pre(
   "validate",
 
@@ -926,6 +1028,14 @@ propertySchema.pre(
     } else if (this.roomTypes?.length || this.nightlyPriceFrom != null) {
       this.roomTypes = [];
       this.nightlyPriceFrom = null;
+    }
+
+    if (isHostelType(this.propertyType)) {
+      applyHostelRules(this);
+    } else if (this.hostelRooms?.length || this.hostelPricing || this.mess?.plan) {
+      this.hostelRooms = [];
+      this.hostelPricing = null;
+      this.mess = { plan: null, monthlyCharge: null, menu: [], notes: null };
     }
   }
 );
@@ -968,6 +1078,8 @@ propertySchema.pre(
     }
   }
 );
+
+propertySchema.statics.pricePerPerson = pricePerPerson;
 
 /*
 |--------------------------------------------------------------------------

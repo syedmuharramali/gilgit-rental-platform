@@ -37,7 +37,7 @@ const {
   "../services/tenancyActivation.service"
 );
 
-const { isShopType } = require("../data/propertyTypes");
+const { isHostelType, isShopType } = require("../data/propertyTypes");
 
 const DEFAULT_CLAUSES = [
   "The renter shall pay the agreed monthly rent on time.",
@@ -178,6 +178,8 @@ exports.createAgreementFromTerms = asyncHandler(
     }
 
     const rentedProperty = await Property.findById(terms.property).select("propertyType");
+    // A hostel has one tenancy per student; see slotKey in tenancy.model.js.
+    const slotKey = isHostelType(rentedProperty?.propertyType) ? terms.application : null;
     const clauses = cleanClauses(
       req.body.clauses,
       isShopType(rentedProperty?.propertyType) ? DEFAULT_SHOP_CLAUSES : DEFAULT_CLAUSES
@@ -215,6 +217,7 @@ exports.createAgreementFromTerms = asyncHandler(
                 agreedMonthlyRent: terms.monthlyRent,
                 securityDeposit: terms.securityDeposit,
                 occupants: terms.occupants,
+                slotKey,
                 status: "pending_agreement",
               },
             ],
@@ -547,7 +550,9 @@ exports.signAgreement = asyncHandler(
                   terms.property
                 ).session(session);
 
-                if (property) {
+                // A hostel stays listed: the student's places were
+                // already taken from its free count on acceptance.
+                if (property && !isHostelType(property.propertyType)) {
                   property.listingStatus = "rented";
                   property.reservationStatus = "available";
                   property.reservedAt = null;

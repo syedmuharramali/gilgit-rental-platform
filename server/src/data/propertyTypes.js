@@ -7,7 +7,8 @@
 | preference today.
 |
 | LEGACY_PROPERTY_TYPES were retired ("private room" and "shared room" do
-| not fit how renting works in Gilgit). The schema still accepts them so
+| not fit how renting works in Gilgit; "hostel bed" became a seater option
+| of a Hostel — `npm run migrate:hostels` converts old listings). The schema still accepts them so
 | listings that already carry them — including ones under an active rental
 | — keep loading and saving, but nothing new can be created with them and a
 | listing must switch to a current type before it can be submitted again.
@@ -16,7 +17,6 @@
 
 const PROPERTY_TYPES = [
   "hostel",
-  "hostel_bed",
   "apartment",
   "house",
   "upper_portion",
@@ -41,6 +41,13 @@ const SHOP_TYPES = ["shop"];
 */
 const STAY_TYPES = ["hotel", "guest_house"];
 
+/*
+| Hostels rent by the seat: one listing has many seater options and many
+| tenants at once, so they never become "rented" as a whole.
+*/
+const HOSTEL_TYPES = ["hostel"];
+const isHostelType = (type) => HOSTEL_TYPES.includes(type);
+
 const HOME_TYPES = PROPERTY_TYPES.filter(
   (type) =>
     !SHOP_TYPES.includes(type) &&
@@ -53,6 +60,7 @@ const isStayType = (type) => STAY_TYPES.includes(type);
 const LEGACY_PROPERTY_TYPES = [
   "shared_room",
   "private_room",
+  "hostel_bed",
 ];
 
 const ALL_PROPERTY_TYPES = [
@@ -70,6 +78,8 @@ module.exports = {
   STAY_TYPES,
   isShopType,
   isStayType,
+  HOSTEL_TYPES,
+  isHostelType,
   LEGACY_PROPERTY_TYPES,
   ALL_PROPERTY_TYPES,
   isLegacyPropertyType,

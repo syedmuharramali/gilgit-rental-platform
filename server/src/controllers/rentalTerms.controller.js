@@ -7,6 +7,8 @@ const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
 const { safeCreateNotification } = require("../services/notification.service");
 const { isBeforeGilgitToday, startOfGilgitToday } = require("../utils/gilgitDate");
+const { isHostelType } = require("../data/propertyTypes");
+const { hostelRentFor } = require("../services/hostelSeats.service");
 
 const populateTerms = async (terms) => {
   await terms.populate([
@@ -24,7 +26,7 @@ const populateTerms = async (terms) => {
     },
     {
       path: "application",
-      select: "status applicationType preferredMoveInDate expectedStayMonths occupants",
+      select: "status applicationType preferredMoveInDate expectedStayMonths occupants hostelRoom units",
     },
   ]);
 
@@ -61,9 +63,14 @@ const parseTermsPayload = ({ body, application, property }) => {
     throw new AppError("Rental duration must be between 1 and 120 months", 400);
   }
 
+  // A hostel student pays for the seater option they applied for.
+  const hostelRoom = isHostelType(property.propertyType) ? application.hostelRoom : null;
+
   const monthlyRent = body.monthlyRent !== undefined
     ? Number(body.monthlyRent)
-    : property.monthlyRent;
+    : hostelRoom
+      ? hostelRentFor(hostelRoom, application.units || 1)
+      : property.monthlyRent;
 
   if (Number.isNaN(monthlyRent) || monthlyRent < 0) {
     throw new AppError("Monthly rent must be a valid non-negative number", 400);
@@ -88,7 +95,13 @@ const parseTermsPayload = ({ body, application, property }) => {
     : 1;
 
   // No maxOccupants means the owner set no limit (20 is the form's cap).
-  const maximumOccupants = property.maxOccupants || 20;
+  // A hostel student gets the places held on acceptance: their beds
+  // (per person) or, for a whole room, up to its size.
+  const maximumOccupants = hostelRoom
+    ? hostelRoom.pricing === "per_room"
+      ? hostelRoom.seater
+      : application.units || 1
+    : property.maxOccupants || 20;
 
   if (!Number.isInteger(occupants) || occupants < minimumOccupants || occupants > maximumOccupants) {
     throw new AppError(`Occupants must be between ${minimumOccupants} and ${maximumOccupants}`, 400);
@@ -142,18 +155,24 @@ exports.proposeRentalTerms = asyncHandler(async (req, res, next) => {
     return next(new AppError("Accepted application not found", 404));
   }
 
+  /*
+  | A hostel keeps its accepted students while the owner edits the listing
+  | (which sends it back to review), so only homes and shops must still be
+  | published here.
+  */
   const property = await Property.findOne({
     _id: application.property,
     owner: req.user._id,
-    listingStatus: "published",
     isDeleted: { $ne: true },
   });
 
-  if (!property) {
+  const hostel = isHostelType(property?.propertyType);
+
+  if (!property || (!hostel && property.listingStatus !== "published") || property.listingStatus === "rented") {
     return next(new AppError("Property is no longer available for rental terms", 404));
   }
 
-  if (property.reservationStatus !== "reserved") {
+  if (!hostel && property.reservationStatus !== "reserved") {
     property.reservationStatus = "reserved";
     property.reservedAt = new Date();
     await property.save({ validateBeforeSave: false });

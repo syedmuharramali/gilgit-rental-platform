@@ -20,8 +20,7 @@ export function aboutFacts(property, t) {
   }
 
   if (asks('hostelFor') && property.hostelFor) add(t('ed.field.hostelFor'), t(`ed.hostelFor.${property.hostelFor}`))
-  if (asks('bedsPerRoom')) add(t('ed.field.bedsPerRoom'), property.bedsPerRoom)
-  if (asks('mealsIncluded')) add(t('ed.field.mealsIncluded'), yesNo(property.mealsIncluded, t))
+  if (asks('gateClosesAt')) add(t('ed.field.gateClosesAt'), property.gateClosesAt)
   if (asks('tenantTypes')) add(t('ed.field.tenantTypes'), property.tenantTypes?.length ? listOf(property.tenantTypes, 'ed.tenant', t) : t('ed.tenant.anyone'))
   if (asks('furnishing')) add(t('ed.field.furnishing'), pretty(property.furnishedStatus))
   if (asks('size') && property.totalArea?.value) add(property.propertyType === 'shop' ? t('ed.field.shopArea') : t('ed.field.size'), `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}`)
@@ -55,4 +54,15 @@ export function utilityFacts(property, t) {
   // Types without a field list (retired ones) show everything.
   const keys = utilities.length ? utilities : Object.keys(rows)
   return keys.map((key) => [key, ...rows[key]])
+}
+
+// Hostels: every seater option has 0 free places.
+export const hostelIsFull = (property) =>
+  (property.hostelRooms || []).length > 0 && property.hostelRooms.every((room) => !(room.available > 0))
+
+// "1–4" for a hostel with 1 to 4 seater rooms.
+export const seaterRange = (property) => {
+  const sizes = (property.hostelRooms || []).map((room) => room.seater).sort((a, b) => a - b)
+  if (!sizes.length) return null
+  return sizes.length === 1 ? String(sizes[0]) : `${sizes[0]}–${sizes[sizes.length - 1]}`
 }

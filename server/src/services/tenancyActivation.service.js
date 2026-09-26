@@ -1,5 +1,6 @@
 const Tenancy = require("../models/tenancy.model");
 const Property = require("../models/property.model");
+const { HOSTEL_TYPES } = require("../data/propertyTypes");
 const RentalAgreement = require("../models/rentalAgreement.model");
 const { safeCreateNotifications } = require("./notification.service");
 
@@ -73,8 +74,10 @@ const activateDueTenancies = async (filter = {}) => {
 
   for (const dueTenancy of dueTenancies) {
     try {
-      const property = await Property.findOneAndUpdate(
-        { _id: dueTenancy.property },
+      // Hostels stay listed (places were held on acceptance); still fetch
+      // the title for the notification.
+      const rentedProperty = await Property.findOneAndUpdate(
+        { _id: dueTenancy.property, propertyType: { $nin: HOSTEL_TYPES } },
         {
           $set: {
             listingStatus: "rented",
@@ -85,6 +88,10 @@ const activateDueTenancies = async (filter = {}) => {
         },
         { returnDocument: "after" }
       ).select("title");
+
+      const property =
+        rentedProperty ||
+        (await Property.findById(dueTenancy.property).select("title"));
 
       const tenancy = await Tenancy.findOneAndUpdate(
         {

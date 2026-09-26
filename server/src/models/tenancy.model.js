@@ -63,6 +63,12 @@ const tenancySchema =
         max: 20,
       },
 
+      // Hostels: the application's slotKey (see application.model.js).
+      slotKey: {
+        type: mongoose.Schema.Types.ObjectId,
+        default: null,
+      },
+
       status: {
         type: String,
         enum: [
@@ -98,13 +104,18 @@ const tenancySchema =
 
 /*
 |--------------------------------------------------------------------------
-| Only one active tenancy per property
+| Only one active tenancy per property (per slot for hostels)
 |--------------------------------------------------------------------------
+|
+| slotKey is null for homes and shops, so they keep one active tenancy.
+| A hostel tenancy copies its application's slotKey, so many students can
+| live there at once.
 */
 
 tenancySchema.index(
   {
     property: 1,
+    slotKey: 1,
   },
   {
     unique: true,

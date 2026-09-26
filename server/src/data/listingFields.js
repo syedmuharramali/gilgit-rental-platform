@@ -34,13 +34,6 @@ const home = (about, required) => ({
   utilities: ALL_UTILITIES,
 });
 
-const hostel = (about) => ({
-  about,
-  required: ["hostelFor"],
-  areaUnits: [],
-  utilities: ALL_UTILITIES,
-});
-
 const stay = {
   about: [],
   required: [],
@@ -72,8 +65,14 @@ const LISTING_FIELDS = {
     ...home(["bathrooms", "floor", "size", "furnishing", "tenantTypes", "maxOccupants"], []),
     areaUnits: ["sqft", "marla"],
   },
-  hostel: hostel(["hostelFor", "maxOccupants", "mealsIncluded"]),
-  hostel_bed: hostel(["hostelFor", "bedsPerRoom", "mealsIncluded"]),
+  // Seater options, mess and prices live on their own steps (see
+  // HOSTEL_* below); "about" is who it's for and the gate time.
+  hostel: {
+    about: ["hostelFor", "gateClosesAt"],
+    required: ["hostelFor"],
+    areaUnits: [],
+    utilities: ALL_UTILITIES,
+  },
   shop: {
     about: ["size", "floor", "marketName", "bathrooms"],
     required: ["size"],
@@ -96,16 +95,14 @@ const CLEARED = {
   separateEntrance: null,
   separateMeters: null,
   hostelFor: null,
-  bedsPerRoom: null,
-  mealsIncluded: null,
+  gateClosesAt: null,
   marketName: null,
 };
 
-// Set regardless of the form: a hostel bed holds one person, hostels come
-// furnished, a shop is one unit with no bedrooms.
+// Set regardless of the form: hostels come furnished and are rented by the
+// seat, a shop is one unit with no bedrooms.
 const FIXED = {
-  hostel: { furnishedStatus: "furnished", bedrooms: 0 },
-  hostel_bed: { furnishedStatus: "furnished", bedrooms: 0, maxOccupants: 1 },
+  hostel: { furnishedStatus: "furnished", bedrooms: 0, bathrooms: 0 },
   shop: { furnishedStatus: "unfurnished", bedrooms: 0, maxOccupants: 1 },
 };
 
@@ -121,8 +118,7 @@ const FIELD_PATHS = {
   separateEntrance: "separateEntrance",
   separateMeters: "separateMeters",
   hostelFor: "hostelFor",
-  bedsPerRoom: "bedsPerRoom",
-  mealsIncluded: "mealsIncluded",
+  gateClosesAt: "gateClosesAt",
   marketName: "marketName",
 };
 
@@ -138,6 +134,19 @@ const HEATING_TYPES = ["none", "gas_heater", "wood_stove", "electric_heater", "c
 const POWER_BACKUPS = ["none", "ups", "solar", "generator", "other"];
 const WATER_SOURCES = ["municipal", "boring", "tanker", "spring"];
 
+/*
+| Hostels
+|
+| A hostel lists its seater options (1 seater, 2 seater...). The owner
+| quotes each one either per person or per whole room, and says how many
+| beds (per person) or rooms (per room) are free.
+*/
+const HOSTEL_PRICING = ["per_person", "per_room"];
+const MAX_SEATER = 8;
+const MESS_PLANS = ["included", "optional", "none"];
+const MEALS = ["breakfast", "lunch", "dinner"];
+const WEEK_DAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
 const fieldsFor = (type) => LISTING_FIELDS[type] || null;
 
 // "Answered" as the submit check sees it.
@@ -146,7 +155,7 @@ const isAnswered = (field, property) => {
     .split(".")
     .reduce((current, key) => (current == null ? current : current[key]), property);
 
-  if (["bedrooms", "bathrooms", "size", "bedsPerRoom", "maxOccupants"].includes(field)) {
+  if (["bedrooms", "bathrooms", "size", "maxOccupants"].includes(field)) {
     return Number(value) > 0;
   }
 
@@ -170,6 +179,11 @@ module.exports = {
   HEATING_TYPES,
   POWER_BACKUPS,
   WATER_SOURCES,
+  HOSTEL_PRICING,
+  MAX_SEATER,
+  MESS_PLANS,
+  MEALS,
+  WEEK_DAYS,
   fieldsFor,
   firstMissingField,
 };

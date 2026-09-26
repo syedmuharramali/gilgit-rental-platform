@@ -36,6 +36,13 @@ import {
   shortDate,
 } from '../../components/workspace/WorkspaceUI'
 
+// A hostel application's monthly rent: its seater option's price, per person
+// (times the people applying) or for the whole room.
+const hostelRent = (application) =>
+  application.hostelRoom.pricing === 'per_room'
+    ? application.hostelRoom.price
+    : application.hostelRoom.price * (application.units || 1)
+
 function ApplicationsPage({ owner = false }) {
   const { t } = useTranslation()
   const errorMessage = (error) => error?.data?.message || error?.error || t('common.somethingWrong')
@@ -82,8 +89,9 @@ function ApplicationsPage({ owner = false }) {
   // Accepting is not reversible: it also rejects every other pending application.
   const acceptWithConfirmation = (item) => {
     const applicantName = item.applicant?.name || t('apps.thisApplicant')
+    // A hostel accepts many students: only this one's places are taken.
     const confirmed = window.confirm(
-      t('apps.confirmAccept', { applicant: applicantName, property: item.property?.title || t('apps.thisProperty') }),
+      t(item.hostelRoom ? 'apps.confirmAcceptHostel' : 'apps.confirmAccept', { applicant: applicantName, property: item.property?.title || t('apps.thisProperty'), count: item.hostelRoom?.seater || 1 }),
     )
     if (!confirmed) return
     act(accept, item._id, t('apps.toastAccepted'))
@@ -105,7 +113,7 @@ function ApplicationsPage({ owner = false }) {
     setTermsForm({
       startDate: existingTerms?.startDate?.slice(0, 10) || application.preferredMoveInDate?.slice(0, 10) || '',
       durationMonths: existingTerms?.durationMonths != null ? String(existingTerms.durationMonths) : application.expectedStayMonths != null ? String(application.expectedStayMonths) : '',
-      monthlyRent: existingTerms?.monthlyRent != null ? String(existingTerms.monthlyRent) : application.property?.monthlyRent != null ? String(application.property.monthlyRent) : '',
+      monthlyRent: existingTerms?.monthlyRent != null ? String(existingTerms.monthlyRent) : application.hostelRoom ? String(hostelRent(application)) : application.property?.monthlyRent != null ? String(application.property.monthlyRent) : '',
       securityDeposit: existingTerms?.securityDeposit != null ? String(existingTerms.securityDeposit) : '',
       occupants: existingTerms?.occupants != null ? String(existingTerms.occupants) : application.occupants != null ? String(application.occupants) : '1',
     })
@@ -192,6 +200,7 @@ function ApplicationsPage({ owner = false }) {
 
                     <h2 className="mt-3 text-lg font-black text-white">{item.property?.title || t('apps.property')}</h2>
                     <p className="mt-1 text-sm text-slate-400">{owner ? `${item.applicant?.name || t('apps.applicant')} · ${item.applicant?.email || ''}` : `${item.property?.address?.area || ''} · ${money(item.property?.monthlyRent)}${t('common.perMonth')}`}</p>
+                    {item.hostelRoom && <p className="mt-2 text-xs font-bold text-cyan-200">{t('apps.hostelRoom', { count: item.hostelRoom.seater, rent: money(hostelRent(item)) })}</p>}
                     {item.applicationType === 'group' && <p className="mt-2 text-xs font-bold text-violet-300">{t('apps.groupPeople', { count: (item.roommates?.length || 0) + 1 })}</p>}
                     {item.message && <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300">{item.message}</p>}
                     {item.rejectionReason && <p className="mt-3 rounded-2xl border border-rose-400/15 bg-rose-400/8 p-3 text-sm text-rose-300">{item.rejectionReason}</p>}

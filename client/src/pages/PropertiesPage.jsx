@@ -21,11 +21,10 @@ import PropertyResultsMap from '../components/properties/PropertyResultsMap'
 import { useGetAmenitiesQuery } from '../features/amenities/amenitiesApi'
 import { useGetPropertiesQuery } from '../features/properties/propertiesApi'
 import { amenityLabel, pretty } from '../components/workspace/WorkspaceUI'
-import { HOME_TYPES, SHOP_TYPES, STAY_TYPES, isShopType, isStayType } from '../utils/propertyTypes'
-import { HOSTEL_FOR, TENANT_TYPES, isAskedElsewhere } from '../utils/listingFields'
+import { HOME_TYPES, SHOP_TYPES, STAY_TYPES, isHostelType, isShopType, isStayType } from '../utils/propertyTypes'
+import { HOSTEL_FOR, MAX_SEATER, TENANT_TYPES, isAskedElsewhere } from '../utils/listingFields'
 import { localToday } from '../utils/formatters'
 
-const HOSTEL_TYPES = ['hostel', 'hostel_bed']
 
 const quickFilters = [
   ['heating', Flame],
@@ -110,20 +109,23 @@ function PropertiesPage() {
     if (next === category) return
     setSearchParams((current) => {
       const params = new URLSearchParams(current)
-      ;['propertyType', 'bedrooms', 'bathrooms', 'furnishedStatus', 'rentTo', 'hostelFor', 'availableFrom', 'checkIn', 'checkOut', 'guests', 'minRent', 'maxRent', 'page'].forEach((key) => params.delete(key))
+      ;['propertyType', 'bedrooms', 'bathrooms', 'furnishedStatus', 'rentTo', 'hostelFor', 'seater', 'availableFrom', 'checkIn', 'checkOut', 'guests', 'minRent', 'maxRent', 'page'].forEach((key) => params.delete(key))
       if (next === 'homes') params.delete('category')
       else params.set('category', next)
       return params
     }, { replace: true })
   }
 
-  // Boys/girls only applies to hostels; drop it when the type changes away.
+  // Boys/girls and room size only apply to hostels; drop them when the type changes away.
   const changeType = (value) => {
     setSearchParams((current) => {
       const next = new URLSearchParams(current)
       if (value) next.set('propertyType', value)
       else next.delete('propertyType')
-      if (!HOSTEL_TYPES.includes(value)) next.delete('hostelFor')
+      if (!isHostelType(value)) {
+        next.delete('hostelFor')
+        next.delete('seater')
+      }
       next.delete('page')
       return next
     }, { replace: true })
@@ -283,7 +285,8 @@ function PropertiesPage() {
                       {category === 'homes' && <div className="grid grid-cols-2 gap-2"><FilterField label={t('properties.field.bedrooms')}><input type="number" min="0" value={searchParams.get('bedrooms') || ''} onChange={(event) => setParam('bedrooms', event.target.value)} className="filter-control" /></FilterField><FilterField label={t('properties.field.bathrooms')}><input type="number" min="0" value={searchParams.get('bathrooms') || ''} onChange={(event) => setParam('bathrooms', event.target.value)} className="filter-control" /></FilterField></div>}
 
                       {category === 'homes' && <FilterField label={t('properties.field.rentTo')}><select value={searchParams.get('rentTo') || ''} onChange={(event) => setParam('rentTo', event.target.value)} className="filter-control"><option value="">{t('properties.anyone')}</option>{TENANT_TYPES.map((value) => <option key={value} value={value}>{t(`ed.tenant.${value}`)}</option>)}</select></FilterField>}
-                      {HOSTEL_TYPES.includes(searchParams.get('propertyType')) && <FilterField label={t('ed.field.hostelFor')}><select value={searchParams.get('hostelFor') || ''} onChange={(event) => setParam('hostelFor', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{HOSTEL_FOR.map((value) => <option key={value} value={value}>{t(`ed.hostelFor.${value}`)}</option>)}</select></FilterField>}
+                      {isHostelType(searchParams.get('propertyType')) && <FilterField label={t('hostel.roomSize')}><select value={searchParams.get('seater') || ''} onChange={(event) => setParam('seater', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{Array.from({ length: MAX_SEATER }, (_, index) => index + 1).map((size) => <option key={size} value={size}>{t('ed.hostel.seater', { count: size })}</option>)}</select></FilterField>}
+                      {isHostelType(searchParams.get('propertyType')) && <FilterField label={t('ed.field.hostelFor')}><select value={searchParams.get('hostelFor') || ''} onChange={(event) => setParam('hostelFor', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{HOSTEL_FOR.map((value) => <option key={value} value={value}>{t(`ed.hostelFor.${value}`)}</option>)}</select></FilterField>}
                       {category === 'homes' && <FilterField label={t('properties.field.furnishing')}><select value={searchParams.get('furnishedStatus') || ''} onChange={(event) => setParam('furnishedStatus', event.target.value)} className="filter-control"><option value="">{t('properties.any')}</option>{['furnished','semi_furnished','unfurnished'].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}</select></FilterField>}
                       {!isStays && <FilterField label={t('properties.availableBy')}><input type="date" value={searchParams.get('availableFrom') || ''} onChange={(event) => setParam('availableFrom', event.target.value)} className="filter-control" /></FilterField>}
 

@@ -1,10 +1,12 @@
 const mongoose = require("mongoose");
-const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isLegacyPropertyType, isStayType } = require("../data/propertyTypes");
+const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isHostelType, isLegacyPropertyType, isStayType } = require("../data/propertyTypes");
+const Application = require("../models/application.model");
+const { cleanHostelPricing, cleanHostelRooms, cleanMess } = require("../services/hostelSeats.service");
 const Booking = require("../models/booking.model");
 const { startOfGilgitToday } = require("../utils/gilgitDate");
 const { validateStayRange, maxRoomsBookedPerNight } = require("../utils/stayDates");
 const { filterStaysWithRoom } = require("../services/booking.service");
-const { HOSTEL_FOR, TENANT_TYPES, firstMissingField } = require("../data/listingFields");
+const { HOSTEL_FOR, MAX_SEATER, TENANT_TYPES, firstMissingField } = require("../data/listingFields");
 
 const {
   uploadPublicImage,
@@ -316,11 +318,23 @@ exports.createProperty = asyncHandler(
         hostelFor:
           req.body.hostelFor,
 
-        bedsPerRoom:
-          req.body.bedsPerRoom,
+        gateClosesAt:
+          req.body.gateClosesAt,
 
-        mealsIncluded:
-          req.body.mealsIncluded,
+        hostelPricing:
+          cleanHostelPricing(
+            req.body.hostelPricing
+          ),
+
+        hostelRooms:
+          cleanHostelRooms(
+            req.body.hostelRooms
+          ),
+
+        mess:
+          cleanMess(
+            req.body.mess
+          ),
 
         marketName:
           req.body.marketName,
@@ -1138,6 +1152,30 @@ exports.getPublishedProperties =
       |--------------------------------------------------------------------------
       */
 
+      /*
+      | ?seater=2 : hostels with a free place in a 2 seater.
+      */
+
+      if (req.query.seater !== undefined && req.query.seater !== "") {
+        const seater = Number(req.query.seater);
+
+        if (!Number.isInteger(seater) || seater < 1 || seater > MAX_SEATER) {
+          return next(
+            new AppError(
+              `Seater must be a whole number from 1 to ${MAX_SEATER}`,
+              400
+            )
+          );
+        }
+
+        filter.hostelRooms = {
+          $elemMatch: {
+            seater,
+            available: { $gt: 0 },
+          },
+        };
+      }
+
       if (req.query.hostelFor) {
         if (!HOSTEL_FOR.includes(req.query.hostelFor)) {
           return next(
@@ -1640,8 +1678,7 @@ exports.updateProperty =
         "separateEntrance",
         "separateMeters",
         "hostelFor",
-        "bedsPerRoom",
-        "mealsIncluded",
+        "gateClosesAt",
         "marketName",
         "amenities",
         "address",
@@ -1813,8 +1850,137 @@ exports.updateProperty =
         }
       }
 
+      /*
+      | Hostels: applications point at a seater option, so an option with
+      | pending or accepted applications can't be removed, and a hostel with
+      | any can't change type. Changing only the free places is a routine
+      | update and doesn't send the listing back to review.
+      */
+
+      const openHostelApplications = {
+        property: property._id,
+        status: { $in: ["pending", "accepted"] },
+        hostelRoom: { $ne: null },
+      };
+
+      if (
+        isHostelType(property.propertyType) &&
+        updates.propertyType !== undefined &&
+        !isHostelType(updates.propertyType) &&
+        (await Application.exists(openHostelApplications))
+      ) {
+        return next(
+          new AppError(
+            "This hostel has students applied or accepted, so it can't change to another type.",
+            409
+          )
+        );
+      }
+
+      if (updates.hostelPricing !== undefined) {
+        const pricing = cleanHostelPricing(updates.hostelPricing);
+
+        if (
+          pricing !== property.hostelPricing &&
+          property.hostelPricing &&
+          (await Application.exists(openHostelApplications))
+        ) {
+          return next(
+            new AppError(
+              "Students have applied at the current prices, so per person / per room can't change now.",
+              409
+            )
+          );
+        }
+
+        property.hostelPricing = pricing;
+      }
+
+      const nextHostelRooms =
+        cleanHostelRooms(
+          updates.hostelRooms,
+          property.hostelRooms
+        );
+
+      let hostelShapeChanged = false;
+
+      if (nextHostelRooms !== undefined) {
+        const keptIds = new Set(
+          nextHostelRooms
+            .filter((room) => room._id)
+            .map((room) => String(room._id))
+        );
+
+        const removedIds = (property.hostelRooms || [])
+          .map((room) => room._id)
+          .filter((roomId) => !keptIds.has(String(roomId)));
+
+        if (
+          removedIds.length > 0 &&
+          (await Application.exists({
+            ...openHostelApplications,
+            "hostelRoom.id": { $in: removedIds },
+          }))
+        ) {
+          return next(
+            new AppError(
+              "A seater option with applied or accepted students can't be removed. Set its free places to 0 instead.",
+              409
+            )
+          );
+        }
+
+        const shapeKey = (rooms) =>
+          JSON.stringify(
+            rooms.map((room) => [
+              room._id ? String(room._id) : null,
+              Number(room.seater),
+              Number(room.price),
+            ])
+          );
+
+        hostelShapeChanged =
+          shapeKey(nextHostelRooms) !==
+          shapeKey(property.hostelRooms || []);
+
+        if (!hostelShapeChanged) {
+          // Same options and prices: update the counts in place so only
+          // "available" is marked as changed.
+          nextHostelRooms.forEach((room, index) => {
+            if (property.hostelRooms[index].available !== room.available) {
+              property.hostelRooms[index].available = room.available;
+            }
+          });
+        } else {
+          property.hostelRooms = nextHostelRooms;
+        }
+      }
+
+      const nextMess = cleanMess(updates.mess);
+
+      if (
+        nextMess !== undefined &&
+        JSON.stringify(nextMess) !==
+          JSON.stringify(cleanMess(property.toObject().mess || null))
+      ) {
+        property.mess = nextMess;
+      }
+
+      // A hostel's rent and occupant cap come from its seater options
+      // (pre-validate), so the form's values are ignored.
+      const hostelAfterUpdate = isHostelType(
+        updates.propertyType ?? property.propertyType
+      );
+
       allowedFields.forEach(
         (field) => {
+          if (
+            hostelAfterUpdate &&
+            ["monthlyRent", "maxOccupants"].includes(field)
+          ) {
+            return;
+          }
+
           if (
             field !==
               "amenities" &&
@@ -1838,7 +2004,20 @@ exports.updateProperty =
       |
       */
 
-      if (property.isModified()) {
+      // Only free places changed (same options and prices): a routine
+      // update that doesn't need another review.
+      const onlySeatCounts =
+        !hostelShapeChanged &&
+        property
+          .modifiedPaths()
+          .every((path) =>
+            /^hostelRooms(\.\d+(\.available)?)?$/.test(path)
+          );
+
+      if (
+        property.isModified() &&
+        !onlySeatCounts
+      ) {
         resetPropertyReviewState(
           property
         );
@@ -2492,6 +2671,109 @@ exports.reorderPropertyImages =
 
   /*
 |--------------------------------------------------------------------------
+| Update a hostel's free places
+| PATCH /api/properties/:id/seats   { rooms: [{ _id, available }] }
+|--------------------------------------------------------------------------
+|
+| The everyday hostel chore: a student moved out, a room got repaired. It
+| only touches the counts, so a live hostel stays live (no re-review), and
+| it works while students are mid-application.
+*/
+
+exports.updateHostelSeats =
+  asyncHandler(
+    async (req, res, next) => {
+      const property =
+        await Property.findOne({
+          _id: req.params.id,
+          owner: req.user._id,
+          isDeleted: { $ne: true },
+        });
+
+      if (!property) {
+        return next(
+          new AppError(
+            "Property not found or you do not own this property",
+            404
+          )
+        );
+      }
+
+      if (!isHostelType(property.propertyType)) {
+        return next(
+          new AppError(
+            "Only hostels have free places to update",
+            400
+          )
+        );
+      }
+
+      const rooms = req.body?.rooms;
+
+      if (!Array.isArray(rooms) || rooms.length === 0) {
+        return next(
+          new AppError(
+            "Send the free places for at least one seater option",
+            400
+          )
+        );
+      }
+
+      for (const room of rooms) {
+        const option = (property.hostelRooms || []).find(
+          (item) => String(item._id) === String(room?._id)
+        );
+        const available = Number(room?.available);
+
+        if (!option) {
+          return next(
+            new AppError(
+              "That seater option no longer exists. Refresh and try again.",
+              404
+            )
+          );
+        }
+
+        if (!Number.isInteger(available) || available < 0 || available > 1000) {
+          return next(
+            new AppError(
+              "Free places must be a whole number from 0 to 1000",
+              400
+            )
+          );
+        }
+
+        // The page sends the count it showed; if a student was accepted
+        // since, don't silently overwrite the places they took.
+        if (
+          room.was !== undefined &&
+          Number(room.was) !== option.available
+        ) {
+          return next(
+            new AppError(
+              `Free places for the ${option.seater} seater changed since you opened this page (now ${option.available}). Check and save again.`,
+              409
+            )
+          );
+        }
+
+        option.available = available;
+      }
+
+      await property.save();
+
+      res.status(200).json({
+        success: true,
+        message: "Free places updated",
+        data: {
+          hostelRooms: property.hostelRooms,
+        },
+      });
+    }
+  );
+
+/*
+|--------------------------------------------------------------------------
 | Submit property for admin review
 | PATCH /api/properties/:id/submit
 |--------------------------------------------------------------------------
@@ -2606,6 +2888,20 @@ exports.submitPropertyForReview =
       | Each type has a few details renters can't do without (bedrooms for a
       | house, boys/girls for a hostel, floor area for a shop).
       */
+
+      if (
+        isHostelType(
+          property.propertyType
+        ) &&
+        !(property.hostelRooms?.length > 0)
+      ) {
+        return next(
+          new AppError(
+            "Add at least one seater option with a price before submitting",
+            400
+          )
+        );
+      }
 
       const missingField =
         firstMissingField(property);
@@ -2733,6 +3029,23 @@ exports.deleteProperty =
         return next(
           new AppError(
             "This stay has open or confirmed bookings. Decline or cancel them before deleting it.",
+            409
+          )
+        );
+      }
+
+      // Hostels aren't locked by accepted students (see
+      // propertyState.middleware.js), so check them here.
+      if (
+        isHostelType(property.propertyType) &&
+        (await Application.exists({
+          property: property._id,
+          status: "accepted",
+        }))
+      ) {
+        return next(
+          new AppError(
+            "This hostel has accepted students. It can't be deleted while they are staying; set its free places to 0 instead.",
             409
           )
         );
