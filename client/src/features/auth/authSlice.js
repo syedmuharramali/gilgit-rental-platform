@@ -166,6 +166,7 @@ const initialState = {
   sessionChecked: false,
   // The server couldn't be reached while checking the session.
   sessionUnavailable: false,
+  sessionStatus: 'idle',
   // Bumped on every sign-in and sign-out, so a slow session check that
   // started before one can tell its answer is out of date.
   sessionEpoch: 0,
@@ -242,12 +243,15 @@ const authSlice = createSlice({
       .addCase(googleSignIn.pending, pending)
       .addCase(googleSignIn.fulfilled, fulfilled)
       .addCase(googleSignIn.rejected, rejected)
+      // The page-load session check has its own status: it must not mark
+      // the login form or the Google button as "busy" (they were disabled
+      // for as long as the check took, up to 15 s on a slow server).
       .addCase(hydrateCurrentUser.pending, (state) => {
-        state.status = 'loading'
+        state.sessionStatus = 'loading'
         state.sessionUnavailable = false
       })
       .addCase(hydrateCurrentUser.fulfilled, (state, action) => {
-        state.status = 'idle'
+        state.sessionStatus = 'idle'
         state.sessionChecked = true
         state.sessionUnavailable = false
         if (action.payload.stale) return
@@ -259,7 +263,7 @@ const authSlice = createSlice({
       .addCase(hydrateCurrentUser.rejected, (state) => {
         // Server unreachable: we don't know yet. Protected pages offer a
         // retry instead of sending someone who is signed in to the login page.
-        state.status = 'idle'
+        state.sessionStatus = 'idle'
         state.sessionUnavailable = true
       })
       .addCase(updateProfile.fulfilled, (state, action) => {

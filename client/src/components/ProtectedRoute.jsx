@@ -8,7 +8,7 @@ function ProtectedRoute({ children }) {
   const { t } = useTranslation()
   const location = useLocation()
   const dispatch = useDispatch()
-  const { isAuthenticated, sessionChecked, sessionUnavailable, status } = useSelector((state) => state.auth)
+  const { isAuthenticated, sessionChecked, sessionUnavailable, sessionStatus } = useSelector((state) => state.auth)
 
   // Couldn't reach the server to check the session: offer a retry rather
   // than sending a signed-in person to the login page.
@@ -18,7 +18,7 @@ function ProtectedRoute({ children }) {
         <div>
           <p className="text-lg font-black">{t('common.serverUnreachable')}</p>
           <p className="mt-2 text-sm text-white/50">{t('common.networkError')}</p>
-          <button type="button" disabled={status === 'loading'} onClick={() => dispatch(hydrateCurrentUser())} className="mt-5 rounded-full bg-white px-5 py-2.5 text-sm font-black text-[#07101e] disabled:opacity-50">{t('common.tryAgain')}</button>
+          <button type="button"disabled={sessionStatus === 'loading'} onClick={() => dispatch(hydrateCurrentUser())} className="mt-5 rounded-full bg-white px-5 py-2.5 text-sm font-black text-[#07101e] disabled:opacity-50">{t('common.tryAgain')}</button>
         </div>
       </div>
     )
