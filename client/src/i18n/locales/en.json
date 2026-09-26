@@ -1379,7 +1379,12 @@
     "tapToPin": "Tap or click on the map exactly where the property is to drop the pin.",
     "pinPlaced": "Pin placed",
     "pinHint": "Drag the pin or tap elsewhere on the map to adjust it.",
-    "removePin": "Remove pin"
+    "removePin": "Remove pin",
+    "needsHttps": "Your browser only shares location on a secure (https) page or on localhost. Search for the area or tap the map instead.",
+    "locationTimeout": "Couldn't get a location fix. Turn on location / GPS, or search for the area and tap the map.",
+    "refining": "Finding your exact spot… currently accurate to about {{distance}}.",
+    "roughLocation": "Your device could only place you within about {{distance}} (common on laptops without GPS). Drag the pin to the exact spot, or use your phone at the property.",
+    "goodLocation": "Pinned your current location (accurate to about {{distance}}). Drag the pin if it's slightly off."
   },
   "error": {
     "title": "This screen ran into a problem.",

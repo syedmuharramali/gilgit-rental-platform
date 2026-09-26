@@ -11,6 +11,12 @@ const SEARCH_VIEWBOX = '72.5,37.1,77.8,34.5'
 const NOMINATIM = 'https://nominatim.openstreetmap.org'
 
 const round = (value) => Math.round(value * 1e6) / 1e6
+// Stop refining once the device is this sure (metres), or after LOCATE_FOR_MS.
+const GOOD_ACCURACY_M = 25
+const LOCATE_FOR_MS = 20000
+// Above this the pin is only a starting point and the owner should adjust it.
+const ROUGH_ACCURACY_M = 100
+const formatDistance = (metres) => (metres >= 1000 ? `${(metres / 1000).toFixed(1)} km` : `${metres} m`)
 const isCoord = (value) => value !== '' && value !== null && value !== undefined && Number.isFinite(Number(value))
 
 const pickArea = (address = {}) =>
@@ -74,39 +80,105 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
     }
   }, [onAddressSuggestion])
 
-  const placePin = useCallback((lat, lng) => {
+  // lookup: fill the address from the pin. Skipped while GPS is still
+  // refining, so a rough first fix can't fill in the wrong neighbourhood.
+  const placePin = useCallback((lat, lng, { lookup = true } = {}) => {
     const next = { latitude: round(lat), longitude: round(lng) }
     onChange(next)
     setAddressLabel('')
-    reverseLookup(next.latitude, next.longitude)
+    if (lookup) reverseLookup(next.latitude, next.longitude)
   }, [onChange, reverseLookup])
+
+  /*
+   * "I'm at the property" used to take the first answer the browser gave,
+   * and allowed a cached one up to a minute old. That first answer is often
+   * a rough Wi-Fi / network guess (hundreds of metres to kilometres off),
+   * and the cache could even be from somewhere else. Now it asks for a fresh
+   * GPS fix, keeps listening for a few seconds, moves the pin each time a
+   * more accurate fix arrives, and says how accurate the result is.
+   */
+  const watchId = useRef(null)
+  const watchTimer = useRef(null)
+  const [accuracy, setAccuracy] = useState(null)
+
+  const stopWatching = useCallback(() => {
+    if (watchId.current !== null) navigator.geolocation?.clearWatch(watchId.current)
+    clearTimeout(watchTimer.current)
+    watchId.current = null
+    setLocating(false)
+  }, [])
 
   const locate = useCallback(({ pin = false } = {}) => {
     if (!('geolocation' in navigator)) {
       setGeoMessage(t('map.noGeolocation'))
       return
     }
+    // Browsers only share location on https (or localhost). Opening the
+    // dev server on a phone via http://192.168.x.x fails silently otherwise.
+    if (!window.isSecureContext) {
+      setGeoMessage(t('map.needsHttps'))
+      return
+    }
+
+    // Opening the page: just centre the map roughly, no pin.
+    if (!pin) {
+      navigator.geolocation.getCurrentPosition(
+        ({ coords }) => {
+          setUserPosition({ latitude: coords.latitude, longitude: coords.longitude })
+          flyTo(coords.latitude, coords.longitude, 15)
+        },
+        () => {},
+        { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 },
+      )
+      return
+    }
+
+    stopWatching()
     setLocating(true)
     setGeoMessage('')
-    navigator.geolocation.getCurrentPosition(
+    setAccuracy(null)
+    let best = null
+
+    const finish = () => {
+      stopWatching()
+      if (best) reverseLookup(round(best.latitude), round(best.longitude))
+      else setGeoMessage(t('map.locationTimeout'))
+    }
+
+    watchId.current = navigator.geolocation.watchPosition(
       ({ coords }) => {
-        setLocating(false)
-        const position = { latitude: coords.latitude, longitude: coords.longitude }
-        setUserPosition(position)
-        flyTo(position.latitude, position.longitude, 16)
-        if (pin) placePin(position.latitude, position.longitude)
+        if (best && coords.accuracy >= best.accuracy) return
+        best = { latitude: coords.latitude, longitude: coords.longitude, accuracy: coords.accuracy }
+        setUserPosition({ latitude: best.latitude, longitude: best.longitude })
+        setAccuracy(Math.round(best.accuracy))
+        flyTo(best.latitude, best.longitude, best.accuracy > 500 ? 14 : 17)
+        placePin(best.latitude, best.longitude, { lookup: false })
+        if (best.accuracy <= GOOD_ACCURACY_M) finish()
       },
       (error) => {
-        setLocating(false)
+        // Keep a fix we already have; only report if there is none.
+        if (best) return
+        stopWatching()
         setGeoMessage(
           error.code === error.PERMISSION_DENIED
             ? t('map.permissionDenied')
-            : t('map.locationFailed'),
+            : error.code === error.TIMEOUT
+              ? t('map.locationTimeout')
+              : t('map.locationFailed'),
         )
       },
-      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 },
+      { enableHighAccuracy: true, timeout: LOCATE_FOR_MS, maximumAge: 0 },
     )
-  }, [flyTo, placePin, t])
+
+    watchTimer.current = setTimeout(finish, LOCATE_FOR_MS)
+  }, [flyTo, placePin, reverseLookup, stopWatching, t])
+
+  // A pin the owner places by hand wins over any GPS fix still arriving.
+  const placeManually = useCallback((lat, lng) => {
+    stopWatching()
+    setAccuracy(null)
+    placePin(lat, lng)
+  }, [placePin, stopWatching])
 
   // Open on the owner's current location when no pin exists yet.
   useEffect(() => {
@@ -114,6 +186,8 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
     return () => {
       searchAbort.current?.abort()
       reverseAbort.current?.abort()
+      if (watchId.current !== null) navigator.geolocation?.clearWatch(watchId.current)
+      clearTimeout(watchTimer.current)
     }
     // Only on first mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -148,7 +222,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
     setResults([])
     setQuery(result.name || result.display_name.split(',')[0])
     flyTo(lat, lng, 17)
-    placePin(lat, lng)
+    placeManually(lat, lng)
   }
 
   return (
@@ -202,7 +276,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
             ref={mapRef}
             {...viewState}
             onMove={(event) => setViewState(event.viewState)}
-            onClick={(event) => placePin(event.lngLat.lat, event.lngLat.lng)}
+            onClick={(event) => placeManually(event.lngLat.lat, event.lngLat.lng)}
             onLoad={(event) => { mapLoaded.current = true; event.target.resize() }}
             // A failed tile after load is harmless; only a style that never loads is fatal.
             onError={() => { if (!mapLoaded.current) setMapError(true) }}
@@ -228,7 +302,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
                 longitude={Number(longitude)}
                 anchor="bottom"
                 draggable
-                onDragEnd={(event) => placePin(event.lngLat.lat, event.lngLat.lng)}
+                onDragEnd={(event) => placeManually(event.lngLat.lat, event.lngLat.lng)}
               >
                 <div className="flex cursor-grab flex-col items-center active:cursor-grabbing" title={t('map.dragToAdjust')}>
                   <div className="grid h-11 w-11 place-items-center rounded-full border-4 border-white bg-gradient-to-br from-cyan-400 to-violet-500 text-white shadow-xl">
@@ -251,6 +325,16 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
 
       {geoMessage && <p className="text-xs text-amber-200/80">{geoMessage}</p>}
 
+      {accuracy !== null && (
+        <p className={`rounded-2xl border px-4 py-3 text-xs leading-5 ${accuracy > ROUGH_ACCURACY_M ? 'border-amber-300/20 bg-amber-300/[0.06] text-amber-100' : 'border-emerald-300/15 bg-emerald-300/[0.05] text-emerald-100'}`}>
+          {locating
+            ? t('map.refining', { distance: formatDistance(accuracy) })
+            : accuracy > ROUGH_ACCURACY_M
+              ? t('map.roughLocation', { distance: formatDistance(accuracy) })
+              : t('map.goodLocation', { distance: formatDistance(accuracy) })}
+        </p>
+      )}
+
       {hasPin ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-cyan-300/15 bg-cyan-300/[0.05] p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex gap-3">
@@ -261,7 +345,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
               <p className="mt-1 font-mono text-[10px] text-slate-600">{Number(latitude).toFixed(6)}, {Number(longitude).toFixed(6)}</p>
             </div>
           </div>
-          <button type="button" onClick={() => { onChange({ latitude: '', longitude: '' }); setAddressLabel('') }} className="self-start rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-slate-300 hover:border-rose-300/30 hover:text-rose-200 sm:self-center">
+          <button type="button" onClick={() => { stopWatching(); setAccuracy(null); onChange({ latitude: '', longitude: '' }); setAddressLabel('') }} className="self-start rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-slate-300 hover:border-rose-300/30 hover:text-rose-200 sm:self-center">
             {t('map.removePin')}
           </button>
         </div>

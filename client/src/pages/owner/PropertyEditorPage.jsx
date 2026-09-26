@@ -924,9 +924,11 @@ export default function PropertyEditorPage() {
                 {asks('floor') && <Field group label={isShop ? t('ed.field.shopFloor') : t('ed.field.floor')} {...optional}><Counter label={t('ed.field.floor')} value={form.floor} min={0} start={0} max={50} emptyLabel={t('ed.notSaid')} format={(number) => (number === 0 ? t('ed.floorGround') : number)} onChange={(value) => set('floor', value)} /></Field>}
                 {asks('size') && (
                   <Field label={isShop ? t('ed.field.shopArea') : t('ed.field.size')} required={requires('size')} {...(requires('size') ? {} : optional)} hint={isShop ? t('ed.field.shopAreaHint') : t('ed.field.sizeHint')} className="sm:col-span-2 lg:col-span-1">
-                    <div className="flex gap-2">
-                      <TextInput type="number" min="0" inputMode="decimal" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder={areaUnit === 'sqft' ? '250' : '5'} className="min-w-0 flex-1" />
-                      <Select aria-label={t('ed.field.areaUnit')} value={areaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)} className="w-32">
+                    {/* A grid, not flex: inputs are w-full, and a w-full select in a
+                        flex row squeezed the number box to zero width. */}
+                    <div className="grid grid-cols-[minmax(0,1fr)_8.5rem] gap-2">
+                      <TextInput type="number" min="0" step="any" inputMode="decimal" value={form.totalAreaValue} onChange={(event) => set('totalAreaValue', event.target.value)} placeholder={areaUnit === 'sqft' ? '250' : '5'} />
+                      <Select aria-label={t('ed.field.areaUnit')} value={areaUnit} onChange={(event) => set('totalAreaUnit', event.target.value)}>
                         {[...new Set([...fields.areaUnits, areaUnit])].map((value) => <option key={value} value={value}>{pretty(value)}</option>)}
                       </Select>
                     </div>
@@ -1098,7 +1100,7 @@ export default function PropertyEditorPage() {
                 <Field group label={t('ed.field.minimumStay')} required>
                   <div className="flex flex-wrap items-center gap-2">
                     {['1', '3', '6', '12'].map((months) => <button key={months} type="button" aria-pressed={form.minimumStayMonths === months} onClick={() => set('minimumStayMonths', months)} className={chipClass(form.minimumStayMonths === months)}>{t('ed.months', { count: Number(months) })}</button>)}
-                    <TextInput type="number" min="1" max="120" aria-label={t('ed.field.minimumStay')} value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} className="!h-10 w-24" />
+                    <div className="w-24"><TextInput type="number" min="1" max="120" aria-label={t('ed.field.minimumStay')} value={form.minimumStayMonths} onChange={(event) => set('minimumStayMonths', event.target.value)} className="!h-10" /></div>
                   </div>
                 </Field>
                 <Field label={t('ed.field.availableFrom')} required hint={t('ed.field.availableFromHint')}><TextInput type="date" value={form.availableFrom} onChange={(event) => set('availableFrom', event.target.value)} /></Field>
