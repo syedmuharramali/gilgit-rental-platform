@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
-import { hydrateCurrentUser } from './features/auth/authSlice'
+import { checkSession } from './features/auth/authSlice'
 import AdminLayout from './layouts/AdminLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 import PublicLayout from './layouts/PublicLayout'
@@ -46,39 +46,39 @@ const protectedElement = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 
 function App() {
   const dispatch = useDispatch()
-  const sessionUnavailable = useSelector((state) => state.auth.sessionUnavailable)
-  const sessionChecked = useSelector((state) => state.auth.sessionChecked)
+  const session = useSelector((state) => state.auth.session)
   const retries = useRef(0)
 
-  // The session cookie is invisible to the page, so always ask the server
-  // once on load who is signed in.
+  // The session cookie is invisible to the page, so ask the server once on
+  // load who is signed in.
   useEffect(() => {
-    dispatch(hydrateCurrentUser())
+    dispatch(checkSession())
   }, [dispatch])
 
-  // If that failed (server still starting, restarting after a code change,
-  // brief network drop), keep trying on our own: 2 s, 4 s, 8 s … up to 30 s
-  // apart, and straight away when the tab regains focus or the network is
-  // back. Otherwise one unlucky moment left the page stuck until a reload.
+  // If the server couldn't be reached (still starting, restarting after a
+  // code change, network blip), keep trying: 2 s, 4 s, 8 s … up to 30 s
+  // apart, and at once when the tab regains focus or the network returns.
+  const serverUnreachable = Boolean(session.error) && !session.checking
+
   useEffect(() => {
-    if (sessionChecked) {
+    if (session.checked) {
       retries.current = 0
       return undefined
     }
-    if (!sessionUnavailable) return undefined
+    if (!serverUnreachable) return undefined
 
-    const retry = () => dispatch(hydrateCurrentUser())
-    const delay = Math.min(2000 * 2 ** retries.current, 30000)
+    const retry = () => dispatch(checkSession())
+    const timer = setTimeout(retry, Math.min(2000 * 2 ** retries.current, 30000))
     retries.current += 1
-    const timer = setTimeout(retry, delay)
     window.addEventListener('focus', retry)
     window.addEventListener('online', retry)
+
     return () => {
       clearTimeout(timer)
       window.removeEventListener('focus', retry)
       window.removeEventListener('online', retry)
     }
-  }, [sessionUnavailable, sessionChecked, dispatch])
+  }, [serverUnreachable, session.checked, dispatch])
 
   return (
     <Routes>

@@ -64,7 +64,7 @@ function PropertyDetailsPage() {
   const { t } = useTranslation()
   const { id } = useParams()
   const navigate = useNavigate()
-  const token = useSelector((state) => state.auth.isAuthenticated)
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
   const user = useSelector((state) => state.auth.user)
   const { data: property, isLoading, error } = useGetPropertyQuery(id)
   const { data: score } = useGetLivingScoreQuery(id)
@@ -99,7 +99,7 @@ function PropertyDetailsPage() {
   const isStay = isStayType(property.propertyType)
 
   const requireAuth = (next) => {
-    if (!token) return navigate('/login', { state: { from: `/properties/${id}` } })
+    if (!isAuthenticated) return navigate('/login', { state: { from: `/properties/${id}` } })
     next()
   }
   const updateRoommate = (index, key, value) => setApplication((current) => ({ ...current, roommates: current.roommates.map((roommate, roommateIndex) => roommateIndex === index ? { ...roommate, [key]: value } : roommate) }))

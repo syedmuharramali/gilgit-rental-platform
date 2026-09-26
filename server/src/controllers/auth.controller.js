@@ -1,48 +1,37 @@
 const crypto = require("node:crypto");
 
 const User = require("../models/user.model");
-const AppError = require("../utils/AppError.js");
+const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
-const generateToken = require("../utils/generateToken");
+const { normalizeEmail, getEmailLookupCandidates } = require("../utils/email");
 const {
-  setSessionCookie,
+  startSession,
   clearSessionCookie,
   getSessionToken,
   csrfTokenFor,
 } = require("../utils/session");
-
-const {
-  normalizeEmail,
-  getEmailLookupCandidates,
-} = require("../utils/email");
 const {
   verifyGoogleCredential,
   isGoogleAuthoritativeEmail,
 } = require("../services/googleAuth.service");
-
-const {
-  sendVerificationEmail,
-} = require("../services/mail.service");
+const { sendVerificationEmail } = require("../services/mail.service");
 
 /*
-|--------------------------------------------------------------------------
-| Start a signed-in session — THIS is where the cookie is sent
-|--------------------------------------------------------------------------
-|
-| Used by login, Google sign-in and email confirmation.
-|
-| setSessionCookie() (utils/session.js) calls
-|   res.cookie("gr_session", <JWT>, { httpOnly: true, sameSite, secure, maxAge: 7 days })
-| which adds a Set-Cookie header to this response. The browser stores it
-| and sends it back on every request; page scripts can't read it.
-|
-| The JSON body carries only the CSRF token, never the JWT.
+| How a signed-in response works (login, Google, email confirmation):
+|   const csrfToken = startSession(res, user._id);
+| startSession() (utils/session.js) puts the JWT in the httpOnly
+| `gr_session` cookie via res.cookie(), and returns the CSRF token. The
+| JSON body carries only { csrfToken, user } — never the JWT.
 */
 
-const startSession = (res, userId) => {
-  const token = generateToken(userId);
-  setSessionCookie(res, token);
-  res.locals.csrfToken = csrfTokenFor(token);
+const signedInResponse = (res, user, message) => {
+  const csrfToken = startSession(res, user._id);
+
+  res.status(200).json({
+    success: true,
+    message,
+    data: { csrfToken, user: formatAuthUser(user) },
+  });
 };
 
 /*
@@ -279,17 +268,7 @@ exports.login = asyncHandler(async (req, res, next) => {
     validateBeforeSave: false,
   });
 
-  startSession(res, user._id);
-
-  res.status(200).json({
-    success: true,
-    message: "Login successful",
-
-    data: {
-      csrfToken: res.locals.csrfToken,
-      user: formatAuthUser(user),
-    },
-  });
+  signedInResponse(res, user, "Login successful");
 });
 
 /*
@@ -407,17 +386,7 @@ exports.googleLogin = asyncHandler(async (req, res, next) => {
     validateBeforeSave: false,
   });
 
-  startSession(res, user._id);
-
-  res.status(200).json({
-    success: true,
-    message: "Google sign-in successful",
-
-    data: {
-      csrfToken: res.locals.csrfToken,
-      user: formatAuthUser(user),
-    },
-  });
+  signedInResponse(res, user, "Google sign-in successful");
 });
 
 /*
@@ -480,17 +449,7 @@ exports.verifyEmail = asyncHandler(async (req, res, next) => {
 
   await user.save({ validateBeforeSave: false });
 
-  startSession(res, user._id);
-
-  res.status(200).json({
-    success: true,
-    message: "Email confirmed successfully",
-
-    data: {
-      csrfToken: res.locals.csrfToken,
-      user: formatAuthUser(user),
-    },
-  });
+  signedInResponse(res, user, "Email confirmed successfully");
 });
 
 /*
@@ -540,38 +499,6 @@ exports.resendVerification = asyncHandler(async (req, res) => {
 
   issueVerificationEmail(user).catch((error) => {
     console.error("Resend verification failed:", error.message);
-  });
-});
-
-/*
-|--------------------------------------------------------------------------
-| Current user
-| GET /api/auth/me
-|--------------------------------------------------------------------------
-*/
-
-exports.getMe = asyncHandler(async (req, res) => {
-  res.status(200).json({
-    success: true,
-
-    data: {
-      // After a page reload the CSRF token is gone from memory; this is
-      // how the client gets it back for the current session cookie.
-      csrfToken: csrfTokenFor(getSessionToken(req)),
-
-      user: {
-        id: req.user._id,
-        name: req.user.name,
-        email: req.user.email,
-        phone: req.user.phone,
-        avatar: req.user.avatar,
-        role: req.user.role,
-        emailVerified: req.user.emailVerified,
-        phoneVerified: req.user.phoneVerified,
-        accountStatus: req.user.accountStatus,
-        createdAt: req.user.createdAt,
-      },
-    },
   });
 });
 

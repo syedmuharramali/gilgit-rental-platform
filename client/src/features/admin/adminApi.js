@@ -44,7 +44,8 @@ export const adminApi = baseApi.injectEndpoints({
     getVerificationDocument: builder.query({
       query: ({ id, documentType }) => ({
         url: `/admin/verifications/${id}/documents/${documentType}`,
-        responseHandler: (response) => response.blob(),
+        responseType: 'blob',
+        timeout: 0, // documents can be slow on a weak connection
       }),
       keepUnusedDataFor: 0,
     }),

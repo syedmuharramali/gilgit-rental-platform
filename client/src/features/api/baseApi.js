@@ -1,61 +1,35 @@
-import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
-import { logoutUser } from '../auth/authSlice'
-import { isCsrfError, isSessionEndedError } from '../../services/api'
-import { CSRF_HEADER, getCsrfToken, setCsrfToken } from '../../services/session'
+import { createApi } from '@reduxjs/toolkit/query/react'
+import api, { toRequestError } from '../../services/api'
 
-const rawBaseQuery = fetchBaseQuery({
-  baseUrl: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
-  // The session is an httpOnly cookie; the browser attaches it.
-  credentials: 'include',
-  prepareHeaders: (headers) => {
-    const csrfToken = getCsrfToken()
+/*
+ * RTK Query runs every request through the shared axios client, so cookies,
+ * the CSRF header and "session ended" handling are the same everywhere.
+ *
+ * Endpoints use the usual shape: '/path' or { url, method, body, params },
+ * plus `responseType: 'blob'` and `timeout: 0` for file downloads.
+ */
+const axiosBaseQuery = async (args, { signal }) => {
+  const { url, method = 'GET', body, params, responseType, timeout } = typeof args === 'string' ? { url: args } : args
 
-    if (csrfToken) {
-      headers.set(CSRF_HEADER, csrfToken)
+  try {
+    const response = await api.request({ url, method, data: body, params, responseType, timeout, signal })
+
+    // The API always answers JSON. A plain string means the request hit
+    // something else (e.g. VITE_API_URL pointing at the website): report it
+    // instead of rendering empty pages.
+    if (!responseType && typeof response.data === 'string') {
+      return { error: { status: 'PARSING_ERROR', error: `Unexpected response from ${response.config?.baseURL || ''}${url}` } }
     }
 
-    return headers
-  },
-})
-
-const baseQuery = async (args, api, extraOptions) => {
-  let result = await rawBaseQuery(args, api, extraOptions)
-
-  // Stale CSRF token (e.g. signed in again in another tab): refresh it from
-  // the current cookie and retry once.
-  if (isCsrfError(result.error?.status, result.error?.data?.code)) {
-    const session = await rawBaseQuery('/auth/session', api, extraOptions)
-
-    // Only act on a real answer; a failed check (offline, rate limit, 5xx)
-    // must not sign anyone out.
-    if (session.data) {
-      const sessionUser = session.data.data?.user
-      const currentUser = api.getState().auth?.user
-
-      if (!sessionUser) {
-        if (api.getState().auth?.isAuthenticated) api.dispatch(logoutUser())
-      } else if (String(sessionUser.id) !== String(currentUser?.id)) {
-        // Another tab signed in as someone else: never replay this request
-        // as them. Reload so the page shows who is really signed in.
-        window.location.reload()
-      } else {
-        setCsrfToken(session.data.data.csrfToken)
-        result = await rawBaseQuery(args, api, extraOptions)
-      }
-    }
+    return { data: response.data }
+  } catch (error) {
+    return { error: toRequestError(error) }
   }
-
-
-  if (isSessionEndedError(result.error?.status, result.error?.data?.code) && api.getState().auth?.isAuthenticated) {
-    api.dispatch(logoutUser())
-  }
-
-  return result
 }
 
 export const baseApi = createApi({
   reducerPath: 'api',
-  baseQuery,
+  baseQuery: axiosBaseQuery,
   refetchOnMountOrArgChange: true,
   refetchOnFocus: true,
   refetchOnReconnect: true,

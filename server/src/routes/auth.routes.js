@@ -8,7 +8,6 @@ const {
   googleLogin,
   verifyEmail,
   resendVerification,
-  getMe,
   updateMe,
   logout,
   getSession,
@@ -206,8 +205,7 @@ router.post(
 |--------------------------------------------------------------------------
 */
 
-router.get("/me", protect, getMe);
-
+// Who is signed in (or null), plus the CSRF token — asked on every page load.
 router.get("/session", optionalAuth, getSession);
 
 // No protect: signing out must work even with an expired session.

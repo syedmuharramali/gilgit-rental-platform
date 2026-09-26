@@ -1,17 +1,16 @@
 import { configureStore, createListenerMiddleware, isAnyOf } from '@reduxjs/toolkit'
 import { setupListeners } from '@reduxjs/toolkit/query'
-import authReducer, { googleSignIn, loginUser, logout, logoutUser, verifyEmailToken } from '../features/auth/authSlice'
+import authReducer, { googleSignIn, loginUser, logoutUser, signedOut, verifyEmailToken } from '../features/auth/authSlice'
 import { baseApi } from '../features/api/baseApi'
-import { setCurrentUserGetter, setSessionEndedHandler } from '../services/api'
+import { configureSessionHooks } from '../services/api'
 
 const listenerMiddleware = createListenerMiddleware()
 
-// Drop every cached query whenever the signed-in person changes — not only
-// on logout. Opening someone else's confirmation link, or signing in over a
-// stale tab, otherwise briefly showed the previous person's data.
+// Whenever the signed-in person changes, drop every cached query so nobody
+// briefly sees the previous person's data.
 listenerMiddleware.startListening({
-  matcher: isAnyOf(logout, loginUser.fulfilled, googleSignIn.fulfilled, verifyEmailToken.fulfilled),
-  effect: async (_action, listenerApi) => {
+  matcher: isAnyOf(signedOut, loginUser.fulfilled, googleSignIn.fulfilled, verifyEmailToken.fulfilled),
+  effect: (_action, listenerApi) => {
     listenerApi.dispatch(baseApi.util.resetApiState())
   },
 })
@@ -26,12 +25,14 @@ export const store = configureStore({
   devTools: import.meta.env.DEV,
 })
 
-// Without this, the refetchOnFocus / refetchOnReconnect options set on the
-// API did nothing: coming back to a tab never refreshed it.
+// Makes refetchOnFocus / refetchOnReconnect (set in baseApi) actually work.
 setupListeners(store.dispatch)
 
-setCurrentUserGetter(() => store.getState().auth.user?.id)
-
-setSessionEndedHandler(() => {
-  if (store.getState().auth.isAuthenticated) store.dispatch(logoutUser())
+// The HTTP client can't import the store, so the store tells it how to react.
+configureSessionHooks({
+  // 401, or 403 ACCOUNT_INACTIVE, from any request.
+  onSessionEnded: () => {
+    if (store.getState().auth.isAuthenticated) store.dispatch(logoutUser())
+  },
+  getCurrentUserId: () => store.getState().auth.user?.id ?? null,
 })

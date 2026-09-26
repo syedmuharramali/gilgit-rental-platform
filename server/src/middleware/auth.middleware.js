@@ -1,124 +1,88 @@
-const jwt = require("jsonwebtoken");
-
 const User = require("../models/user.model");
 const AppError = require("../utils/AppError");
 const asyncHandler = require("../utils/asyncHandler");
-const { getSessionToken } = require("../utils/session");
+const { getSessionToken, readSessionUserId } = require("../utils/session");
+
+/*
+|--------------------------------------------------------------------------
+| protect — the route needs a signed-in, active user
+|--------------------------------------------------------------------------
+|
+| The session token only ever arrives in the httpOnly cookie (see
+| utils/session.js); there is no Authorization header any more.
+*/
 
 exports.protect = asyncHandler(async (req, res, next) => {
-  // The session token only ever arrives in the httpOnly cookie; it is
-  // never handed to page scripts, so there is no header to read.
-  const token = getSessionToken(req);
-
-  if (!token) {
-    return next(
-      new AppError(
-        "You are not authenticated. Please log in.",
-        401
-      )
-    );
+  if (!getSessionToken(req)) {
+    return next(new AppError("You are not authenticated. Please log in.", 401));
   }
 
-  let decoded;
+  const userId = readSessionUserId(req);
 
-  try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (error) {
-    return next(
-      new AppError(
-        "Invalid or expired authentication token",
-        401
-      )
-    );
+  if (!userId) {
+    return next(new AppError("Your session has expired. Please log in again.", 401));
   }
 
-  const user = await User.findById(decoded.userId);
+  const user = await User.findById(userId);
 
   if (!user) {
-    return next(
-      new AppError(
-        "The user belonging to this token no longer exists",
-        401
-      )
-    );
+    return next(new AppError("The user belonging to this session no longer exists", 401));
   }
 
   if (user.accountStatus !== "active") {
-    const inactiveError = new AppError(
-      `Your account is currently ${user.accountStatus}`,
-      403
-    );
+    const inactive = new AppError(`Your account is currently ${user.accountStatus}`, 403);
 
     // Lets the client sign the person out instead of leaving a dashboard
     // where every request fails.
-    inactiveError.code = "ACCOUNT_INACTIVE";
+    inactive.code = "ACCOUNT_INACTIVE";
 
-    return next(inactiveError);
+    return next(inactive);
   }
 
   req.user = user;
+  next();
+});
+
+/*
+|--------------------------------------------------------------------------
+| optionalAuth — signed-in users get req.user, visitors pass through
+|--------------------------------------------------------------------------
+|
+| A missing, invalid or expired token just means "visitor". A database
+| error is NOT swallowed: treating it as "signed out" would make
+| /auth/session delete a perfectly good cookie during a DB hiccup.
+*/
+
+exports.optionalAuth = asyncHandler(async (req, res, next) => {
+  const userId = readSessionUserId(req);
+
+  if (userId) {
+    const user = await User.findById(userId);
+
+    if (user?.accountStatus === "active") {
+      req.user = user;
+    }
+  }
 
   next();
 });
 
-exports.authorize = (...roles) => {
-  return (req, res, next) => {
+/*
+|--------------------------------------------------------------------------
+| authorize — the signed-in user must have one of these roles
+|--------------------------------------------------------------------------
+*/
+
+exports.authorize =
+  (...roles) =>
+  (req, res, next) => {
     if (!req.user) {
-      return next(
-        new AppError("Authentication is required", 401)
-      );
+      return next(new AppError("Authentication is required", 401));
     }
 
     if (!roles.includes(req.user.role)) {
-      return next(
-        new AppError(
-          "You do not have permission to perform this action",
-          403
-        )
-      );
+      return next(new AppError("You do not have permission to perform this action", 403));
     }
 
     next();
   };
-};
-
-exports.optionalAuth = asyncHandler(
-  async (req, res, next) => {
-    const token =
-      getSessionToken(req);
-
-    if (!token) {
-      return next();
-    }
-
-    let decoded;
-
-    try {
-      decoded =
-        jwt.verify(
-          token,
-          process.env.JWT_SECRET
-        );
-    } catch (error) {
-      // An invalid or expired token is just an anonymous visitor here.
-      return next();
-    }
-
-    // Database errors are NOT treated as "signed out": that would make
-    // /auth/session delete a perfectly good cookie during a DB hiccup.
-    const user =
-      await User.findById(
-        decoded.userId
-      );
-
-    if (
-      user &&
-      user.accountStatus ===
-        "active"
-    ) {
-      req.user = user;
-    }
-
-    next();
-  }
-);

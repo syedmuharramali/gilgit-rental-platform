@@ -13,14 +13,14 @@ import {
 
 function FavoriteButton({ propertyId, className = '', showLabel = false }) {
   const { t } = useTranslation()
-  const token = useSelector((state) => state.auth.isAuthenticated)
+  const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
   const navigate = useNavigate()
   const location = useLocation()
   // Every card shares this one list. With the app-wide refetch-on-mount, each
   // card mounting re-downloaded it and set every heart spinning; the add and
   // remove mutations already refresh it when it actually changes.
-  const listQuery = useGetFavoritesQuery(undefined, { skip: !token || showLabel, refetchOnMountOrArgChange: false })
-  const statusQuery = useCheckFavoriteQuery(propertyId, { skip: !token || !propertyId || !showLabel })
+  const listQuery = useGetFavoritesQuery(undefined, { skip: !isAuthenticated || showLabel, refetchOnMountOrArgChange: false })
+  const statusQuery = useCheckFavoriteQuery(propertyId, { skip: !isAuthenticated || !propertyId || !showLabel })
   const [addFavorite, { isLoading: isAdding }] = useAddFavoriteMutation()
   const [removeFavorite, { isLoading: isRemoving }] = useRemoveFavoriteMutation()
 
@@ -33,7 +33,7 @@ function FavoriteButton({ propertyId, className = '', showLabel = false }) {
     event.preventDefault()
     event.stopPropagation()
 
-    if (!token) {
+    if (!isAuthenticated) {
       navigate('/login', { state: { from: `${location.pathname}${location.search}` } })
       return
     }

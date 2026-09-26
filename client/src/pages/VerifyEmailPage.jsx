@@ -34,7 +34,7 @@ export default function VerifyEmailPage() {
       }
 
       setState('failed')
-      setMessage(result.payload || 'This confirmation link could not be used')
+      setMessage(result.payload)
     })
   }, [token, dispatch, navigate])
 

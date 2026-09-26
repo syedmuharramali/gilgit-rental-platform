@@ -47,10 +47,10 @@ function LoginPage() {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { status, error, isAuthenticated: token, user, pendingVerificationEmail } = useSelector((state) => state.auth)
+  const { status, error, isAuthenticated, user, pendingVerificationEmail } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const isLoading = status === 'loading'
-  const shouldCheckVerification = Boolean(token && user && user.role !== 'admin')
+  const shouldCheckVerification = Boolean(isAuthenticated && user && user.role !== 'admin')
   const {
     data: verificationData,
     isLoading: isVerificationLoading,
@@ -63,7 +63,7 @@ function LoginPage() {
   const { register, handleSubmit, formState: { errors } } = useForm({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
 
   useEffect(() => {
-    if (!token || !user) return
+    if (!isAuthenticated || !user) return
 
     if (user.role !== 'admin') {
       if (
@@ -80,7 +80,7 @@ function LoginPage() {
       { replace: true },
     )
   }, [
-    token,
+    isAuthenticated,
     user,
     verificationData,
     isVerificationLoading,

@@ -1,73 +1,68 @@
 const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 /*
 |--------------------------------------------------------------------------
-| Session cookie + CSRF token
+| Sessions: everything about the sign-in cookie lives here
 |--------------------------------------------------------------------------
 |
-| The sign-in token (a JWT) lives only in an httpOnly cookie. Page scripts
-| can't read it, so a cross-site-scripting bug can no longer steal it the
-| way it could from localStorage.
+| 1. Signing in creates a JWT and stores it ONLY in an httpOnly cookie.
+|    Page scripts can't read it, so an XSS bug can't steal it.
 |
-| Because the browser now attaches the cookie by itself, a request forged
-| from another site would carry it too. So every state-changing request
-| must also send an X-CSRF-Token header. That value is an HMAC of the
-| session token: the server can recompute it without storing anything,
-| and another site can't obtain it (CORS stops it reading our responses,
-| and the cookie itself is unreadable).
+| 2. Because the browser sends that cookie automatically, every
+|    state-changing request must also carry an X-CSRF-Token header. The
+|    token is an HMAC of the session JWT: the server can recompute it
+|    without storing anything, and another site can't obtain it.
 |
 | Environment
-|   COOKIE_SAME_SITE   lax (default) | strict | none
-|                      Use "none" only when the API and the website are on
-|                      different sites (e.g. *.onrender.com + *.vercel.app).
-|   COOKIE_SECURE      true | false. Defaults to true in production, and is
-|                      forced on with SameSite=None (browsers require it).
+|   COOKIE_SAME_SITE  lax (default) | strict | none
+|                     "none" only if the website and API are on different
+|                     sites; the cookie is then always Secure.
+|   COOKIE_SECURE     true | false (default: true in production)
 |--------------------------------------------------------------------------
 */
 
 const SESSION_COOKIE = "gr_session";
 const CSRF_HEADER = "x-csrf-token";
-const SESSION_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-const baseCookieOptions = () => {
-  const sameSiteSetting = String(process.env.COOKIE_SAME_SITE || "lax").toLowerCase();
-  const sameSite = ["lax", "strict", "none"].includes(sameSiteSetting)
-    ? sameSiteSetting
-    : "lax";
+// One lifetime for both the JWT and the cookie that carries it.
+const SESSION_DAYS = 7;
+const SESSION_MAX_AGE_MS = SESSION_DAYS * 24 * 60 * 60 * 1000;
+
+/*
+|--------------------------------------------------------------------------
+| Cookie
+|--------------------------------------------------------------------------
+*/
+
+const cookieOptions = () => {
+  const sameSiteSetting = String(process.env.COOKIE_SAME_SITE || "lax").trim().toLowerCase();
+  const sameSite = ["lax", "strict", "none"].includes(sameSiteSetting) ? sameSiteSetting : "lax";
 
   // An empty COOKIE_SECURE= line (as in .env.example) counts as unset.
   const secureSetting = String(process.env.COOKIE_SECURE ?? "").trim().toLowerCase();
-
   const secure =
     sameSite === "none" ||
-    (secureSetting
-      ? secureSetting === "true"
-      : process.env.NODE_ENV === "production");
+    (secureSetting ? secureSetting === "true" : process.env.NODE_ENV === "production");
 
-  return {
-    httpOnly: true,
-    secure,
-    sameSite,
-    path: "/",
-  };
-};
-
-const setSessionCookie = (res, token) => {
-  res.cookie(SESSION_COOKIE, token, {
-    ...baseCookieOptions(),
-    maxAge: SESSION_MAX_AGE_MS,
-  });
-};
-
-const clearSessionCookie = (res) => {
-  // Must match the attributes it was set with, or the browser keeps it.
-  res.clearCookie(SESSION_COOKIE, baseCookieOptions());
+  return { httpOnly: true, secure, sameSite, path: "/" };
 };
 
 const getSessionToken = (req) => {
   const token = req.cookies?.[SESSION_COOKIE];
-  return typeof token === "string" && token.length > 0 ? token : null;
+  return typeof token === "string" && token ? token : null;
 };
+
+const clearSessionCookie = (res) => {
+  // Must use the same attributes it was set with, or the browser keeps it.
+  res.clearCookie(SESSION_COOKIE, cookieOptions());
+};
+
+/*
+|--------------------------------------------------------------------------
+| CSRF token
+|--------------------------------------------------------------------------
+*/
 
 const csrfTokenFor = (sessionToken) =>
   crypto
@@ -76,26 +71,50 @@ const csrfTokenFor = (sessionToken) =>
     .digest("base64url");
 
 const isValidCsrfToken = (sessionToken, provided) => {
-  if (!sessionToken || typeof provided !== "string" || !provided) {
-    return false;
-  }
+  if (!sessionToken || typeof provided !== "string" || !provided) return false;
 
   const expected = Buffer.from(csrfTokenFor(sessionToken));
   const actual = Buffer.from(provided);
 
-  return (
-    expected.length === actual.length &&
-    crypto.timingSafeEqual(expected, actual)
-  );
+  return expected.length === actual.length && crypto.timingSafeEqual(expected, actual);
+};
+
+/*
+|--------------------------------------------------------------------------
+| Start / read a session
+|--------------------------------------------------------------------------
+*/
+
+// Signs the user in: sets the cookie, returns the CSRF token for the page.
+const startSession = (res, userId) => {
+  const token = jwt.sign({ userId }, process.env.JWT_SECRET, {
+    expiresIn: `${SESSION_DAYS}d`,
+  });
+
+  res.cookie(SESSION_COOKIE, token, { ...cookieOptions(), maxAge: SESSION_MAX_AGE_MS });
+
+  return csrfTokenFor(token);
+};
+
+// The user id inside a valid session token, or null if missing/invalid/expired.
+const readSessionUserId = (req) => {
+  const token = getSessionToken(req);
+  if (!token) return null;
+
+  try {
+    return jwt.verify(token, process.env.JWT_SECRET).userId || null;
+  } catch {
+    return null;
+  }
 };
 
 module.exports = {
   SESSION_COOKIE,
   CSRF_HEADER,
-  SESSION_MAX_AGE_MS,
-  setSessionCookie,
-  clearSessionCookie,
   getSessionToken,
+  clearSessionCookie,
   csrfTokenFor,
   isValidCsrfToken,
+  startSession,
+  readSessionUserId,
 };

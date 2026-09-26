@@ -1,12 +1,5 @@
-import i18n from '../../i18n/config'
-import api from '../../services/api'
+import api, { toRequestError } from '../../services/api'
 import { baseApi } from '../api/baseApi'
-
-const toUploadError = (error) => ({
-  status: error.response?.status || 'CUSTOM_ERROR',
-  data: error.response?.data || { message: error.message || i18n.t('common.uploadFailed') },
-  error: error.message || i18n.t('common.uploadFailed'),
-})
 
 export const propertiesApi = baseApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -74,7 +67,7 @@ export const propertiesApi = baseApi.injectEndpoints({
 
           return { data: response.data }
         } catch (error) {
-          return { error: toUploadError(error) }
+          return { error: toRequestError(error) }
         }
       },
       invalidatesTags: (_result, _error, { id }) => [

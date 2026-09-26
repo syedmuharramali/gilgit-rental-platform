@@ -27,14 +27,14 @@ function RegisterPage() {
   const { t } = useTranslation()
   const dispatch = useDispatch()
   const navigate = useNavigate()
-  const { status, error, isAuthenticated: token } = useSelector((state) => state.auth)
+  const { status, error, isAuthenticated } = useSelector((state) => state.auth)
   const [showPassword, setShowPassword] = useState(false)
   const [createdEmail, setCreatedEmail] = useState(null)
   const isLoading = status === 'loading'
   const { register, handleSubmit, watch, formState: { errors } } = useForm({ resolver: zodResolver(registerSchema), defaultValues: { name: '', email: '', password: '' } })
   const password = watch('password') || ''
 
-  useEffect(() => { if (token) navigate('/dashboard', { replace: true }) }, [token, navigate])
+  useEffect(() => { if (isAuthenticated) navigate('/dashboard', { replace: true }) }, [isAuthenticated, navigate])
   useEffect(() => { if (error) toast.error(error); return () => dispatch(clearAuthError()) }, [error, dispatch])
 
   const rules = useMemo(() => [[t('auth.rule.length'), password.length >= 8], [t('auth.rule.uppercase'), /[A-Z]/.test(password)], [t('auth.rule.lowercase'), /[a-z]/.test(password)], [t('auth.rule.number'), /[0-9]/.test(password)]], [password, t])
