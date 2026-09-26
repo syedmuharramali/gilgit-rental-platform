@@ -8,7 +8,7 @@ function ProtectedRoute({ children }) {
   const { t } = useTranslation()
   const location = useLocation()
   const dispatch = useDispatch()
-  const { isAuthenticated, sessionChecked, sessionUnavailable, sessionStatus } = useSelector((state) => state.auth)
+  const { isAuthenticated, sessionChecked, sessionUnavailable, sessionStatus, sessionError } = useSelector((state) => state.auth)
 
   // Couldn't reach the server to check the session: offer a retry rather
   // than sending a signed-in person to the login page.
@@ -17,7 +17,10 @@ function ProtectedRoute({ children }) {
       <div className="grid min-h-screen place-items-center bg-[#070b14] px-5 text-center text-white">
         <div>
           <p className="text-lg font-black">{t('common.serverUnreachable')}</p>
-          <p className="mt-2 text-sm text-white/50">{t('common.networkError')}</p>
+          <p className="mt-2 text-sm text-white/50">{sessionError?.message || t('common.networkError')}</p>
+          {/* Exactly what was tried, to tell a wrong API URL or a CORS block from a server error. */}
+          {sessionError?.url && <p className="force-ltr mt-3 font-mono text-xs text-white/35">GET {sessionError.url} → {sessionError.status ?? t('common.noResponse')}</p>}
+          <p className="mt-3 text-xs text-white/35">{t('common.retryingAutomatically')}</p>
           <button type="button"disabled={sessionStatus === 'loading'} onClick={() => dispatch(hydrateCurrentUser())} className="mt-5 rounded-full bg-white px-5 py-2.5 text-sm font-black text-[#07101e] disabled:opacity-50">{t('common.tryAgain')}</button>
         </div>
       </div>

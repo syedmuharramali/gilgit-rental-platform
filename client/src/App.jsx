@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
+import { useEffect, useRef } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
 import { hydrateCurrentUser } from './features/auth/authSlice'
@@ -46,11 +46,39 @@ const protectedElement = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 
 function App() {
   const dispatch = useDispatch()
+  const sessionUnavailable = useSelector((state) => state.auth.sessionUnavailable)
+  const sessionChecked = useSelector((state) => state.auth.sessionChecked)
+  const retries = useRef(0)
+
   // The session cookie is invisible to the page, so always ask the server
   // once on load who is signed in.
   useEffect(() => {
     dispatch(hydrateCurrentUser())
   }, [dispatch])
+
+  // If that failed (server still starting, restarting after a code change,
+  // brief network drop), keep trying on our own: 2 s, 4 s, 8 s … up to 30 s
+  // apart, and straight away when the tab regains focus or the network is
+  // back. Otherwise one unlucky moment left the page stuck until a reload.
+  useEffect(() => {
+    if (sessionChecked) {
+      retries.current = 0
+      return undefined
+    }
+    if (!sessionUnavailable) return undefined
+
+    const retry = () => dispatch(hydrateCurrentUser())
+    const delay = Math.min(2000 * 2 ** retries.current, 30000)
+    retries.current += 1
+    const timer = setTimeout(retry, delay)
+    window.addEventListener('focus', retry)
+    window.addEventListener('online', retry)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('focus', retry)
+      window.removeEventListener('online', retry)
+    }
+  }, [sessionUnavailable, sessionChecked, dispatch])
 
   return (
     <Routes>

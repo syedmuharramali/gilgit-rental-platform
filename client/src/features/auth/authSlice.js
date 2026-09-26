@@ -122,7 +122,14 @@ export const hydrateCurrentUser = createAsyncThunk(
       setCsrfToken(data.data?.csrfToken)
       return { user: data.data?.user || null }
     } catch (error) {
-      return rejectWithValue({ message: getErrorMessage(error, 'Unable to reach the server') })
+      // Keep what actually happened, so the screen can say it instead of a
+      // generic "can't reach the server" (wrong URL, CORS block, 404, 500…).
+      const config = error.config || {}
+      return rejectWithValue({
+        message: getErrorMessage(error, 'Unable to reach the server'),
+        status: error.response?.status ?? null,
+        url: `${config.baseURL || ''}${config.url || ''}`,
+      })
     }
   },
 )
@@ -166,6 +173,7 @@ const initialState = {
   sessionChecked: false,
   // The server couldn't be reached while checking the session.
   sessionUnavailable: false,
+  sessionError: null,
   sessionStatus: 'idle',
   // Bumped on every sign-in and sign-out, so a slow session check that
   // started before one can tell its answer is out of date.
@@ -252,6 +260,7 @@ const authSlice = createSlice({
       })
       .addCase(hydrateCurrentUser.fulfilled, (state, action) => {
         state.sessionStatus = 'idle'
+        state.sessionError = null
         state.sessionChecked = true
         state.sessionUnavailable = false
         if (action.payload.stale) return
@@ -260,11 +269,13 @@ const authSlice = createSlice({
         state.sessionChecked = true
         state.sessionUnavailable = false
       })
-      .addCase(hydrateCurrentUser.rejected, (state) => {
-        // Server unreachable: we don't know yet. Protected pages offer a
-        // retry instead of sending someone who is signed in to the login page.
+      .addCase(hydrateCurrentUser.rejected, (state, action) => {
+        // Server unreachable: we don't know yet. App.jsx retries on its own;
+        // protected pages show what failed instead of sending someone who is
+        // signed in to the login page.
         state.sessionStatus = 'idle'
         state.sessionUnavailable = true
+        state.sessionError = action.payload || null
       })
       .addCase(updateProfile.fulfilled, (state, action) => {
         state.user = action.payload
