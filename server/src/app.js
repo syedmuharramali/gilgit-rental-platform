@@ -151,6 +151,17 @@ if (
   );
 }
 
+// Log first, so requests rejected by CORS, the rate limiter or the CSRF
+// check still show up in the terminal during development.
+if (
+  process.env.NODE_ENV ===
+    "development"
+) {
+  app.use(
+    morgan("dev")
+  );
+}
+
 app.use(
   helmet()
 );
@@ -205,6 +216,12 @@ app.use(
           true
         );
       }
+
+      // Say it out loud: the browser only reports "network error", and the
+      // request never reaches the request log, so this was invisible.
+      console.warn(
+        `[CORS] Blocked a request from ${origin}. Allowed origins: ${allowedOrigins.join(", ") || "(none)"}. Set CLIENT_URL (or CLIENT_URLS) in server/.env to the address the website runs on.`
+      );
 
       return callback(
         new AppError(
@@ -352,14 +369,6 @@ app.use(
   }
 );
 
-if (
-  process.env.NODE_ENV ===
-    "development"
-) {
-  app.use(
-    morgan("dev")
-  );
-}
 
 app.get(
   "/api/health",
