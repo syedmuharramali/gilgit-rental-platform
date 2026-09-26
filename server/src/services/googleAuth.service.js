@@ -41,7 +41,50 @@ const parseMaxAge = (
   return seconds;
 };
 
+// Development-only diagnostics: why a Google sign-in was refused.
+const logGoogleIssue = (message) => {
+  if (process.env.NODE_ENV !== "production") {
+    console.warn(`[Google sign-in] ${message}`);
+  }
+};
+
+const JWKS_HARD_TIMEOUT_MS = 8000;
+
+/*
+| Fetch Google's signing keys, but never wait longer than 8 s in total.
+| The socket timeout alone doesn't cover every stall (e.g. a response
+| that starts and then stops), and a stuck fetch here used to leave every
+| later Google sign-in waiting on it forever.
+*/
 const fetchGoogleJwks = () =>
+  Promise.race([
+    fetchGoogleJwksOnce(),
+    new Promise((_, reject) =>
+      setTimeout(
+        () =>
+          reject(
+            Object.assign(
+              new Error("no answer within 8 seconds"),
+              { hardTimeout: true }
+            )
+          ),
+        JWKS_HARD_TIMEOUT_MS
+      ).unref()
+    ),
+  ]).catch((error) => {
+    logGoogleIssue(
+      `Could not download Google's signing keys from ${GOOGLE_JWKS_URL}: ${error?.cause?.message || error?.message}. Check that this computer can reach www.googleapis.com.`
+    );
+
+    throw error instanceof AppError
+      ? error
+      : new AppError(
+          "Google authentication is temporarily unavailable",
+          503
+        );
+  });
+
+const fetchGoogleJwksOnce = () =>
   new Promise(
     (resolve, reject) => {
       const request =
@@ -75,6 +118,12 @@ const fetchGoogleJwks = () =>
 
             response.setEncoding(
               "utf8"
+            );
+
+            // A connection dropped mid-body must fail, not hang.
+            response.on("error", reject);
+            response.on("aborted", () =>
+              reject(new Error("Google closed the connection early"))
             );
 
             response.on(
@@ -144,9 +193,12 @@ const fetchGoogleJwks = () =>
           }
 
           reject(
-            new AppError(
-              "Google authentication is temporarily unavailable",
-              503
+            Object.assign(
+              new AppError(
+                "Google authentication is temporarily unavailable",
+                503
+              ),
+              { cause: error }
             )
           );
         }
@@ -252,6 +304,9 @@ const getGooglePublicKey =
       cachedKeys.get(kid);
 
     if (!key) {
+      logGoogleIssue(
+        `Google's token was signed with an unknown key (kid ${kid}).`
+      );
       throw new AppError(
         "Invalid Google credential",
         401
@@ -315,7 +370,20 @@ const verifyGoogleCredential =
               .GOOGLE_CLIENT_ID,
         }
       );
-    } catch (_) {
+    } catch (error) {
+      // The usual cause is two different client IDs: the website asks
+      // Google for a token for VITE_GOOGLE_CLIENT_ID, the server only
+      // accepts GOOGLE_CLIENT_ID.
+      if (error?.name === "JsonWebTokenError" && /audience/i.test(error.message)) {
+        logGoogleIssue(
+          `Client ID mismatch. The token was issued for "${decoded.payload?.aud}", but server/.env GOOGLE_CLIENT_ID is "${process.env.GOOGLE_CLIENT_ID}". Use the same Web client ID in client/.env (VITE_GOOGLE_CLIENT_ID) and server/.env (GOOGLE_CLIENT_ID).`
+        );
+      } else {
+        logGoogleIssue(
+          `Token rejected: ${error?.message}. If it says "jwt expired", check this computer's clock and time zone.`
+        );
+      }
+
       throw new AppError(
         "Invalid or expired Google credential",
         401
