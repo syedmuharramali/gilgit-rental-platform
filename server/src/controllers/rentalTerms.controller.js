@@ -87,8 +87,11 @@ const parseTermsPayload = ({ body, application, property }) => {
     ? 1 + (application.roommates?.length || 0)
     : 1;
 
-  if (!Number.isInteger(occupants) || occupants < minimumOccupants || occupants > property.maxOccupants) {
-    throw new AppError(`Occupants must be between ${minimumOccupants} and ${property.maxOccupants}`, 400);
+  // No maxOccupants means the owner set no limit (20 is the form's cap).
+  const maximumOccupants = property.maxOccupants || 20;
+
+  if (!Number.isInteger(occupants) || occupants < minimumOccupants || occupants > maximumOccupants) {
+    throw new AppError(`Occupants must be between ${minimumOccupants} and ${maximumOccupants}`, 400);
   }
 
   return {

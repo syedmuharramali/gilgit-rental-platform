@@ -12,7 +12,6 @@ The platform connects renters with verified property owners for hostels, rooms, 
 - Owner identity verification (CNIC + selfie, reviewed by an admin)
 - Property submission and admin moderation
 - Property listings with search, filters, and sorting
-- Smart property matching using transparent weighted rules
 - Winter & utility facts on every listing (heating, hot water, backup power, water, road and winter access), searchable with filters
 - Saved properties (favorites)
 - Individual and group rental applications

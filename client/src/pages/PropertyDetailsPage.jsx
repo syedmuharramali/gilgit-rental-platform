@@ -14,11 +14,15 @@ import {
   Plus,
   Ruler,
   Clock,
+  Droplets,
+  Route,
+  Snowflake,
   DoorOpen,
   ShieldCheck,
   Star,
   Trash2,
   UsersRound,
+  Utensils,
   Waves,
   X,
   Zap,
@@ -51,10 +55,22 @@ import { useGetPropertyReviewsQuery } from '../features/reviews/reviewsApi'
 import i18n from '../i18n/config'
 import { localToday } from '../utils/formatters'
 import { isShopType, isStayType } from '../utils/propertyTypes'
+import { aboutFacts, utilityFacts } from '../utils/listingFacts'
 import StayBookingPanel from '../components/properties/StayBookingPanel'
 
 const errorMessage = (error) => error?.data?.message || error?.error || i18n.t('common.somethingWrong')
 const blankRoommate = () => ({ name: '', email: '', phone: '' })
+
+
+const UTILITY_ICONS = {
+  heating: Flame,
+  hotWater: Waves,
+  power: Zap,
+  waterSources: Droplets,
+  waterReliability: Droplets,
+  roadAccess: Route,
+  winterAccess: Snowflake,
+}
 
 function PropertyDetailsPage() {
   const { t } = useTranslation()
@@ -92,6 +108,8 @@ function PropertyDetailsPage() {
   const isShop = isShopType(property.propertyType)
   // Hotels and guest houses are booked by date instead of applied for.
   const isStay = isStayType(property.propertyType)
+  const isHostel = property.propertyType === 'hostel' || property.propertyType === 'hostel_bed'
+  const typeFacts = aboutFacts(property, t)
 
   const requireAuth = (next) => {
     if (!isAuthenticated) return navigate('/login', { state: { from: `/properties/${id}` } })
@@ -229,15 +247,17 @@ function PropertyDetailsPage() {
                 ? [[DoorOpen, t('card.roomTypes', { count: property.roomTypes?.length || 0 })], [UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })], [Clock, t('stay.checkInAt', { time: property.checkInTime || '14:00' })], [Clock, t('stay.checkOutAt', { time: property.checkOutTime || '12:00' })]]
                 : isShop
                 ? [[Ruler, property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : t('details.areaUnknown')], [Bath, t('details.washroomsCount', { count: property.bathrooms || 0 })], [CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]
-                : [[BedDouble, t('details.bedroomsCount', { count: property.bedrooms || 0 })],[Bath, t('details.bathroomsCount', { count: property.bathrooms || 0 })],[UsersRound, t('details.upTo', { count: property.maxOccupants || 1 })],[CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]).map(([Icon,label]) => <motion.div key={label} whileHover={{ y: -4 }} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-cyan-300" /><p className="mt-3 text-sm font-black">{label}</p></motion.div>)}
+                : isHostel
+                ? [[BedDouble, property.hostelFor ? t(`details.hostelFor.${property.hostelFor}`) : pretty(property.propertyType)], [UsersRound, property.bedsPerRoom ? t('details.bedsPerRoom', { count: property.bedsPerRoom }) : property.maxOccupants ? t('details.upTo', { count: property.maxOccupants }) : t('details.noOccupantLimit')], [Utensils, property.mealsIncluded ? t('details.mealsIncluded') : property.mealsIncluded === false ? t('details.noMeals') : t('details.mealsNotSaid')], [CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]
+                : [[BedDouble, property.bedrooms ? t('details.bedroomsCount', { count: property.bedrooms }) : pretty(property.propertyType)],[Bath, t('details.bathroomsCount', { count: property.bathrooms || 0 })],[UsersRound, property.maxOccupants ? t('details.upTo', { count: property.maxOccupants }) : t('details.noOccupantLimit')],[CalendarDays, t('details.monthStay', { count: property.minimumStayMonths || 1 })]]).map(([Icon,label]) => <motion.div key={label} whileHover={{ y: -4 }} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-cyan-300" /><p className="mt-3 text-sm font-black">{label}</p></motion.div>)}
             </div>
 
-            <div className="py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('details.theProperty')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.aboutThisPlace')}</h2><p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-400">{property.description}</p></div>
+            <div className="py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('details.theProperty')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.aboutThisPlace')}</h2><p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-400">{property.description}</p>{typeFacts.length > 0 && <dl className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{typeFacts.map(([label, value]) => <div key={label} className="rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3"><dt className="text-[11px] font-bold text-slate-500">{label}</dt><dd className="mt-1 text-sm font-black text-white">{value}</dd></div>)}</dl>}</div>
 
 
-            <div className="border-t border-white/[0.08] py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">{t('details.included')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.amenities')}</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{(property.amenities || []).map((amenity) => <div key={amenity._id} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm font-semibold text-slate-300"><CheckCircle2 className="h-4 w-4 text-cyan-300" /> {amenityLabel(amenity)}</div>)}</div></div>
+            {property.amenities?.length > 0 && <div className="border-t border-white/[0.08] py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">{t('details.included')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.amenities')}</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{(property.amenities || []).map((amenity) => <div key={amenity._id} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm font-semibold text-slate-300"><CheckCircle2 className="h-4 w-4 text-cyan-300" /> {amenityLabel(amenity)}</div>)}</div></div>}
 
-            <div className="grid gap-3 border-t border-white/[0.08] py-9 sm:grid-cols-3">{[[Flame,t('details.heating'),property.livingInfo?.heatingAvailable ? t('details.available') : t('details.notListed')],[Waves,t('details.hotWater'),property.livingInfo?.hotWaterAvailable ? t('details.available') : t('details.notListed')],[Zap,t('details.powerBackup'),property.livingInfo?.electricityBackup ? t('details.available') : t('details.notListed')]].map(([Icon,label,value]) => <div key={label} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-violet-300" /><p className="mt-3 text-xs text-slate-500">{label}</p><p className="mt-1 text-sm font-black">{value}</p></div>)}</div>
+            <div className="border-t border-white/[0.08] py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('details.winterEyebrow')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.winterTitle')}</h2><div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{utilityFacts(property, t).map(([key, label, value]) => { const Icon = UTILITY_ICONS[key] || CheckCircle2; return <div key={key} className="rounded-[22px] border border-white/[0.08] bg-white/[0.035] p-4"><Icon className="h-4 w-4 text-violet-300" /><p className="mt-3 text-xs text-slate-500">{label}</p><p className="mt-1 text-sm font-black">{value}</p></div> })}</div></div>
 
             <div className="border-t border-white/[0.08] py-9"><h2 className="text-2xl font-black tracking-[-0.04em]">{t('details.location')}</h2><p className="mt-2 text-sm text-slate-500">{[property.address?.street, property.address?.area, property.address?.city, property.address?.landmark].filter(Boolean).join(' · ')}</p><div className="mt-5 overflow-hidden rounded-[28px] border border-white/[0.08]"><PropertyMap latitude={property.address?.latitude} longitude={property.address?.longitude} title={property.title} className="h-[360px]" /></div></div>
 

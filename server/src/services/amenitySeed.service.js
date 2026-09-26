@@ -20,8 +20,8 @@ const toSlug = (name) =>
 | Ensure default amenities exist
 |--------------------------------------------------------------------------
 |
-| The property editor requires at least one amenity, so an empty
-| Amenity collection makes it impossible to list a property.
+| Amenities are optional on a listing, but an empty Amenity collection
+| leaves owners nothing to pick in the editor.
 |
 | mode "missing"   -> insert only amenities that do not exist yet
 |                     (never overwrites admin edits; safe on every boot)

@@ -1,9 +1,10 @@
 const mongoose = require("mongoose");
-const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isLegacyPropertyType, isShopType, isStayType } = require("../data/propertyTypes");
+const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isLegacyPropertyType, isStayType } = require("../data/propertyTypes");
 const Booking = require("../models/booking.model");
 const { startOfGilgitToday } = require("../utils/gilgitDate");
 const { validateStayRange, maxRoomsBookedPerNight } = require("../utils/stayDates");
 const { filterStaysWithRoom } = require("../services/booking.service");
+const { HOSTEL_FOR, TENANT_TYPES, firstMissingField } = require("../data/listingFields");
 
 const {
   uploadPublicImage,
@@ -237,6 +238,13 @@ const validateAmenities = async (amenityIds) => {
   return uniqueIds;
 };
 
+const MISSING_FIELD_MESSAGES = {
+  bedrooms: "Add the number of bedrooms before submitting",
+  bathrooms: "Add the number of bathrooms before submitting",
+  size: "Add the shop's floor area before submitting it for review",
+  hostelFor: "Say whether the hostel is for boys or girls before submitting",
+};
+
 /*
 |--------------------------------------------------------------------------
 | Create property
@@ -295,6 +303,27 @@ exports.createProperty = asyncHandler(
 
         maxOccupants:
           req.body.maxOccupants,
+
+        tenantTypes:
+          req.body.tenantTypes,
+
+        separateEntrance:
+          req.body.separateEntrance,
+
+        separateMeters:
+          req.body.separateMeters,
+
+        hostelFor:
+          req.body.hostelFor,
+
+        bedsPerRoom:
+          req.body.bedsPerRoom,
+
+        mealsIncluded:
+          req.body.mealsIncluded,
+
+        marketName:
+          req.body.marketName,
 
         amenities,
 
@@ -1075,6 +1104,56 @@ exports.getPublishedProperties =
 
       /*
       |--------------------------------------------------------------------------
+      | Who the renter is: ?rentTo=families | bachelors | students
+      |--------------------------------------------------------------------------
+      |
+      | Listings that say nothing about it rent to anyone, so they match too.
+      */
+
+      if (req.query.rentTo) {
+        if (!TENANT_TYPES.includes(req.query.rentTo)) {
+          return next(
+            new AppError(
+              "rentTo must be families, bachelors or students",
+              400
+            )
+          );
+        }
+
+        filter.$and = [
+          ...(filter.$and || []),
+          {
+            $or: [
+              { tenantTypes: req.query.rentTo },
+              { tenantTypes: { $size: 0 } },
+              { tenantTypes: { $exists: false } },
+            ],
+          },
+        ];
+      }
+
+      /*
+      |--------------------------------------------------------------------------
+      | Hostels: ?hostelFor=boys | girls
+      |--------------------------------------------------------------------------
+      */
+
+      if (req.query.hostelFor) {
+        if (!HOSTEL_FOR.includes(req.query.hostelFor)) {
+          return next(
+            new AppError(
+              "hostelFor must be boys or girls",
+              400
+            )
+          );
+        }
+
+        filter.hostelFor =
+          req.query.hostelFor;
+      }
+
+      /*
+      |--------------------------------------------------------------------------
       | Search
       |--------------------------------------------------------------------------
       */
@@ -1557,6 +1636,13 @@ exports.updateProperty =
         "totalArea",
         "furnishedStatus",
         "maxOccupants",
+        "tenantTypes",
+        "separateEntrance",
+        "separateMeters",
+        "hostelFor",
+        "bedsPerRoom",
+        "mealsIncluded",
+        "marketName",
         "amenities",
         "address",
         "livingInfo",
@@ -2499,24 +2585,6 @@ exports.submitPropertyForReview =
       }
 
       /*
-      |--------------------------------------------------------------------------
-      | Ensure amenities exist
-      |--------------------------------------------------------------------------
-      */
-
-      if (
-        !property.amenities ||
-        property.amenities.length === 0
-      ) {
-        return next(
-          new AppError(
-            "Select at least one amenity before submitting the property",
-            400
-          )
-        );
-      }
-
-      /*
       | A stay can't be booked without at least one room type.
       */
 
@@ -2535,23 +2603,18 @@ exports.submitPropertyForReview =
       }
 
       /*
-      | Floor area is what a shopkeeper compares shops by.
+      | Each type has a few details renters can't do without (bedrooms for a
+      | house, boys/girls for a hostel, floor area for a shop).
       */
 
-      if (
-        isShopType(
-          property.propertyType
-        ) &&
-        !(
-          Number(
-            property.totalArea
-              ?.value
-          ) > 0
-        )
-      ) {
+      const missingField =
+        firstMissingField(property);
+
+      if (missingField) {
         return next(
           new AppError(
-            "Add the shop's floor area before submitting it for review",
+            MISSING_FIELD_MESSAGES[missingField] ||
+              "Some required details are missing. Open the listing and complete the About step.",
             400
           )
         );

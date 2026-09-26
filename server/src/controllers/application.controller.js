@@ -479,9 +479,11 @@ exports.createApplication =
         );
       }
 
+      // No maxOccupants means the owner set no limit.
       if (
+        property.maxOccupants &&
         occupants >
-        property.maxOccupants
+          property.maxOccupants
       ) {
         return next(
           new AppError(

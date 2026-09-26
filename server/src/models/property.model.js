@@ -1,5 +1,16 @@
 const mongoose = require("mongoose");
 const { ALL_PROPERTY_TYPES, isStayType } = require("../data/propertyTypes");
+const {
+  CLEARED,
+  FIXED,
+  FIELD_PATHS,
+  HEATING_TYPES,
+  HOSTEL_FOR,
+  POWER_BACKUPS,
+  TENANT_TYPES,
+  WATER_SOURCES,
+  fieldsFor,
+} = require("../data/listingFields");
 const slugify = require("slugify");
 
 /*
@@ -219,12 +230,50 @@ const propertySchema =
           "unfurnished",
       },
 
+      // null = the owner set no limit.
       maxOccupants: {
         type: Number,
 
         min: 1,
 
-        default: 1,
+        default: null,
+      },
+
+      /*
+      |--------------------------------------------------------------------------
+      | Type-specific details (see data/listingFields.js)
+      |--------------------------------------------------------------------------
+      |
+      | All optional: listings made before these existed simply don't show
+      | them. null on the yes/no ones means "not said".
+      */
+
+      // Who the owner rents to. Empty = anyone.
+      tenantTypes: {
+        type: [{ type: String, enum: TENANT_TYPES }],
+        default: [],
+      },
+
+      // Portions: own door, and own gas / electricity meters.
+      separateEntrance: { type: Boolean, default: null },
+      separateMeters: { type: Boolean, default: null },
+
+      // Hostels
+      hostelFor: { type: String, enum: [...HOSTEL_FOR, null], default: null },
+      bedsPerRoom: {
+        type: Number,
+        min: [1, "Beds per room must be at least 1"],
+        max: [20, "Beds per room cannot exceed 20"],
+        default: null,
+      },
+      mealsIncluded: { type: Boolean, default: null },
+
+      // Shops: the market or bazaar, e.g. "Rahim Market, NLI Chowk".
+      marketName: {
+        type: String,
+        trim: true,
+        maxlength: [100, "Market name is too long"],
+        default: null,
       },
 
       /*
@@ -457,6 +506,13 @@ const propertySchema =
           default: false,
         },
 
+        // Kinds of heating; kept in step with heatingAvailable on save.
+        // Empty = not said. "none" = no heating.
+        heatingTypes: {
+          type: [{ type: String, enum: HEATING_TYPES }],
+          default: [],
+        },
+
         hotWaterAvailable: {
           type: Boolean,
 
@@ -467,6 +523,19 @@ const propertySchema =
           type: Boolean,
 
           default: false,
+        },
+
+        // Kinds of backup for load-shedding; kept in step with
+        // electricityBackup on save. Empty = not said. "none" = no backup.
+        powerBackups: {
+          type: [{ type: String, enum: POWER_BACKUPS }],
+          default: [],
+        },
+
+        // Where the water comes from. Empty = not said.
+        waterSources: {
+          type: [{ type: String, enum: WATER_SOURCES }],
+          default: [],
         },
 
         waterAvailability: {
@@ -764,10 +833,77 @@ propertySchema.index({
 | (the business), however the form was filled in.
 */
 
+/*
+| When a listing gets its type (or changes it), clear what that type doesn't
+| ask for and set what it fixes. See data/listingFields.js.
+*/
+
+const applyTypeFields = (property) => {
+  const fields = fieldsFor(property.propertyType);
+
+  if (!fields) {
+    return; // retired types keep what they have
+  }
+
+  for (const [field, path] of Object.entries(FIELD_PATHS)) {
+    if (!fields.about.includes(field)) {
+      property.set(path, CLEARED[field]);
+    }
+  }
+
+  for (const [path, value] of Object.entries(FIXED[property.propertyType] || {})) {
+    property.set(path, value);
+  }
+
+  const asks = (utility) => fields.utilities.includes(utility);
+
+  if (!asks("heating")) {
+    property.set("livingInfo.heatingTypes", []);
+    property.set("livingInfo.heatingAvailable", false);
+  }
+
+  if (!asks("hotWater")) {
+    property.set("livingInfo.hotWaterAvailable", false);
+  }
+
+  if (!asks("power")) {
+    property.set("livingInfo.powerBackups", []);
+    property.set("livingInfo.electricityBackup", false);
+  }
+
+  if (!asks("waterSources")) {
+    property.set("livingInfo.waterSources", []);
+  }
+};
+
+// heatingAvailable / electricityBackup drive the search filters. They follow
+// the kinds the owner picked; listings saved before the kinds existed keep
+// their yes/no until the owner answers the new question.
+const syncUtilityFlags = (property) => {
+  const sync = (listPath, flagPath) => {
+    const list = property.get(listPath) || [];
+
+    if (list.length > 0) {
+      property.set(flagPath, list.some((value) => value !== "none"));
+    } else if (!property.isNew && property.isModified(listPath)) {
+      property.set(flagPath, false);
+    }
+  };
+
+  sync("livingInfo.heatingTypes", "livingInfo.heatingAvailable");
+  sync("livingInfo.powerBackups", "livingInfo.electricityBackup");
+};
+
 propertySchema.pre(
   "validate",
 
   function () {
+    if (this.isNew || this.isModified("propertyType")) {
+      applyTypeFields(this);
+    }
+
+    syncUtilityFlags(this);
+
     if (this.propertyType === "shop") {
       this.bedrooms = 0;
       this.maxOccupants = 1;

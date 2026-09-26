@@ -8,6 +8,7 @@ import FavoriteButton from './FavoriteButton'
 
 function PropertyCard({ property }) {
   const { t } = useTranslation()
+  const isHostel = property.propertyType === 'hostel' || property.propertyType === 'hostel_bed'
   const cover = property?.images?.find((image) => image.isCover) || property?.images?.[0]
 
   return (
@@ -95,12 +96,16 @@ function PropertyCard({ property }) {
               <span className="flex items-center gap-1.5">
                 <Ruler className="h-4 w-4 text-white/28" /> {property.totalArea?.value ? `${property.totalArea.value} ${pretty(property.totalArea.unit || 'sqft')}` : '—'}
               </span>
+            ) : isHostel ? (
+              <span className="flex items-center gap-1.5">
+                <BedDouble className="h-4 w-4 text-white/28" /> {property.hostelFor ? t(`details.hostelFor.${property.hostelFor}`) : pretty(property.propertyType)}
+              </span>
             ) : (
               <span className="flex items-center gap-1.5">
-                <BedDouble className="h-4 w-4 text-white/28" /> {t('card.beds', { count: property.bedrooms || 0 })}
+                <BedDouble className="h-4 w-4 text-white/28" /> {property.bedrooms ? t('card.beds', { count: property.bedrooms }) : pretty(property.propertyType)}
               </span>
             )}
-            {!isStayType(property.propertyType) && (
+            {!isStayType(property.propertyType) && !isHostel && (
               <span className="flex items-center gap-1.5">
                 <Bath className="h-4 w-4 text-white/28" /> {t('card.baths', { count: property.bathrooms || 0 })}
               </span>
