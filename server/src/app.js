@@ -127,11 +127,6 @@ const rentalAgreementRoutes =
     "./routes/rentalAgreement.routes"
   );
 
-const scoringRoutes =
-  require(
-    "./routes/scoring.routes"
-  );
-
 const app =
   express();
 
@@ -494,11 +489,6 @@ app.use(
 app.use(
   "/api/agreements",
   rentalAgreementRoutes
-);
-
-app.use(
-  "/api/scoring",
-  scoringRoutes
 );
 
 app.use(

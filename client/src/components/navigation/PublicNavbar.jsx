@@ -10,7 +10,6 @@ const links = [
   { to: '/properties', key: 'nav.explore' },
   { to: '/properties?category=shops', key: 'nav.shops', category: 'shops' },
   { to: '/properties?category=stays', key: 'nav.stays', category: 'stays' },
-  { to: '/living-score', key: 'nav.livingScore' },
   { to: '/about', key: 'nav.howItWorks' },
 ]
 
@@ -47,7 +46,6 @@ function PublicNavbar() {
 
         <nav className="hidden items-center gap-1 lg:flex">
           {links.map((link) => <NavLink key={link.to} to={link.to} className={({ isActive }) => navClass(linkActive(link, isActive))}>{t(link.key)}</NavLink>)}
-          {isAuthenticated && <NavLink to="/matches" className={({ isActive }) => navClass(isActive)}>{t('nav.smartMatches')}</NavLink>}
         </nav>
 
         <div className="hidden items-center gap-2 lg:flex">
@@ -65,7 +63,7 @@ function PublicNavbar() {
           <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="overflow-hidden border-t border-white/8 bg-[#080c18] lg:hidden">
             <div className="space-y-2 px-5 py-5 sm:px-8">
               {links.map((link) => <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white">{t(link.key)}</Link>)}
-              {isAuthenticated && <><Link to="/matches" onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white">{t('nav.smartMatches')}</Link><Link to="/favorites" onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white">{t('nav.savedHomes')}</Link></>}
+              {isAuthenticated && <><Link to="/favorites" onClick={() => setOpen(false)} className="block rounded-2xl px-4 py-3 text-sm font-semibold text-white/70 hover:bg-white/[0.06] hover:text-white">{t('nav.savedHomes')}</Link></>}
               <div className="pt-2"><LanguageSwitcher className="w-full justify-center" /></div>
               <div className="grid grid-cols-2 gap-2 pt-2">
                 <Link to={isAuthenticated ? '/dashboard' : '/login'} onClick={() => setOpen(false)} className="rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-center text-sm font-bold text-white">{isAuthenticated ? t('common.dashboard') : t('common.signIn')}</Link>

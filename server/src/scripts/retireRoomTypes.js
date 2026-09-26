@@ -4,7 +4,6 @@ const mongoose = require("mongoose");
 
 const connectDB = require("../config/db");
 const Property = require("../models/property.model");
-const RenterPreference = require("../models/renterPreference.model");
 const { safeCreateNotifications } = require("../services/notification.service");
 const { LEGACY_PROPERTY_TYPES } = require("../data/propertyTypes");
 
@@ -19,7 +18,6 @@ const { LEGACY_PROPERTY_TYPES } = require("../data/propertyTypes");
 | - Reserved or rented listings are left exactly as they are: a rental is in
 |   progress and they cannot be edited anyway.
 | - Every affected owner gets a notification explaining what to do.
-| - The retired types are removed from saved renter preferences.
 |
 | Safe to run again (nothing breaks), but a second run sends the owner
 | notifications again — run it once.
@@ -75,14 +73,8 @@ const retireRoomTypes = async () => {
       }))
     );
 
-    const preferences = await RenterPreference.updateMany(
-      { propertyTypes: { $in: LEGACY_PROPERTY_TYPES } },
-      { $pull: { propertyTypes: { $in: LEGACY_PROPERTY_TYPES } } }
-    );
-
     console.log(`${affected.length} listing(s) use a retired type`);
     console.log(`${unpublished} moved from published / in review back to draft`);
-    console.log(`${preferences.modifiedCount} renter preference(s) cleaned`);
 
     await mongoose.connection.close();
     process.exit(0);

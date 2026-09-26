@@ -28,9 +28,7 @@
   },
   "nav": {
     "explore": "Explore",
-    "livingScore": "Living Score",
     "howItWorks": "How it works",
-    "smartMatches": "Smart matches",
     "savedHomes": "Saved homes",
     "notifications": "Notifications",
     "searchRentals": "Search rentals",
@@ -64,14 +62,14 @@
     "popularAreas": "Popular areas",
     "statLive": "live rentals",
     "statVerified": "verified-owner listings",
-    "statSignals": "Living Score signals",
+    "statSignals": "Local living facts",
     "trust": {
       "verifiedTitle": "Verified-owner ecosystem",
       "verifiedText": "Only approved owners can publish listings.",
-      "scoreTitle": "Living Score",
-      "scoreText": "Understand heating, water, roads and winter access.",
       "journeyTitle": "One connected journey",
-      "journeyText": "Save, apply, view, message and agree with confidence."
+      "journeyText": "Save, apply, view, message and agree with confidence.",
+      "factsTitle": "Winter facts up front",
+      "factsText": "See heating, water, power backup and road access before you visit."
     },
     "freshEyebrow": "Fresh listings",
     "freshTitle": "Homes worth opening first.",
@@ -97,10 +95,6 @@
       "stayTitle": "Hotels & guest houses",
       "stayText": "Stay a night or a week, booked by date"
     },
-    "scoreEyebrow": "Gilgit Living Score",
-    "scoreTitle": "A beautiful room is only half the story.",
-    "scoreText": "Compare the local details that affect everyday comfort before you commit to a property.",
-    "scoreCta": "Understand the score",
     "signal": {
       "heating": "Heating",
       "heatingText": "Winter comfort",
@@ -127,7 +121,13 @@
     "ctaText": "Create an account to save homes, build your preferences, request viewings and keep every rental step together.",
     "ctaPrimary": "Create free account",
     "browseShops": "Browse shops",
-    "browseStays": "Browse stays"
+    "browseStays": "Browse stays",
+    "facts": {
+      "eyebrow": "Built for Gilgit",
+      "title": "A beautiful room is only half the story.",
+      "text": "Every listing shows how it copes with winter: heating, hot water, power backup, water supply and road access. Filter by what matters to you.",
+      "cta": "Search with these filters"
+    }
   },
   "properties": {
     "eyebrow": "Curated for Gilgit living",
@@ -231,7 +231,6 @@
     "amenities": "Amenities",
     "about": "About this property",
     "location": "Location",
-    "livingScore": "Gilgit Living Score",
     "reviews": "Reviews",
     "noReviews": "No reviews yet.",
     "apply": "Apply for this property",
@@ -399,7 +398,8 @@
       "googleConnected": "Account connected with Google",
       "created": "Account created. Check your inbox.",
       "createdNoEmail": "Account created, but the email could not be sent. Try resending it."
-    }
+    },
+    "trustWinter": "Winter & utility facts"
   },
   "enums": {
     "hostel": "Hostel",
@@ -514,7 +514,6 @@
     "overview": "Overview",
     "ownerOverview": "Owner overview",
     "savedHomes": "Saved homes",
-    "smartMatches": "Smart matches",
     "applications": "Applications",
     "viewings": "Viewings",
     "messages": "Messages",
@@ -581,82 +580,7 @@
     "emptyTitle": "No saved homes yet",
     "emptyText": "Save any published listing and it will appear here for quick comparison."
   },
-  "matches": {
-    "badge": "Smart Matching",
-    "title1": "Homes ranked around what",
-    "title2": "matters to you.",
-    "lede": "Set your budget, location, furnishing, amenities and winter priorities. Published rentals are scored transparently against those preferences.",
-    "currentResults": "Current results",
-    "rankedProperties": "ranked properties",
-    "yourPreferences": "Your preferences",
-    "tuneRanking": "Tune the ranking whenever your needs change.",
-    "bestFit": "Best fit first",
-    "rankedMatches": "Your ranked matches",
-    "refreshing": "Refreshing",
-    "errorTitle": "We could not load your matches",
-    "errorText": "If you have not saved preferences yet, complete the panel first. Otherwise retry the live matching request.",
-    "emptyTitle": "No public rentals to rank yet",
-    "emptyText": "Your preferences are saved. New published listings will appear here automatically.",
-    "saved": "Preferences saved and matches refreshed",
-    "saveError": "Unable to save preferences"
-  },
-  "score": {
-    "Excellent": "Excellent",
-    "Very Good": "Very Good",
-    "Good": "Good",
-    "Fair": "Fair",
-    "Limited": "Limited",
-    "Excellent Match": "Excellent Match",
-    "Strong Match": "Strong Match",
-    "Good Match": "Good Match",
-    "Possible Match": "Possible Match",
-    "Low Match": "Low Match",
-    "outOf": "/ 100",
-    "points": "{{value}} / {{max}} points",
-    "heating": "Heating",
-    "hotWater": "Hot water",
-    "electricityBackup": "Power backup",
-    "waterAvailability": "Water reliability",
-    "roadAccess": "Road access",
-    "winterAccessible": "Winter access"
-  },
-  "match": {
-    "noPhoto": "No photo yet",
-    "rank": "#{{rank}} match",
-    "living": "Living {{score}}",
-    "viewHome": "View matched home",
-    "reason": {
-      "rent": "Budget fit",
-      "propertyType": "Property type",
-      "area": "Preferred area",
-      "furnishing": "Furnishing",
-      "bedrooms": "Bedrooms",
-      "amenities": "Amenities",
-      "winterReadiness": "Winter readiness"
-    }
-  },
-  "prefs": {
-    "budget": "Monthly budget",
-    "minimum": "Minimum PKR",
-    "maximum": "Maximum PKR",
-    "rentError": "Minimum rent cannot exceed maximum rent",
-    "propertyTypes": "Property types",
-    "preferredAreas": "Preferred areas",
-    "areasPlaceholder": "Konodas, Jutial, Danyore",
-    "areasHint": "Separate multiple areas with commas.",
-    "minimumBedrooms": "Minimum bedrooms",
-    "furnishing": "Furnishing",
-    "amenitiesThatMatter": "Amenities that matter",
-    "winterTitle": "Prioritize winter readiness",
-    "winterText": "Use heating, water, power and access quality in your matches.",
-    "save": "Save preferences & refresh matches"
-  },
   "info": {
-    "living-score": {
-      "eyebrow": "Gilgit Living Score",
-      "title": "Look beyond the room itself.",
-      "text": "The platform surfaces practical local living details such as heating, hot water, power backup, water reliability, road access and winter accessibility so renters can compare homes with more context."
-    },
     "about": {
       "eyebrow": "How it works",
       "title": "One connected rental journey.",
@@ -667,28 +591,6 @@
       "title": "Know what to do next.",
       "text": "The dashboard keeps renter and owner actions organized around simple next steps, from finding a home through completing an agreement."
     }
-  },
-  "living": {
-    "title": "A rental score built for how Gilgit actually feels to live in.",
-    "text": "Instead of judging a home only by rent and photos, the score surfaces winter readiness, utilities and access conditions that matter locally.",
-    "cta": "Browse scored rentals",
-    "context": "Local living context",
-    "transparent": "Transparent scoring",
-    "transparentTitle": "See exactly where the score comes from.",
-    "transparentText": "The score is rule-based, not a black-box AI model. Every point maps to a specific property condition.",
-    "points": "{{count}} pts",
-    "factor": {
-      "heating": "Whether the property provides heating for Gilgit winters.",
-      "hotWater": "Reliable access to hot water during colder months.",
-      "electricityBackup": "Backup electricity support when the grid is unavailable.",
-      "waterAvailability": "How dependable daily water availability is.",
-      "roadAccess": "Ease of reaching the property and nearby routes.",
-      "winterAccessible": "Whether the property remains reasonably accessible in winter."
-    },
-    "personalized": "Personalized ranking",
-    "personalizedTitle": "Living Score + your preferences = Smart Matches.",
-    "personalizedText": "Signed-in renters can combine this local living context with budget, area, property type, furnishing, bedrooms and amenities.",
-    "openMatches": "Open Smart Matches"
   },
   "overview": {
     "eyebrowOwner": "Owner command centre",
@@ -711,7 +613,7 @@
     "keepMovingOwner": "Keep your listings and renter requests moving.",
     "keepMovingRenter": "Keep looking for the right rental.",
     "keepMovingOwnerText": "Applications, viewings, messages and agreements stay connected in one simple workspace.",
-    "keepMovingRenterText": "Saved homes, smart matches, applications and messages stay connected to the same rental journey.",
+    "keepMovingRenterText": "Saved homes, applications and messages stay connected to the same rental journey.",
     "continue": "Continue",
     "there": "there"
   },
@@ -1151,7 +1053,7 @@
       "locationText": "Describe the area, then pin the exact spot on the map.",
       "amenities": "Amenities",
       "amenitiesText": "Select only the facilities that are genuinely available.",
-      "living": "Living score",
+      "living": "Winter & utilities",
       "livingText": "Capture the Gilgit-specific conditions that affect everyday living.",
       "images": "Images",
       "imagesText": "Add at least three clear photos and choose one cover image.",
@@ -1166,7 +1068,7 @@
       "details": "These details help renters compare properties. Use 0 bedrooms for hostel beds or room-style listings when a separate bedroom count does not apply.",
       "location": "Type the area and city, then drop a pin on the map exactly where the property is. The map opens on your current location — search a place or tap anywhere to move the pin.",
       "amenities": "Click a card to select or remove an amenity. At least one amenity is required before the listing can be submitted for review.",
-      "living": "These fields power the Gilgit Living Score. Use the real condition of the property—unknown is better than guessing.",
+      "living": "Renters filter by these facts. Use the real condition of the property — \"not sure\" is better than guessing.",
       "images": "Upload at least three clear JPG or PNG photos. Upload one image at a time and keep every image smaller than 1 MB. The first uploaded image becomes the initial cover automatically.",
       "rooms": "Add each kind of room you offer. Guests book a room type for their dates, and the number of rooms you enter is what stops double bookings."
     },
@@ -1369,13 +1271,13 @@
   "hero": {
     "listingTrust": "Listing trust",
     "verifiedOwner": "Verified owner",
-    "livingScore": "Living Score",
     "winterReady": "Winter ready",
     "premiumDiscovery": "Premium discovery",
     "tagline": "Homes that make sense beyond the photos.",
     "interactive": "Interactive 3D rental experience",
     "imageAlt": "A bright, modern rental home",
-    "location": "Gilgit · Jutial"
+    "location": "Gilgit · Jutial",
+    "winterFacts": "Winter facts"
   },
   "authLayout": {
     "journey": "Local rental journey",
@@ -1389,17 +1291,15 @@
   },
   "meta": {
     "homeTitle": "Gilgit Rental Platform",
-    "homeDesc": "Discover verified rentals in Gilgit with transparent Living Scores, smart matching and a connected rental journey.",
+    "homeDesc": "Discover verified homes, shops and stays in Gilgit with clear heating, water and road facts.",
     "propertiesTitle": "Find Rentals in Gilgit | Gilgit Rental",
     "propertiesDesc": "Browse published rental properties in Gilgit by area, rent, amenities and winter-readiness details.",
-    "livingTitle": "Gilgit Living Score | Gilgit Rental",
-    "livingDesc": "Understand heating, hot water, power backup, water reliability, road access and winter accessibility before renting.",
     "aboutTitle": "How Gilgit Rental Works",
     "aboutDesc": "Learn how verified owners, property review and connected rental workflows make renting in Gilgit clearer.",
     "helpTitle": "Help Centre | Gilgit Rental",
     "helpDesc": "Get guidance for renters and owners using the Gilgit Rental Platform.",
     "detailsTitle": "Property Details | Gilgit Rental",
-    "detailsDesc": "Review rental details, amenities, location, Living Score, reviews and owner information.",
+    "detailsDesc": "Review rental details, amenities, location, winter facts, reviews and owner information.",
     "fallbackDesc": "A verified rental marketplace built for Gilgit."
   },
   "stay": {

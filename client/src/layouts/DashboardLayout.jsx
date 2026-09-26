@@ -35,7 +35,6 @@ const renterGroups = [
     links: [
       ['/dashboard', 'overview', Home],
       ['/dashboard/favorites', 'savedHomes', Heart],
-      ['/dashboard/matches', 'smartMatches', Sparkles],
       ['/dashboard/applications', 'applications', ClipboardList],
       ['/dashboard/viewings', 'viewings', FileCheck2],
       ['/dashboard/trips', 'trips', BedDouble],

@@ -1,4 +1,4 @@
-import { Building2, ChevronRight, FileCheck2, Sparkles } from 'lucide-react'
+import { Building2, ChevronRight, FileCheck2, Search } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -44,10 +44,10 @@ function DashboardOverviewPage({ owner = false }) {
       Icon: FileCheck2,
     },
     {
-      label: owner ? t('overview.myProperties') : t('ws.smartMatches'),
+      label: owner ? t('overview.myProperties') : t('common.browseRentals'),
       value: owner ? t('overview.manage') : t('overview.explore'),
-      to: owner ? '/owner/properties' : '/dashboard/matches',
-      Icon: owner ? Building2 : Sparkles,
+      to: owner ? '/owner/properties' : '/properties',
+      Icon: owner ? Building2 : Search,
     },
   ]
 

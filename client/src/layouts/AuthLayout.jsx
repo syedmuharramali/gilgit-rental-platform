@@ -1,4 +1,4 @@
-import { ArrowLeft, BadgeCheck, Home, MapPin, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowLeft, BadgeCheck, Home, MapPin, ShieldCheck, Snowflake } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
@@ -11,7 +11,7 @@ function AuthLayout({ children, eyebrow, title, subtitle }) {
   const trust = [
     { icon: ShieldCheck, label: t('footer.verifiedOwners') },
     { icon: MapPin, label: t('footer.location') },
-    { icon: Sparkles, label: t('nav.livingScore') },
+    { icon: Snowflake, label: t('auth.trustWinter') },
   ]
 
   return (

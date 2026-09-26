@@ -16,14 +16,12 @@ import {
 import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
 import InfoPage from './pages/InfoPage'
-import LivingScorePage from './pages/LivingScorePage'
 import LoginPage from './pages/LoginPage'
 import PropertyEditorPage from './pages/owner/PropertyEditorPage'
 import PropertyMediaPage from './pages/owner/PropertyMediaPage'
 import PropertiesPage from './pages/PropertiesPage'
 import PropertyDetailsPage from './pages/PropertyDetailsPage'
 import RegisterPage from './pages/RegisterPage'
-import SmartMatchesPage from './pages/SmartMatchesPage'
 import VerifyEmailPage from './pages/VerifyEmailPage'
 import {
   OwnerPropertiesPage,
@@ -86,11 +84,12 @@ function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/properties/:id" element={<PropertyDetailsPage />} />
-        <Route path="/living-score" element={<LivingScorePage />} />
+        {/* Old links to the removed score pages */}
+        <Route path="/living-score" element={<Navigate to="/properties" replace />} />
+        <Route path="/matches" element={<Navigate to="/properties" replace />} />
         <Route path="/about" element={<InfoPage type="about" />} />
         <Route path="/help" element={<InfoPage type="help" />} />
         <Route path="/favorites" element={protectedElement(<Navigate to="/dashboard/favorites" replace />)} />
-        <Route path="/matches" element={protectedElement(<Navigate to="/dashboard/matches" replace />)} />
       </Route>
 
       <Route path="/login" element={<LoginPage />} />
@@ -100,7 +99,7 @@ function App() {
       <Route path="/dashboard" element={protectedElement(<DashboardLayout mode="renter" />)}>
         <Route index element={<DashboardOverviewPage />} />
         <Route path="favorites" element={<FavoritesPage />} />
-        <Route path="matches" element={<SmartMatchesPage />} />
+        <Route path="matches" element={<Navigate to="/properties" replace />} />
         <Route path="applications" element={<ApplicationsPage />} />
         <Route path="viewings" element={<ViewingsPage />} />
         <Route path="trips" element={<TripsPage />} />

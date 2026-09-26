@@ -46,8 +46,8 @@ function FallbackScene() {
 
       <GlassBadge className="right-5 top-[30%] sm:right-7" delay={0.32}>
         <div className="flex items-center gap-3">
-          <div className="relative grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-cyan-300 to-blue-500 text-sm font-black text-[#08101f] shadow-lg">86</div>
-          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-200/60">{t('hero.livingScore')}</p><p className="mt-0.5 text-xs font-black">{t('hero.winterReady')}</p></div>
+          <span className="grid h-12 w-12 place-items-center rounded-full bg-gradient-to-br from-cyan-300 to-blue-500 text-[#08101f] shadow-lg"><Flame className="h-5 w-5" /></span>
+          <div><p className="text-[10px] font-bold uppercase tracking-[.16em] text-cyan-200/60">{t('hero.winterFacts')}</p><p className="mt-0.5 text-xs font-black">{t('hero.winterReady')}</p></div>
         </div>
       </GlassBadge>
 

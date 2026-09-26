@@ -13,7 +13,7 @@ The platform connects renters with verified property owners for hostels, rooms, 
 - Property submission and admin moderation
 - Property listings with search, filters, and sorting
 - Smart property matching using transparent weighted rules
-- Gilgit Living Score (heating, hot water, backup power, water, road and winter access)
+- Winter & utility facts on every listing (heating, hot water, backup power, water, road and winter access), searchable with filters
 - Saved properties (favorites)
 - Individual and group rental applications
 - Property viewing requests
@@ -53,7 +53,7 @@ The platform connects renters with verified property owners for hostels, rooms, 
 
 ## Rental Journey
 
-`register/login -> browse -> property details -> save -> smart matches -> message owner -> request viewing -> apply -> owner accepts -> rental terms agreed -> rental agreement accepted by both -> done`
+`register/login -> browse -> property details -> save -> message owner -> request viewing -> apply -> owner accepts -> rental terms agreed -> rental agreement accepted by both -> done`
 
 After both parties accept the agreement, the rental is **upcoming** until its start date and then **active**. Once active, the property is marked as rented and removed from public listings. Upcoming rentals are activated automatically (hourly, and whenever either party opens their rentals or agreements).
 

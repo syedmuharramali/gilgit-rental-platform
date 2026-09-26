@@ -16,7 +16,6 @@ import {
   Clock,
   DoorOpen,
   ShieldCheck,
-  Sparkles,
   Star,
   Trash2,
   UsersRound,
@@ -31,8 +30,6 @@ import { useSelector } from 'react-redux'
 import { toast } from 'sonner'
 import FavoriteButton from '../components/properties/FavoriteButton'
 import PropertyMap from '../components/properties/PropertyMap'
-import LivingScoreBreakdown from '../components/scoring/LivingScoreBreakdown'
-import ScoreRing from '../components/scoring/ScoreRing'
 import {
   Modal,
   PrimaryButton,
@@ -46,7 +43,6 @@ import {
   shortDate,
 } from '../components/workspace/WorkspaceUI'
 import { useGetPropertyQuery } from '../features/properties/propertiesApi'
-import { useGetLivingScoreQuery } from '../features/scoring/scoringApi'
 import { useCreateApplicationMutation } from '../features/applications/applicationsApi'
 import { useCreateViewingMutation } from '../features/viewings/viewingsApi'
 import { useStartConversationMutation } from '../features/messages/messagesApi'
@@ -67,7 +63,6 @@ function PropertyDetailsPage() {
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated)
   const user = useSelector((state) => state.auth.user)
   const { data: property, isLoading, error } = useGetPropertyQuery(id)
-  const { data: score } = useGetLivingScoreQuery(id)
   const { data: reviewData } = useGetPropertyReviewsQuery(id)
   const [createApplication, applicationState] = useCreateApplicationMutation()
   const [createViewing, viewingState] = useCreateViewingMutation()
@@ -239,7 +234,6 @@ function PropertyDetailsPage() {
 
             <div className="py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-violet-300">{t('details.theProperty')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.aboutThisPlace')}</h2><p className="mt-4 max-w-3xl whitespace-pre-line text-[15px] leading-8 text-slate-400">{property.description}</p></div>
 
-            {score && <div className="grid gap-5 border-t border-white/[0.08] py-9 lg:grid-cols-[220px_1fr]"><motion.div whileHover={{ y: -4 }} className="rounded-[28px] border border-cyan-300/10 bg-gradient-to-br from-cyan-300/10 via-blue-500/10 to-violet-500/10 p-5"><ScoreRing score={score.gilgitLivingScore} label={score.label} light /></motion.div><LivingScoreBreakdown breakdown={score.breakdown} /></div>}
 
             <div className="border-t border-white/[0.08] py-9"><p className="text-[10px] font-black uppercase tracking-[.2em] text-cyan-300">{t('details.included')}</p><h2 className="mt-2 text-2xl font-black tracking-[-0.04em]">{t('details.amenities')}</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{(property.amenities || []).map((amenity) => <div key={amenity._id} className="flex items-center gap-3 rounded-2xl border border-white/[0.08] bg-white/[0.035] px-4 py-3 text-sm font-semibold text-slate-300"><CheckCircle2 className="h-4 w-4 text-cyan-300" /> {amenityLabel(amenity)}</div>)}</div></div>
 

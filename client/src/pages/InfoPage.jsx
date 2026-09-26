@@ -1,10 +1,9 @@
-import { ArrowRight, CircleHelp, ShieldCheck, Sparkles } from 'lucide-react'
+import { ArrowRight, CircleHelp, ShieldCheck } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 
 const icons = {
-  'living-score': Sparkles,
   about: ShieldCheck,
   help: CircleHelp,
 }

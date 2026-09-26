@@ -46,8 +46,7 @@ npm run check
 - Property search, pagination, rich filtering and sorting
 - Grid/map discovery experience
 - Property details with media, amenities and location map
-- Gilgit Living Score
-- Smart Matching based on transparent stored preferences
+- Winter & utility facts with search filters
 - Public property reviews from renters
 
 ### Authentication

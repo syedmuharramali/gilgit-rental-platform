@@ -8,7 +8,6 @@ import PublicNavbar from '../components/navigation/PublicNavbar'
 const metadataKeys = {
   '/': ['meta.homeTitle', 'meta.homeDesc'],
   '/properties': ['meta.propertiesTitle', 'meta.propertiesDesc'],
-  '/living-score': ['meta.livingTitle', 'meta.livingDesc'],
   '/about': ['meta.aboutTitle', 'meta.aboutDesc'],
   '/help': ['meta.helpTitle', 'meta.helpDesc'],
 }
