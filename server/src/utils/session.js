@@ -35,10 +35,13 @@ const baseCookieOptions = () => {
     ? sameSiteSetting
     : "lax";
 
+  // An empty COOKIE_SECURE= line (as in .env.example) counts as unset.
+  const secureSetting = String(process.env.COOKIE_SECURE ?? "").trim().toLowerCase();
+
   const secure =
     sameSite === "none" ||
-    (process.env.COOKIE_SECURE !== undefined
-      ? process.env.COOKIE_SECURE === "true"
+    (secureSetting
+      ? secureSetting === "true"
       : process.env.NODE_ENV === "production");
 
   return {

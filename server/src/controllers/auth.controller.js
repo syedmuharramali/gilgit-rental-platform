@@ -11,15 +11,6 @@ const {
   csrfTokenFor,
 } = require("../utils/session");
 
-/*
-| Signs the user in: the token goes into the httpOnly cookie only, and the
-| response carries the matching CSRF token instead.
-*/
-const startSession = (res, userId) => {
-  const token = generateToken(userId);
-  setSessionCookie(res, token);
-  res.locals.csrfToken = csrfTokenFor(token);
-};
 const {
   normalizeEmail,
   getEmailLookupCandidates,
@@ -32,6 +23,27 @@ const {
 const {
   sendVerificationEmail,
 } = require("../services/mail.service");
+
+/*
+|--------------------------------------------------------------------------
+| Start a signed-in session — THIS is where the cookie is sent
+|--------------------------------------------------------------------------
+|
+| Used by login, Google sign-in and email confirmation.
+|
+| setSessionCookie() (utils/session.js) calls
+|   res.cookie("gr_session", <JWT>, { httpOnly: true, sameSite, secure, maxAge: 7 days })
+| which adds a Set-Cookie header to this response. The browser stores it
+| and sends it back on every request; page scripts can't read it.
+|
+| The JSON body carries only the CSRF token, never the JWT.
+*/
+
+const startSession = (res, userId) => {
+  const token = generateToken(userId);
+  setSessionCookie(res, token);
+  res.locals.csrfToken = csrfTokenFor(token);
+};
 
 /*
 |--------------------------------------------------------------------------
