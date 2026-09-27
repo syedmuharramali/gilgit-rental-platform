@@ -49,7 +49,8 @@ export function ReviewsPage({ owner = false }) {
   const [form, setForm] = useState({ tenancyId: '', rating: 5, comment: '' })
 
   const submit = async () => {
-    try { await create(form).unwrap(); toast.success(t('rev.toast')); setOpen(false) } catch (error) { toast.error(errorMessage(error)) }
+    if (!form.tenancyId) { toast.error(t('rev.chooseRentalFirst')); return }
+    try { await create(form).unwrap(); toast.success(t('rev.toast')); setOpen(false); setForm({ tenancyId: '', rating: 5, comment: '' }) } catch (error) { toast.error(errorMessage(error)) }
   }
 
   return (
@@ -59,7 +60,7 @@ export function ReviewsPage({ owner = false }) {
         <Panel><h2 className="font-black text-white">{t('rev.writtenByYou')}</h2><div className="mt-4 space-y-3">{mine?.reviews?.length ? mine.reviews.map((review) => <div key={review._id} className={`${glass} p-4`}><div className="flex items-center justify-between"><strong className="text-sm text-white">{review.property?.title}</strong><span className="text-amber-300">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-400">{review.comment || t('rev.noComment')}</p></div>) : <p className="text-sm text-slate-500">{t('rev.noWritten')}</p>}</div></Panel>
         <Panel><h2 className="font-black text-white">{t('rev.received')}</h2><div className="mt-4 space-y-3">{received?.reviews?.length ? received.reviews.map((review) => <div key={review._id} className={`${glass} p-4`}><div className="flex items-center justify-between"><strong className="text-sm text-white">{review.reviewer?.name}</strong><span className="text-amber-300">{'★'.repeat(review.rating)}</span></div><p className="mt-2 text-sm text-slate-400">{review.comment || t('rev.noComment')}</p></div>) : <p className="text-sm text-slate-500">{t('rev.noReceived')}</p>}</div></Panel>
       </div>
-      <Modal open={open} onClose={() => setOpen(false)} title={t('rev.modalTitle')}><div className="space-y-3"><Select value={form.tenancyId} onChange={(event) => setForm({ ...form, tenancyId: event.target.value })}><option value="">{t('rev.chooseRental')}</option>{tenancies.filter((tenancy) => ['active', 'ended'].includes(tenancy.status)).map((tenancy) => <option key={tenancy._id} value={tenancy._id}>{tenancy.property?.title}</option>)}</Select><Select value={form.rating} onChange={(event) => setForm({ ...form, rating: Number(event.target.value) })}>{[5,4,3,2,1].map((rating) => <option key={rating} value={rating}>{t('rev.stars', { count: rating })}</option>)}</Select><TextArea value={form.comment} onChange={(event) => setForm({ ...form, comment: event.target.value })} placeholder={t('rev.placeholder')} /><PrimaryButton className="w-full" onClick={submit}>{t('rev.submit')}</PrimaryButton></div></Modal>
+      <Modal open={open} onClose={() => setOpen(false)} title={t('rev.modalTitle')}><div className="space-y-3"><Select value={form.tenancyId} onChange={(event) => setForm({ ...form, tenancyId: event.target.value })}><option value="">{t('rev.chooseRental')}</option>{tenancies.filter((tenancy) => ['active', 'ended'].includes(tenancy.status)).map((tenancy) => <option key={tenancy._id} value={tenancy._id}>{tenancy.property?.title}</option>)}</Select><Select value={form.rating} onChange={(event) => setForm({ ...form, rating: Number(event.target.value) })}>{[5,4,3,2,1].map((rating) => <option key={rating} value={rating}>{t('rev.stars', { count: rating })}</option>)}</Select><TextArea value={form.comment} onChange={(event) => setForm({ ...form, comment: event.target.value })} placeholder={t('rev.placeholder')} /><PrimaryButton className="w-full" disabled={!form.tenancyId} onClick={submit}>{t('rev.submit')}</PrimaryButton></div></Modal>
     </>
   )
 }

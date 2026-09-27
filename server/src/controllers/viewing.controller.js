@@ -227,7 +227,7 @@ exports.createViewingRequest =
       */
 
       const message =
-        req.body.message
+        typeof req.body.message === "string"
           ? req.body.message.trim()
           : "";
 
@@ -597,9 +597,9 @@ exports.confirmViewing =
       }
 
       const ownerResponse =
-        req.body
-          ?.ownerResponse
-          ?.trim() || null;
+        (typeof req.body?.ownerResponse === "string" &&
+          req.body.ownerResponse.trim()) ||
+        null;
 
       if (
         ownerResponse &&
@@ -726,9 +726,9 @@ exports.rejectViewing =
       }
 
       const ownerResponse =
-        req.body
-          ?.ownerResponse
-          ?.trim();
+        typeof req.body?.ownerResponse === "string"
+          ? req.body.ownerResponse.trim()
+          : undefined;
 
       if (
         ownerResponse &&

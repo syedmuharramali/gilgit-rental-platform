@@ -133,7 +133,7 @@ exports.register = asyncHandler(async (req, res, next) => {
 
   const existingUser = await findUserByEmail(
     normalizedEmail,
-    "+emailVerificationSentAt"
+    "+emailVerificationSentAt +emailVerificationExpires"
   );
 
   /*
@@ -171,6 +171,33 @@ exports.register = asyncHandler(async (req, res, next) => {
           429
         )
       );
+    }
+
+    /*
+    | While the first confirmation link is still valid, someone else must
+    | not be able to swap in their own password: the real owner would then
+    | confirm the account and hand it to them. So only resend the link.
+    | Once that link has expired, the signup counts as abandoned and the
+    | new details replace it.
+    */
+    const linkStillValid =
+      existingUser.emailVerificationExpires &&
+      existingUser.emailVerificationExpires.getTime() > Date.now();
+
+    if (linkStillValid) {
+      const resent = await issueVerificationEmail(existingUser);
+
+      return res.status(200).json({
+        success: true,
+        message: resent.sent
+          ? "This email is already registered and waiting for confirmation. We sent the link again; sign in with the password you chose the first time."
+          : "This email is already registered and waiting for confirmation, but the email could not be sent. Use the resend button in a moment.",
+        data: {
+          emailSent: resent.sent,
+          email: existingUser.email,
+          user: formatAuthUser(existingUser),
+        },
+      });
     }
 
     existingUser.name = name;

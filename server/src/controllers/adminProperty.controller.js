@@ -359,8 +359,11 @@ exports.rejectProperty =
       res,
       next
     ) => {
+      // Non-text input is treated as "no reason" (400), not a crash (500).
       const reason =
-        req.body?.reason?.trim();
+        typeof req.body?.reason === "string"
+          ? req.body.reason.trim()
+          : "";
 
       if (!reason) {
         return next(

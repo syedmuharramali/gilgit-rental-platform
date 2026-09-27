@@ -818,7 +818,8 @@
     "stars": "{{count}} stars",
     "placeholder": "Share your experience",
     "submit": "Submit review",
-    "toast": "Review submitted"
+    "toast": "Review submitted",
+    "chooseRentalFirst": "Choose the rental you're reviewing first."
   },
   "prof": {
     "eyebrow": "Account",
@@ -1359,6 +1360,15 @@
       "add": "Add room size",
       "fromPrice": "Price from",
       "options": "Rooms"
+    },
+    "gate": {
+      "title": "Verify your identity to list a property",
+      "text": "To keep renters safe, only verified owners can add listings. Submit your CNIC and a selfie; an admin reviews it, usually within a day.",
+      "cta": "Verify my identity"
+    },
+    "loadFailed": {
+      "title": "This listing can't be opened",
+      "text": "It may have been deleted, or it belongs to another owner."
     }
   },
   "map": {
@@ -1471,7 +1481,8 @@
       "pickRoom": "Choose a room type.",
       "notEnough": "Only {{count}} of these rooms are free for your dates.",
       "tooManyGuests": "These rooms fit at most {{count}} guests. Add a room or pick a bigger room type."
-    }
+    },
+    "listingRemoved": "This listing was removed"
   },
   "trips": {
     "eyebrow": "Stays",
@@ -1575,5 +1586,10 @@
     "messTitle": "Mess & menu",
     "fromPerPerson": "From, per person / month",
     "estimate": "Your monthly rent would be {{rent}}."
+  },
+  "notFound": {
+    "title": "Page not found",
+    "text": "The link may be old or mistyped.",
+    "back": "Go back"
   }
 }

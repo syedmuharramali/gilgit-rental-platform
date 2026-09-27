@@ -155,11 +155,26 @@ if (
   app.use(
     morgan("dev")
   );
+} else {
+  // Short request log in production (the host's log viewer shows it).
+  app.use(
+    morgan("tiny")
+  );
 }
 
 app.use(
   helmet()
 );
+
+// Browsers send the origin without a path or trailing slash; normalise the
+// configured addresses the same way so "https://site.com/" still matches.
+const toOrigin = (value) => {
+  try {
+    return new URL(value.trim()).origin;
+  } catch {
+    return value.trim().replace(/\/+$/, "");
+  }
+};
 
 const allowedOrigins =
   [
@@ -168,13 +183,10 @@ const allowedOrigins =
     ...(
       process.env
         .CLIENT_URLS || ""
-    )
-      .split(",")
-      .map(
-        (origin) =>
-          origin.trim()
-      ),
-  ].filter(Boolean);
+    ).split(","),
+  ]
+    .filter((origin) => origin && origin.trim())
+    .map(toOrigin);
 
 if (
   process.env.NODE_ENV ===
@@ -243,15 +255,25 @@ app.use(
       "Content-Type",
       "X-CSRF-Token",
     ],
+
+    // Let browsers reuse a preflight answer for 10 minutes instead of
+    // asking before every request.
+    maxAge: 600,
   })
 );
 
+/*
+| A general cap per IP. The Messages page alone polls about 200 times in
+| 15 minutes, and many users can share one IP (campus Wi-Fi, mobile
+| carriers), so it is generous; sign-in and sign-up have their own strict
+| limits in auth.routes.js.
+*/
 const apiLimiter =
   rateLimit({
     windowMs:
       15 * 60 * 1000,
 
-    limit: 300,
+    limit: 3000,
 
     standardHeaders:
       "draft-8",

@@ -157,7 +157,7 @@ function MessagesPage() {
 
               <form onSubmit={submit} className="flex gap-2 border-t border-white/[0.07] bg-[#0a101c] p-4">
                 <TextInput value={body} maxLength={2000} onChange={(event) => setBody(event.target.value)} placeholder={t('msg.writeMessage')} />
-                <PrimaryButton disabled={sendState.isLoading || !body.trim()} aria-label={t('msg.send')}><Send className="h-4 w-4" /></PrimaryButton>
+                <PrimaryButton type="submit" disabled={sendState.isLoading || !body.trim()} aria-label={t('msg.send')}><Send className="h-4 w-4" /></PrimaryButton>
               </form>
             </>
           ) : <div className="grid min-h-[620px] place-items-center p-5"><EmptyState title={t('msg.chooseConversation')} text={null} /></div>}

@@ -248,10 +248,13 @@ exports.createApplication =
       | (property, applicant) index means the same record is reused below.
       */
 
+      // A rejected student can try again later (e.g. a hostel had no free
+      // bed then, but has one now); the owner can decline again.
       if (
         existingApplication &&
-        existingApplication.status !==
-          "withdrawn"
+        !["withdrawn", "rejected"].includes(
+          existingApplication.status
+        )
       ) {
         return next(
           new AppError(
@@ -1358,8 +1361,9 @@ exports.rejectApplication =
       }
 
       const reason =
-        req.body.reason
-          ?.trim();
+        typeof req.body?.reason === "string"
+          ? req.body.reason.trim()
+          : undefined;
 
       if (
         reason &&

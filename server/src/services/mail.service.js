@@ -5,12 +5,20 @@ const nodemailer = require("nodemailer");
 | Mail transport
 |--------------------------------------------------------------------------
 |
-| Gmail SMTP with an app password.
+| Two ways to send, the first one configured wins:
 |
-| .env:
-|   SMTP_USER=you@gmail.com
-|   SMTP_PASSWORD=the 16-character Google app password
-|   MAIL_FROM_NAME=Gilgit Rental Platform   (optional)
+| 1. Resend (HTTPS API) — needed on hosts that block SMTP, e.g. Railway's
+|    Free / Trial / Hobby plans.
+|      RESEND_API_KEY=re_...
+|      MAIL_FROM_ADDRESS=no-reply@your-verified-domain.com
+|      MAIL_FROM_NAME=Gilgit Rental Platform   (optional)
+|    The from-address must be on a domain verified in Resend.
+|
+| 2. Gmail SMTP with an app password (fine locally and on hosts that allow
+|    SMTP).
+|      SMTP_USER=you@gmail.com
+|      SMTP_PASSWORD=the 16-character Google app password
+|      MAIL_FROM_NAME=Gilgit Rental Platform   (optional)
 |
 | When SMTP is not configured the mail is not sent. In development the
 | message is printed to the console instead so the flow can still be
@@ -20,11 +28,52 @@ const nodemailer = require("nodemailer");
 
 let cachedTransport = null;
 
-const isConfigured = () =>
+const usesResend = () =>
+  Boolean(
+    process.env.RESEND_API_KEY &&
+      process.env.MAIL_FROM_ADDRESS
+  );
+
+const usesSmtp = () =>
   Boolean(
     process.env.SMTP_USER &&
       process.env.SMTP_PASSWORD
   );
+
+const isConfigured = () => usesResend() || usesSmtp();
+
+const fromName = () =>
+  (process.env.MAIL_FROM_NAME || "Gilgit Rental Platform").replace(/["<>]/g, "");
+
+const sendWithResend = async ({ to, subject, text, html }) => {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: `${fromName()} <${process.env.MAIL_FROM_ADDRESS}>`,
+        to: [to],
+        subject,
+        text,
+        html,
+      }),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      throw new Error(`Resend answered ${response.status}: ${detail.slice(0, 300)}`);
+    }
+  } finally {
+    clearTimeout(timer);
+  }
+};
 
 const getTransport = () => {
   if (cachedTransport) {
@@ -71,7 +120,7 @@ const getFromAddress = () => {
     process.env.MAIL_FROM_NAME ||
     "Gilgit Rental Platform";
 
-  return `"${name}" <${process.env.SMTP_USER}>`;
+  return `"${name.replace(/["<>]/g, "")}" <${process.env.SMTP_USER}>`;
 };
 
 /*
@@ -117,7 +166,7 @@ const sendMail = async ({
     }
 
     console.error(
-      "Email not sent: SMTP_USER and SMTP_PASSWORD are not set"
+      "Email not sent: set RESEND_API_KEY + MAIL_FROM_ADDRESS, or SMTP_USER + SMTP_PASSWORD"
     );
 
     return {
@@ -127,13 +176,17 @@ const sendMail = async ({
   }
 
   try {
-    await getTransport().sendMail({
-      from: getFromAddress(),
-      to,
-      subject,
-      text,
-      html,
-    });
+    if (usesResend()) {
+      await sendWithResend({ to, subject, text, html });
+    } else {
+      await getTransport().sendMail({
+        from: getFromAddress(),
+        to,
+        subject,
+        text,
+        html,
+      });
+    }
 
     return { sent: true };
   } catch (error) {

@@ -44,6 +44,30 @@ const flattenFiles = (files) => {
   return [];
 };
 
+/*
+| The browser says what type a file is, but anyone can lie about that.
+| Check the first bytes: JPEG starts FF D8 FF, PNG with its 8-byte header.
+*/
+const PNG_SIGNATURE = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+const isRealImage = (file) => {
+  const bytes = file?.buffer;
+
+  if (!Buffer.isBuffer(bytes) || bytes.length < 8) {
+    return false;
+  }
+
+  if (file.mimetype === "image/jpeg") {
+    return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  }
+
+  if (file.mimetype === "image/png") {
+    return bytes.subarray(0, 8).equals(PNG_SIGNATURE);
+  }
+
+  return false;
+};
+
 const instrumentMultipart = (label, middleware) =>
   (req, res, next) => {
     const startedAt = process.hrtime.bigint();
@@ -78,6 +102,15 @@ const instrumentMultipart = (label, middleware) =>
         }
 
         return next(error);
+      }
+
+      if (files.some((file) => !isRealImage(file))) {
+        return next(
+          new AppError(
+            "That file isn't a real JPG or PNG image. Please choose another photo.",
+            400
+          )
+        );
       }
 
       return next();

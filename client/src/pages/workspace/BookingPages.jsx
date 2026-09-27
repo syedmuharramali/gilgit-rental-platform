@@ -139,7 +139,7 @@ export function TripsPage() {
                 {booking.property?.coverImageUrl ? <img src={booking.property.coverImageUrl} alt="" className="h-20 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-white/10" /> : <div className="grid h-20 w-24 shrink-0 place-items-center rounded-2xl bg-white/[0.04]"><BedDouble className="h-5 w-5 text-slate-600" /></div>}
                 <div className="min-w-0">
                   <StatusBadge value={booking.status} />
-                  <Link to={`/properties/${booking.property?._id}`} className="mt-2 block truncate font-black text-white hover:text-cyan-200">{booking.property?.title}</Link>
+                  {booking.property?._id ? <Link to={`/properties/${booking.property._id}`} className="mt-2 block truncate font-black text-white hover:text-cyan-200">{booking.property.title}</Link> : <p className="mt-2 truncate font-black text-slate-400">{t('stay.listingRemoved')}</p>}
                   <p className="mt-1 text-xs text-slate-500">{booking.property?.address?.area} · {t('stay.checkInAt', { time: booking.property?.checkInTime || '14:00' })}</p>
                 </div>
               </div>

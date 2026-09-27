@@ -23,7 +23,7 @@ import { motion } from 'motion/react'
 import { Suspense, lazy, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useTranslation } from 'react-i18next'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   LoadingState,
@@ -39,6 +39,7 @@ import {
   pretty,
 } from '../../components/workspace/WorkspaceUI'
 import { useGetAmenitiesQuery } from '../../features/amenities/amenitiesApi'
+import { useGetMyVerificationQuery } from '../../features/verification/verificationApi'
 import {
   useCreatePropertyMutation,
   useDeletePropertyImageMutation,
@@ -442,7 +443,10 @@ export default function PropertyEditorPage() {
   const [form, setForm] = useState(() => ({ ...blank, availableFrom: localToday() }))
   const [newFiles, setNewFiles] = useState([])
   const [uploadProgress, setUploadProgress] = useState({ percent: 0, loaded: 0, total: 0, saving: false })
-  const { data: property, isLoading } = useGetPropertyQuery(id, { skip: !editing })
+  const { data: property, isLoading, isError: propertyError } = useGetPropertyQuery(id, { skip: !editing })
+  // Only verified owners can save listings; say so before the form, not
+  // after five steps of typing.
+  const { data: verification, isLoading: verificationLoading } = useGetMyVerificationQuery()
   const {
     data: amenityData,
     isLoading: amenitiesLoading,
@@ -792,7 +796,28 @@ export default function PropertyEditorPage() {
     }
   }
 
-  if (editing && isLoading) return <LoadingState />
+  if ((editing && isLoading) || verificationLoading) return <LoadingState />
+
+  if (verification && !verification.ownerVerified) {
+    return (
+      <Panel className="mx-auto max-w-xl text-center">
+        <ShieldCheck className="mx-auto h-8 w-8 text-cyan-300" />
+        <h1 className="mt-4 text-xl font-black text-white">{t('ed.gate.title')}</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{t('ed.gate.text')}</p>
+        <Link to="/owner/verification" className="mt-6 inline-flex rounded-2xl bg-gradient-to-r from-cyan-300 via-blue-400 to-violet-500 px-5 py-3 text-sm font-black text-[#07101e]">{t('ed.gate.cta')}</Link>
+      </Panel>
+    )
+  }
+
+  if (editing && (propertyError || !property)) {
+    return (
+      <Panel className="mx-auto max-w-xl text-center">
+        <h1 className="text-xl font-black text-white">{t('ed.loadFailed.title')}</h1>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{t('ed.loadFailed.text')}</p>
+        <Link to="/owner/properties" className="mt-6 inline-flex rounded-2xl border border-white/10 px-5 py-3 text-sm font-black text-slate-200">{t('ed.backToProperties')}</Link>
+      </Panel>
+    )
+  }
 
   const images = property?.images || []
   const hasCover = images.some((image) => image.isCover)

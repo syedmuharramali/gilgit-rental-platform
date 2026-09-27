@@ -13,6 +13,9 @@
     "check": "npm run lint && npm run test && npm run build",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": ">=20.19"
+  },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@reduxjs/toolkit": "^2.9.0",

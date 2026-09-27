@@ -10,6 +10,9 @@
     "migrate:hostels": "node src/scripts/migrateHostels.js",
     "diagnose:storage": "node src/scripts/diagnoseAppwriteStorage.js"
   },
+  "engines": {
+    "node": ">=20.19"
+  },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

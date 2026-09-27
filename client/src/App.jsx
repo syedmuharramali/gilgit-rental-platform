@@ -17,6 +17,7 @@ import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
 import InfoPage from './pages/InfoPage'
 import LoginPage from './pages/LoginPage'
+import NotFoundPage from './pages/NotFoundPage'
 import PropertyEditorPage from './pages/owner/PropertyEditorPage'
 import PropertyMediaPage from './pages/owner/PropertyMediaPage'
 import PropertiesPage from './pages/PropertiesPage'
@@ -90,6 +91,7 @@ function App() {
         <Route path="/about" element={<InfoPage type="about" />} />
         <Route path="/help" element={<InfoPage type="help" />} />
         <Route path="/favorites" element={protectedElement(<Navigate to="/dashboard/favorites" replace />)} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       <Route path="/login" element={<LoginPage />} />
@@ -109,6 +111,7 @@ function App() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="*" element={<NotFoundPage home="/dashboard" />} />
       </Route>
 
       <Route path="/owner" element={protectedElement(<DashboardLayout mode="owner" />)}>
@@ -127,6 +130,7 @@ function App() {
         <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="*" element={<NotFoundPage home="/owner" />} />
       </Route>
 
       <Route path="/admin" element={protectedElement(<AdminGuard><AdminLayout /></AdminGuard>)}>
@@ -136,9 +140,8 @@ function App() {
         <Route path="properties" element={<AdminPropertiesQueuePage />} />
         <Route path="properties/:id" element={<AdminPropertyReviewPage />} />
         <Route path="reports" element={<AdminReportsPage />} />
+        <Route path="*" element={<NotFoundPage home="/admin" />} />
       </Route>
-
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

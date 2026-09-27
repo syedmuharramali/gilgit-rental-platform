@@ -3,6 +3,8 @@ const { PROPERTY_TYPES, HOME_TYPES, SHOP_TYPES, STAY_TYPES, isHostelType, isLega
 const Application = require("../models/application.model");
 const { cleanHostelPricing, cleanHostelRooms, cleanMess } = require("../services/hostelSeats.service");
 const Booking = require("../models/booking.model");
+const Viewing = require("../models/viewing.model");
+const { safeCreateNotifications } = require("../services/notification.service");
 const { startOfGilgitToday } = require("../utils/gilgitDate");
 const { validateStayRange, maxRoomsBookedPerNight } = require("../utils/stayDates");
 const { filterStaysWithRoom } = require("../services/booking.service");
@@ -458,18 +460,24 @@ exports.getPublishedProperties =
       |--------------------------------------------------------------------------
       */
 
+      // Whole numbers only (a "12.5" limit or a huge page made MongoDB
+      // reject the query with a 500).
       const page =
-        Math.max(
-          Number(req.query.page) ||
-            1,
-          1
+        Math.min(
+          Math.max(
+            parseInt(req.query.page, 10) ||
+              1,
+            1
+          ),
+          1000
         );
 
       const limit =
         Math.min(
           Math.max(
-            Number(
-              req.query.limit
+            parseInt(
+              req.query.limit,
+              10
             ) || 12,
             1
           ),
@@ -801,7 +809,9 @@ exports.getPublishedProperties =
       if (req.query.area) {
         const area =
           escapeRegex(
-            req.query.area.trim()
+            String(req.query.area)
+              .trim()
+              .slice(0, 100)
           );
 
         filter[
@@ -1282,6 +1292,10 @@ exports.getPublishedProperties =
           };
           break;
       }
+
+      // Many listings share a rent or publish time; without a tiebreaker
+      // the same listing could show on two pages or on none.
+      sort._id = 1;
 
       /*
       |--------------------------------------------------------------------------
@@ -2573,7 +2587,7 @@ exports.reorderPropertyImages =
         new Set(
           imageIds.map(
             (id) =>
-              id.toString()
+              String(id)
           )
         );
 
@@ -3064,6 +3078,60 @@ exports.deleteProperty =
         validateBeforeSave:
           false,
       });
+
+      /*
+      | Close what was still waiting on this listing, and tell the renters,
+      | so nobody turns up for a viewing of a listing that is gone.
+      */
+      const [pendingApplications, openViewings] = await Promise.all([
+        Application.find({ property: property._id, status: "pending" }).select("_id applicant"),
+        Viewing.find({ property: property._id, status: { $in: ["requested", "confirmed"] } }).select("_id renter"),
+      ]);
+
+      if (pendingApplications.length > 0) {
+        await Application.updateMany(
+          { _id: { $in: pendingApplications.map((item) => item._id) }, status: "pending" },
+          {
+            $set: {
+              status: "rejected",
+              reviewedAt: new Date(),
+              rejectionReason: "The owner removed this listing",
+            },
+          }
+        );
+      }
+
+      if (openViewings.length > 0) {
+        await Viewing.updateMany(
+          { _id: { $in: openViewings.map((item) => item._id) }, status: { $in: ["requested", "confirmed"] } },
+          {
+            $set: {
+              status: "cancelled",
+              cancelledAt: new Date(),
+              ownerResponse: "The owner removed this listing.",
+            },
+          }
+        );
+      }
+
+      await safeCreateNotifications([
+        ...pendingApplications.map((item) => ({
+          user: item.applicant,
+          type: "application_rejected",
+          title: "Listing removed",
+          message: `${property.title} was removed by its owner, so your application was closed.`,
+          resourceType: "application",
+          resourceId: item._id,
+        })),
+        ...openViewings.map((item) => ({
+          user: item.renter,
+          type: "viewing_cancelled",
+          title: "Viewing Cancelled",
+          message: `${property.title} was removed by its owner, so your viewing was cancelled.`,
+          resourceType: "viewing",
+          resourceId: item._id,
+        })),
+      ]);
 
       res.status(200).json({
         success: true,

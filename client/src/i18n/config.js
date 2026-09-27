@@ -27,6 +27,8 @@ const readStoredLanguage = () => {
  * and so screen readers announce the page in the right language.
  */
 export const applyDocumentLanguage = (code) => {
+  // Tests run without a browser page; there is nothing to update there.
+  if (typeof document === 'undefined') return
   const direction = getDirection(code)
   const root = document.documentElement
   root.setAttribute('lang', code)

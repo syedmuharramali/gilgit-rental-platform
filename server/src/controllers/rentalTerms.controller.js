@@ -239,7 +239,7 @@ exports.acceptRentalTerms = asyncHandler(async (req, res, next) => {
     return next(new AppError("Invalid rental terms ID", 400));
   }
 
-  const terms = await RentalTerms.findOne({
+  let terms = await RentalTerms.findOne({
     _id: req.params.id,
     renter: req.user._id,
   });
@@ -272,12 +272,34 @@ exports.acceptRentalTerms = asyncHandler(async (req, res, next) => {
     return next(new AppError("The start date on these terms has passed. Ask the owner to send updated terms.", 409));
   }
 
-  terms.status = "accepted";
-  terms.respondedAt = new Date();
-  terms.acceptedAt = new Date();
-  terms.changeRequestMessage = null;
-  await terms.save();
+  /*
+  | Accept exactly the version this check looked at: if the owner revised
+  | the terms a moment ago, the filter no longer matches and nothing is
+  | accepted.
+  */
+  const accepted = await RentalTerms.findOneAndUpdate(
+    {
+      _id: terms._id,
+      renter: req.user._id,
+      status: "proposed",
+      proposedAt: terms.proposedAt,
+    },
+    {
+      $set: {
+        status: "accepted",
+        respondedAt: new Date(),
+        acceptedAt: new Date(),
+        changeRequestMessage: null,
+      },
+    },
+    { returnDocument: "after" }
+  );
 
+  if (!accepted) {
+    return next(new AppError("The owner changed these terms while you were viewing them. Please review the updated terms.", 409));
+  }
+
+  terms = accepted;
   await populateTerms(terms);
 
   await safeCreateNotification({
