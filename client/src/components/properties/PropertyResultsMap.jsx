@@ -1,14 +1,15 @@
-import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/maplibre'
+import Map, { Marker, NavigationControl, Popup } from 'react-map-gl/mapbox'
 import { MapPin } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import 'mapbox-gl/dist/mapbox-gl.css'
 import { money } from '../workspace/WorkspaceUI'
 import { isStayType } from '../../utils/propertyTypes'
+import MapStyleToggle, { MapNotConfigured } from './MapStyleToggle'
+import { GILGIT_CENTER, MAPBOX_TOKEN, MAP_STYLES } from './mapConfig'
 
-const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
-const DEFAULT_GILGIT = { latitude: 35.9208, longitude: 74.3144, zoom: 11 }
+const DEFAULT_GILGIT = { ...GILGIT_CENTER, zoom: 11 }
 
 // Number(null) is 0, which passed isFinite and plotted unpinned listings at 0,0.
 const hasCoordinate = (value) => value != null && value !== '' && Number.isFinite(Number(value))
@@ -16,13 +17,17 @@ const hasCoordinate = (value) => value != null && value !== '' && Number.isFinit
 export default function PropertyResultsMap({ properties = [] }) {
   const { t } = useTranslation()
   const [selected, setSelected] = useState(null)
+  const [look, setLook] = useState('streets')
   const mapped = useMemo(() => properties.filter((property) => hasCoordinate(property.address?.latitude) && hasCoordinate(property.address?.longitude)), [properties])
   const first = mapped[0]
   const initialViewState = first ? { latitude: Number(first.address.latitude), longitude: Number(first.address.longitude), zoom: 12 } : DEFAULT_GILGIT
 
+  if (!MAPBOX_TOKEN) return <MapNotConfigured className="h-[680px]" />
+
   return (
     <div className="relative h-[680px] overflow-hidden rounded-[30px] border border-slate-200 bg-slate-100 shadow-sm">
-      <Map initialViewState={initialViewState} mapStyle={import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE} style={{ width: '100%', height: '100%' }}>
+      <MapStyleToggle value={look} onChange={setLook} />
+      <Map mapboxAccessToken={MAPBOX_TOKEN} initialViewState={initialViewState} mapStyle={MAP_STYLES[look]} style={{ width: '100%', height: '100%' }}>
         <NavigationControl position="top-right" showCompass={false} />
         {mapped.map((property) => (
           <Marker key={property._id} latitude={Number(property.address.latitude)} longitude={Number(property.address.longitude)} anchor="bottom">

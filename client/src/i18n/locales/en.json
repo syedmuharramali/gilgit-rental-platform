@@ -1373,7 +1373,7 @@
     "noPlaces": "No places found. Try a nearby landmark or tap the map directly.",
     "searchUnavailable": "Search is unavailable right now. Tap the map to place the pin.",
     "loadFailed": "The map could not load",
-    "loadFailedText": "Check your internet connection and reload the page. A pin is required to continue, so if the map still will not load, use search or \"I'm at the property\" to place it.",
+    "loadFailedText": "Check your internet connection and reload. If it keeps failing, check that VITE_MAPBOX_TOKEN in client/.env is correct and allowed for this address in your Mapbox account.",
     "yourLocation": "Your current location",
     "dragToAdjust": "Drag to adjust",
     "tapToPin": "Tap or click on the map exactly where the property is to drop the pin.",
@@ -1384,7 +1384,13 @@
     "locationTimeout": "Couldn't get a location fix. Turn on location / GPS, or search for the area and tap the map.",
     "refining": "Finding your exact spot… currently accurate to about {{distance}}.",
     "roughLocation": "Your device could only place you within about {{distance}} (common on laptops without GPS). Drag the pin to the exact spot, or use your phone at the property.",
-    "goodLocation": "Pinned your current location (accurate to about {{distance}}). Drag the pin if it's slightly off."
+    "goodLocation": "Pinned your current location (accurate to about {{distance}}). Drag the pin if it's slightly off.",
+    "styleStreets": "Map",
+    "styleSatellite": "Satellite",
+    "styleLabel": "Map view",
+    "noToken": "The map isn't set up yet",
+    "noTokenText": "Add VITE_MAPBOX_TOKEN to client/.env and restart the client.",
+    "tapYourHouse": "Now tap the exact building on the map to drop the pin — Satellite view shows the roofs."
   },
   "error": {
     "title": "This screen ran into a problem.",

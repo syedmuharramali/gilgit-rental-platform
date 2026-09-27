@@ -1,14 +1,23 @@
-import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
+import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox'
 import { Crosshair, Loader2, LocateFixed, MapPin, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import 'maplibre-gl/dist/maplibre-gl.css'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import MapStyleToggle, { MapNotConfigured } from './MapStyleToggle'
+import { GB_BBOX, GILGIT_CENTER, MAPBOX_TOKEN, MAP_STYLES } from './mapConfig'
 
-const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
-const GILGIT_CENTER = { latitude: 35.9208, longitude: 74.3089 }
-// Gilgit-Baltistan bounding box, used to bias place search results.
-const SEARCH_VIEWBOX = '72.5,37.1,77.8,34.5'
+/*
+ * Place search uses Mapbox (suggestions while typing). Mapbox's free search
+ * results may not be stored, so choosing one only moves the map there; the
+ * owner then taps their house, and that tap is what gets saved.
+ *
+ * The Area / Street fields are filled from the pin with OpenStreetMap's
+ * Nominatim, whose results may be stored (one lookup per pin, as its usage
+ * policy asks).
+ */
+const MAPBOX_SEARCH = 'https://api.mapbox.com/search/geocode/v6/forward'
 const NOMINATIM = 'https://nominatim.openstreetmap.org'
+const SEARCH_DELAY_MS = 350
 
 const round = (value) => Math.round(value * 1e6) / 1e6
 // Stop refining once the device is this sure (metres), or after LOCATE_FOR_MS.
@@ -29,7 +38,12 @@ const pickCity = (address = {}) => address.city || address.town || address.count
  * - Click/tap the map or drag the pin to place the property.
  * - Search a place name, or pin the device's current position.
  */
-export default function LocationPicker({ latitude, longitude, onChange, onAddressSuggestion }) {
+export default function LocationPicker(props) {
+  if (!MAPBOX_TOKEN) return <MapNotConfigured className="h-[340px] sm:h-[420px]" />
+  return <LocationPickerMap {...props} />
+}
+
+function LocationPickerMap({ latitude, longitude, onChange, onAddressSuggestion }) {
   const { t } = useTranslation()
   const mapRef = useRef(null)
   const searchAbort = useRef(null)
@@ -51,6 +65,10 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
   const [addressLabel, setAddressLabel] = useState('')
   const [mapError, setMapError] = useState(false)
   const mapLoaded = useRef(false)
+  // Satellite first: in villages it's the only way to see your own roof.
+  const [look, setLook] = useState('satellite')
+  const [pickHint, setPickHint] = useState('')
+  const skipNextSearch = useRef(false)
 
   const flyTo = useCallback((lat, lng, zoom = 16) => {
     const map = mapRef.current
@@ -177,6 +195,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
   const placeManually = useCallback((lat, lng) => {
     stopWatching()
     setAccuracy(null)
+    setPickHint('')
     placePin(lat, lng)
   }, [placePin, stopWatching])
 
@@ -193,36 +212,68 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const search = async (event) => {
-    event?.preventDefault()
-    const text = query.trim()
-    if (text.length < 2) return
+  const runSearch = useCallback(async (text, { quiet = false } = {}) => {
     searchAbort.current?.abort()
     const controller = new AbortController()
     searchAbort.current = controller
     setSearching(true)
     setSearchMessage('')
     try {
-      const params = new URLSearchParams({ format: 'jsonv2', q: text, countrycodes: 'pk', viewbox: SEARCH_VIEWBOX, limit: '6', addressdetails: '1' })
-      const response = await fetch(`${NOMINATIM}/search?${params}`, { signal: controller.signal, headers: { 'Accept-Language': 'en' } })
+      const params = new URLSearchParams({
+        q: text,
+        access_token: MAPBOX_TOKEN,
+        country: 'pk',
+        bbox: GB_BBOX.join(','),
+        proximity: `${GILGIT_CENTER.longitude},${GILGIT_CENTER.latitude}`,
+        language: 'en',
+        limit: '6',
+        autocomplete: 'true',
+      })
+      const response = await fetch(`${MAPBOX_SEARCH}?${params}`, { signal: controller.signal })
       if (!response.ok) throw new Error('search failed')
       const data = await response.json()
-      setResults(data)
-      if (!data.length) setSearchMessage(t('map.noPlaces'))
+      const places = (data?.features || []).filter((feature) => feature?.properties?.coordinates)
+      setResults(places)
+      if (!places.length && !quiet) setSearchMessage(t('map.noPlaces'))
     } catch (error) {
       if (error.name !== 'AbortError') setSearchMessage(t('map.searchUnavailable'))
     } finally {
-      setSearching(false)
+      if (searchAbort.current === controller) setSearching(false)
     }
+  }, [t])
+
+  // Suggestions while typing (debounced).
+  useEffect(() => {
+    if (skipNextSearch.current) {
+      skipNextSearch.current = false
+      return undefined
+    }
+    const text = query.trim()
+    if (text.length < 3) {
+      setResults([])
+      return undefined
+    }
+    const timer = setTimeout(() => runSearch(text, { quiet: true }), SEARCH_DELAY_MS)
+    return () => clearTimeout(timer)
+  }, [query, runSearch])
+
+  const search = (event) => {
+    event?.preventDefault()
+    const text = query.trim()
+    if (text.length >= 2) runSearch(text)
   }
 
+  const placeName = (result) => result.properties.name_preferred || result.properties.name
+  const placeDetails = (result) => result.properties.full_address || result.properties.place_formatted || ''
+
   const chooseResult = (result) => {
-    const lat = Number(result.lat)
-    const lng = Number(result.lon)
+    const { latitude: lat, longitude: lng } = result.properties.coordinates
+    skipNextSearch.current = true
     setResults([])
-    setQuery(result.name || result.display_name.split(',')[0])
-    flyTo(lat, lng, 17)
-    placeManually(lat, lng)
+    setQuery(placeName(result))
+    setLook('satellite')
+    flyTo(Number(lat), Number(lng), result.properties.feature_type === 'poi' || result.properties.feature_type === 'address' ? 18 : 16)
+    setPickHint(t('map.tapYourHouse'))
   }
 
   return (
@@ -247,10 +298,10 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
           {results.length > 0 && (
             <ul className="absolute inset-x-0 top-14 z-20 max-h-72 overflow-y-auto rounded-2xl border border-white/10 bg-[#0b1322] p-1.5 shadow-2xl">
               {results.map((result) => (
-                <li key={result.place_id}>
+                <li key={result.properties.mapbox_id || result.id}>
                   <button type="button" onClick={() => chooseResult(result)} className="flex w-full items-start gap-2.5 rounded-xl px-3 py-2.5 text-left hover:bg-white/[0.06]">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" />
-                    <span className="text-xs leading-5 text-slate-300"><span className="block font-black text-white">{result.name || result.display_name.split(',')[0]}</span>{result.display_name}</span>
+                    <span className="text-xs leading-5 text-slate-300"><span className="block font-black text-white">{placeName(result)}</span>{placeDetails(result)}</span>
                   </button>
                 </li>
               ))}
@@ -265,6 +316,7 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
       </div>
 
       {searchMessage && <p className="text-xs text-amber-200/80">{searchMessage}</p>}
+      {pickHint && !searchMessage && <p className="text-xs font-bold text-cyan-200">{pickHint}</p>}
 
       <div className="relative h-[340px] overflow-hidden rounded-[24px] border border-white/10 bg-[#0b1322] sm:h-[420px]">
         {mapError ? (
@@ -274,13 +326,14 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
         ) : (
           <Map
             ref={mapRef}
+            mapboxAccessToken={MAPBOX_TOKEN}
             {...viewState}
             onMove={(event) => setViewState(event.viewState)}
             onClick={(event) => placeManually(event.lngLat.lat, event.lngLat.lng)}
             onLoad={(event) => { mapLoaded.current = true; event.target.resize() }}
             // A failed tile after load is harmless; only a style that never loads is fatal.
             onError={() => { if (!mapLoaded.current) setMapError(true) }}
-            mapStyle={import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE}
+            mapStyle={MAP_STYLES[look]}
             cooperativeGestures
             cursor="crosshair"
             style={{ width: '100%', height: '100%' }}
@@ -314,6 +367,8 @@ export default function LocationPicker({ latitude, longitude, onChange, onAddres
             )}
           </Map>
         )}
+
+        {!mapError && <MapStyleToggle value={look} onChange={setLook} />}
 
         {!mapError && !hasPin && (
           <div className="pointer-events-none absolute inset-x-3 bottom-3 flex items-center gap-2 rounded-2xl bg-[#07101e]/85 px-4 py-3 text-xs font-bold text-slate-200 backdrop-blur">

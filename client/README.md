@@ -10,7 +10,7 @@ Production-oriented React client for the Gilgit Rental Platform. The web app cov
 - React Router
 - Motion
 - React Hook Form + Zod
-- MapLibre / react-map-gl
+- Mapbox GL / react-map-gl (street + satellite views, Mapbox place search)
 - Sonner notifications
 - Lucide icons
 - React Dropzone for listing and verification uploads

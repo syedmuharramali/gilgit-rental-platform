@@ -1,12 +1,14 @@
-import Map, { Marker, NavigationControl } from 'react-map-gl/maplibre'
+import Map, { Marker, NavigationControl } from 'react-map-gl/mapbox'
 import { MapPin } from 'lucide-react'
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import 'maplibre-gl/dist/maplibre-gl.css'
-
-const DEFAULT_STYLE = 'https://tiles.openfreemap.org/styles/liberty'
+import 'mapbox-gl/dist/mapbox-gl.css'
+import MapStyleToggle, { MapNotConfigured } from './MapStyleToggle'
+import { MAPBOX_TOKEN, MAP_STYLES } from './mapConfig'
 
 export default function PropertyMap({ latitude, longitude, title, className = '' }) {
   const { t } = useTranslation()
+  const [look, setLook] = useState('streets')
   // Number(null) is 0, so a listing with no pin used to be drawn at 0,0 in
   // the Atlantic instead of showing the "no location" card.
   const lat = latitude == null || latitude === '' ? NaN : Number(latitude)
@@ -20,13 +22,17 @@ export default function PropertyMap({ latitude, longitude, title, className = ''
     )
   }
 
+  if (!MAPBOX_TOKEN) return <MapNotConfigured className={className} />
+
   return (
-    <div className={`overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 ${className}`}>
+    <div className={`relative overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 ${className}`}>
+      <MapStyleToggle value={look} onChange={setLook} />
       <Map
-        initialViewState={{ latitude: lat, longitude: lng, zoom: 14 }}
-        mapStyle={import.meta.env.VITE_MAP_STYLE_URL || DEFAULT_STYLE}
+        mapboxAccessToken={MAPBOX_TOKEN}
+        initialViewState={{ latitude: lat, longitude: lng, zoom: 15 }}
+        mapStyle={MAP_STYLES[look]}
         style={{ width: '100%', height: '100%' }}
-        attributionControl
+        cooperativeGestures
       >
         <NavigationControl position="top-right" showCompass={false} />
         <Marker latitude={lat} longitude={lng} anchor="bottom">
