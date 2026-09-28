@@ -18,7 +18,7 @@ import {
   X,
 } from 'lucide-react'
 import { AnimatePresence, motion } from 'motion/react'
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDispatch, useSelector } from 'react-redux'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
@@ -28,6 +28,7 @@ import {
   useGetUnreadCountQuery,
   useMarkNotificationTypesReadMutation,
 } from '../features/notifications/notificationsApi'
+import PageLoader from '../components/PageLoader'
 
 const renterGroups = [
   {
@@ -217,7 +218,7 @@ function DashboardLayout({ mode = 'renter' }) {
             <Link to={notificationPath} aria-label={t('ws.notifications')} className="relative grid h-10 w-10 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-slate-300 transition hover:text-white"><Bell className="h-4 w-4" />{unread?.unreadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[9px] font-black text-white">{unread.unreadCount}</span>}</Link>
           </div>
         </header>
-        <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
+        <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Suspense fallback={<PageLoader />}><Outlet /></Suspense></motion.main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-white/[0.07] bg-[#090f1b]/95 px-2 py-2 backdrop-blur-2xl lg:hidden" aria-label={t('ws.mobileNavigationLabel', { workspace: workspaceLabel })}>

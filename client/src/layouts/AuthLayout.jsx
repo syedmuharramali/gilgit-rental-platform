@@ -3,7 +3,7 @@ import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher'
-import SplineHero from '../components/three-d/SplineHero'
+import HeroScene from '../components/home/HeroScene'
 
 function AuthLayout({ children, eyebrow, title, subtitle }) {
   const { t } = useTranslation()
@@ -30,7 +30,7 @@ function AuthLayout({ children, eyebrow, title, subtitle }) {
             </div>
 
             <div className="relative z-10 mx-auto mt-7 h-[50vh] min-h-[390px] max-w-[760px] xl:h-[55vh]">
-              <SplineHero />
+              <HeroScene />
             </div>
 
             <div className="relative z-20 mt-7 grid gap-5 xl:grid-cols-[1fr_auto] xl:items-end">

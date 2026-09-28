@@ -20,7 +20,7 @@ import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Link, useNavigate } from 'react-router-dom'
 import PropertyCard from '../components/properties/PropertyCard'
-import SplineHero from '../components/three-d/SplineHero'
+import HeroScene from '../components/home/HeroScene'
 import { useGetPropertiesQuery } from '../features/properties/propertiesApi'
 
 const AREAS = ['Jutial', 'Konodas', 'Danyor', 'Baseen', 'Kashrote']
@@ -90,7 +90,7 @@ function HomePage() {
             <div className="mt-9 grid max-w-2xl grid-cols-3 gap-3">{stats.map(([value, label]) => <div key={label} className="rounded-[22px] border border-white/8 bg-white/[0.04] px-4 py-4 backdrop-blur-xl"><p className="text-xl font-black tracking-[-.04em] text-white sm:text-2xl">{value}</p><p className="mt-1 text-[10px] font-bold uppercase tracking-[.12em] text-white/32">{label}</p></div>)}</div>
           </motion.div>
 
-          <motion.div initial={{ opacity: 0, scale: 0.95, rotateY: -4 }} animate={{ opacity: 1, scale: 1, rotateY: 0 }} transition={{ duration: 0.9, delay: 0.08 }} className="relative h-[500px] min-h-[460px] lg:h-[680px]"><div className="absolute -inset-10 -z-10 rounded-full bg-blue-500/10 blur-3xl" /><SplineHero /></motion.div>
+          <motion.div initial={{ opacity: 0, scale: 0.95, rotateY: -4 }} animate={{ opacity: 1, scale: 1, rotateY: 0 }} transition={{ duration: 0.9, delay: 0.08 }} className="relative h-[500px] min-h-[460px] lg:h-[680px]"><div className="absolute -inset-10 -z-10 rounded-full bg-blue-500/10 blur-3xl" /><HeroScene /></motion.div>
         </div>
       </section>
 

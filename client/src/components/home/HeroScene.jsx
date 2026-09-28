@@ -1,9 +1,6 @@
-import { Suspense, lazy } from 'react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { BadgeCheck, Flame, MapPin, ShieldCheck, Sparkles, Star, Waves } from 'lucide-react'
-
-const Spline = lazy(() => import('@splinetool/react-spline'))
 
 const HERO_HOME = 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1800&q=88'
 
@@ -20,7 +17,8 @@ function GlassBadge({ className = '', children, delay = 0 }) {
   )
 }
 
-function FallbackScene() {
+// Hero picture with floating info cards (home page and sign-in pages).
+function HeroScene() {
   const { t } = useTranslation()
 
   return (
@@ -74,23 +72,4 @@ function FallbackScene() {
   )
 }
 
-function SplineHero() {
-  const { t } = useTranslation()
-  const scene = import.meta.env.VITE_SPLINE_SCENE_URL
-
-  if (!scene) return <FallbackScene />
-
-  return (
-    <div className="relative h-full w-full overflow-hidden rounded-[34px] bg-[#090d18] shadow-[0_40px_100px_rgba(2,6,23,.28)]">
-      <Suspense fallback={<FallbackScene />}>
-        <Spline scene={scene} />
-      </Suspense>
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#070b16]/70 via-transparent to-transparent" />
-      <div className="pointer-events-none absolute bottom-5 left-5 flex items-center gap-2 rounded-full border border-white/15 bg-[#070b16]/70 px-4 py-2 text-xs font-bold text-white shadow-lg backdrop-blur-2xl">
-        <Sparkles className="h-3.5 w-3.5 text-cyan-300" /> {t('hero.interactive')}
-      </div>
-    </div>
-  )
-}
-
-export default SplineHero
+export default HeroScene

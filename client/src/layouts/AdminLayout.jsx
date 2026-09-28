@@ -1,8 +1,10 @@
+import { Suspense } from 'react'
 import { Building2, ChevronLeft, LayoutDashboard, ShieldCheck, Sparkles, TriangleAlert } from 'lucide-react'
 import { motion } from 'motion/react'
 import { useTranslation } from 'react-i18next'
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import LanguageSwitcher from '../components/LanguageSwitcher'
+import PageLoader from '../components/PageLoader'
 
 const links = [
   ['/admin', 'overview', 'overview', LayoutDashboard],
@@ -51,7 +53,7 @@ export default function AdminLayout() {
             <Link to="/dashboard" className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-[11px] font-bold text-slate-300 lg:hidden"><ChevronLeft className="h-3.5 w-3.5 rtl:rotate-180" /> {t('admin.backToAccount')}</Link>
           </div>
         </header>
-        <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Outlet /></motion.main>
+        <motion.main initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="p-5 sm:p-8 lg:p-10"><Suspense fallback={<PageLoader />}><Outlet /></Suspense></motion.main>
       </div>
 
       <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-4 border-t border-white/[0.08] bg-[#090e19]/96 px-2 py-2 backdrop-blur-2xl lg:hidden" aria-label={t('admin.mobileNav')}>

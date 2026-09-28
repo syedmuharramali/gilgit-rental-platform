@@ -33,6 +33,17 @@ const quickFilters = [
   ['winterAccessible', ShieldCheck],
 ]
 
+const TYPED_FILTERS = ['area', 'minRent', 'maxRent']
+
+const withoutTyped = (params) => Object.fromEntries(
+  Object.entries(params).filter(([key]) => !TYPED_FILTERS.includes(key)),
+)
+
+const sameParams = (a, b) => {
+  const aKeys = Object.keys(a)
+  return aKeys.length === Object.keys(b).length && aKeys.every((key) => a[key] === b[key])
+}
+
 function PropertiesPage() {
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -79,7 +90,21 @@ function PropertiesPage() {
     return result
   }, [searchParams, category])
 
-  const { data, isLoading, isFetching, error, refetch } = useGetPropertiesQuery(params)
+  // Typed filters (area, rent range) wait until typing pauses, so "Danyore"
+  // is one request instead of one per letter. Taps on chips and selects
+  // still search at once.
+  const [queryParams, setQueryParams] = useState(params)
+  useEffect(() => {
+    if (sameParams(params, queryParams)) return undefined
+    if (!sameParams(withoutTyped(params), withoutTyped(queryParams))) {
+      setQueryParams(params)
+      return undefined
+    }
+    const timer = setTimeout(() => setQueryParams(params), 400)
+    return () => clearTimeout(timer)
+  }, [params, queryParams])
+
+  const { data, isLoading, isFetching, error, refetch } = useGetPropertiesQuery(queryParams)
   const properties = data?.properties || []
   const selectedAmenities = (searchParams.get('amenities') || '').split(',').filter(Boolean)
 

@@ -1,45 +1,49 @@
-import { useEffect, useRef } from 'react'
+import { Suspense, lazy, useEffect, useRef } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { Navigate, Route, Routes } from 'react-router-dom'
 import ProtectedRoute from './components/ProtectedRoute'
+import PageLoader from './components/PageLoader'
 import { checkSession } from './features/auth/authSlice'
 import AdminLayout from './layouts/AdminLayout'
 import DashboardLayout from './layouts/DashboardLayout'
 import PublicLayout from './layouts/PublicLayout'
-import { AdminDashboardPage, AdminGuard, AdminReportsPage } from './pages/admin/AdminPages'
-import {
-  AdminPropertiesQueuePage,
-  AdminPropertyReviewPage,
-  AdminVerificationReviewPage,
-  AdminVerificationsQueuePage,
-} from './pages/admin/AdminReviewPages'
-import FavoritesPage from './pages/FavoritesPage'
 import HomePage from './pages/HomePage'
-import InfoPage from './pages/InfoPage'
-import LoginPage from './pages/LoginPage'
-import NotFoundPage from './pages/NotFoundPage'
-import PropertyEditorPage from './pages/owner/PropertyEditorPage'
-import PropertyMediaPage from './pages/owner/PropertyMediaPage'
-import PropertiesPage from './pages/PropertiesPage'
-import PropertyDetailsPage from './pages/PropertyDetailsPage'
-import RegisterPage from './pages/RegisterPage'
-import VerifyEmailPage from './pages/VerifyEmailPage'
-import {
-  OwnerPropertiesPage,
-  ProfilePage,
-  ReportsPage,
-  ReviewsPage,
-} from './pages/workspace/AccountPages'
-import ApplicationsPage from './pages/workspace/ApplicationsPage'
-import { HotelBookingsPage, TripsPage } from './pages/workspace/BookingPages'
-import DashboardOverviewPage from './pages/workspace/DashboardOverviewPage'
-import MessagesPage from './pages/workspace/MessagesPage'
-import NotificationsPage from './pages/workspace/NotificationsPage'
-import RentalAgreementsPage from './pages/workspace/RentalAgreementsPage'
-import OwnerVerificationPage from './pages/workspace/OwnerVerificationPage'
-import {
-  ViewingsPage,
-} from './pages/workspace/LifecyclePages'
+
+// Every page except the home page is its own file in the build, downloaded
+// the first time someone opens it. Heavy parts such as the map library then
+// only load on the pages that show a map.
+const page = (load, name = 'default') => lazy(() => load().then((module) => ({ default: module[name] })))
+
+const AdminDashboardPage = page(() => import('./pages/admin/AdminPages'), 'AdminDashboardPage')
+const AdminGuard = page(() => import('./pages/admin/AdminPages'), 'AdminGuard')
+const AdminReportsPage = page(() => import('./pages/admin/AdminPages'), 'AdminReportsPage')
+const AdminPropertiesQueuePage = page(() => import('./pages/admin/AdminReviewPages'), 'AdminPropertiesQueuePage')
+const AdminPropertyReviewPage = page(() => import('./pages/admin/AdminReviewPages'), 'AdminPropertyReviewPage')
+const AdminVerificationReviewPage = page(() => import('./pages/admin/AdminReviewPages'), 'AdminVerificationReviewPage')
+const AdminVerificationsQueuePage = page(() => import('./pages/admin/AdminReviewPages'), 'AdminVerificationsQueuePage')
+const FavoritesPage = page(() => import('./pages/FavoritesPage'))
+const InfoPage = page(() => import('./pages/InfoPage'))
+const LoginPage = page(() => import('./pages/LoginPage'))
+const NotFoundPage = page(() => import('./pages/NotFoundPage'))
+const PropertyEditorPage = page(() => import('./pages/owner/PropertyEditorPage'))
+const PropertyMediaPage = page(() => import('./pages/owner/PropertyMediaPage'))
+const PropertiesPage = page(() => import('./pages/PropertiesPage'))
+const PropertyDetailsPage = page(() => import('./pages/PropertyDetailsPage'))
+const RegisterPage = page(() => import('./pages/RegisterPage'))
+const VerifyEmailPage = page(() => import('./pages/VerifyEmailPage'))
+const OwnerPropertiesPage = page(() => import('./pages/workspace/AccountPages'), 'OwnerPropertiesPage')
+const ProfilePage = page(() => import('./pages/workspace/AccountPages'), 'ProfilePage')
+const ReportsPage = page(() => import('./pages/workspace/AccountPages'), 'ReportsPage')
+const ReviewsPage = page(() => import('./pages/workspace/AccountPages'), 'ReviewsPage')
+const ApplicationsPage = page(() => import('./pages/workspace/ApplicationsPage'))
+const HotelBookingsPage = page(() => import('./pages/workspace/BookingPages'), 'HotelBookingsPage')
+const TripsPage = page(() => import('./pages/workspace/BookingPages'), 'TripsPage')
+const DashboardOverviewPage = page(() => import('./pages/workspace/DashboardOverviewPage'))
+const MessagesPage = page(() => import('./pages/workspace/MessagesPage'))
+const NotificationsPage = page(() => import('./pages/workspace/NotificationsPage'))
+const RentalAgreementsPage = page(() => import('./pages/workspace/RentalAgreementsPage'))
+const OwnerVerificationPage = page(() => import('./pages/workspace/OwnerVerificationPage'))
+const ViewingsPage = page(() => import('./pages/workspace/LifecyclePages'), 'ViewingsPage')
 
 const protectedElement = (element) => <ProtectedRoute>{element}</ProtectedRoute>
 
@@ -80,6 +84,7 @@ function App() {
   }, [serverUnreachable, session.checked, dispatch])
 
   return (
+    <Suspense fallback={<PageLoader fullScreen />}>
     <Routes>
       <Route element={<PublicLayout />}>
         <Route path="/" element={<HomePage />} />
@@ -143,6 +148,7 @@ function App() {
         <Route path="*" element={<NotFoundPage home="/admin" />} />
       </Route>
     </Routes>
+    </Suspense>
   )
 }
 

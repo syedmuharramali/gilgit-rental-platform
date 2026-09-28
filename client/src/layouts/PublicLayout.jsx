@@ -1,9 +1,10 @@
-import { useEffect } from 'react'
+import { Suspense, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { useTranslation } from 'react-i18next'
 import { Outlet, useLocation } from 'react-router-dom'
 import PublicFooter from '../components/navigation/PublicFooter'
 import PublicNavbar from '../components/navigation/PublicNavbar'
+import PageLoader from '../components/PageLoader'
 
 const metadataKeys = {
   '/': ['meta.homeTitle', 'meta.homeDesc'],
@@ -34,7 +35,9 @@ function PublicLayout() {
         <meta name="theme-color" content="#070b14" />
       </Helmet>
       <PublicNavbar />
-      <Outlet />
+      <Suspense fallback={<PageLoader />}>
+        <Outlet />
+      </Suspense>
       <PublicFooter />
     </div>
   )
